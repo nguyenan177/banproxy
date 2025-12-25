@@ -88,13 +88,12 @@
 // API → Proxy
 const API_MAP = {
     "1772007": "77.70.74.151:49655:e5L5WC:7777",
-    "CTT1kQFAcep7psPnl3DBjzUd8AMKIWEX": "36.50.54.151:49643:TN4UTA:Jhza1ZF0"
+    "CTT1kQFAcep7psPnl3DBjzUd8AMKIWEX": "36.50.54.151:49643:TN4UTA:Jhza1ZF0",
+    "suIqN6ncMv4HuUVmEB16284S7RP6sPxQ": "36.50.54.151:e5L5WC:mEV196j8"
 };
 
 // API xoay IP thật
 const ROTATE_API = "https://proxyandanh.com/api/v1/proxy/change-ip?apiKey=";
-
-/* ============================================= */
 
 const apiInput = document.getElementById("apiInput");
 const checkBtn = document.getElementById("checkBtn");
@@ -106,14 +105,14 @@ const copyBtn = document.getElementById("copyBtn");
 const rotateBtn = document.getElementById("rotateBtn");
 const status = document.getElementById("status");
 
-// Copy proxy
+/* ====== COPY PROXY ====== */
 copyBtn.onclick = async () => {
     await navigator.clipboard.writeText(proxyText.innerText);
     copyBtn.innerText = "✅ Đã copy";
     setTimeout(() => copyBtn.innerText = "📋 Copy", 1200);
 };
 
-// Kiểm tra API (local)
+/* ====== KIỂM TRA API ====== */
 checkBtn.onclick = () => {
     const key = apiInput.value.trim();
 
@@ -129,7 +128,7 @@ checkBtn.onclick = () => {
     }
 };
 
-// Xoay IP
+/* ====== XOAY IP ====== */
 rotateBtn.onclick = async () => {
     const key = localStorage.getItem("proxy_api_key");
     if (!key) return;
@@ -142,12 +141,35 @@ rotateBtn.onclick = async () => {
         const data = await res.json();
 
         if (data.success === false) {
+            if(data.message?.includes("Chưa thể xoay")) {
+                // Lấy số giây chờ
+                const wait = data.message.match(/(\d+) giây/);
+                if(wait){
+                    let sec = parseInt(wait[1]);
+                    status.innerHTML = `⏳ Vui lòng chờ ${sec} giây`;
+                    // Đếm ngược
+                    const countdown = setInterval(() => {
+                        sec--;
+                        status.innerHTML = `⏳ Vui lòng chờ ${sec} giây`;
+                        if(sec <= 0) {
+                            clearInterval(countdown);
+                            status.innerHTML = "";
+                            rotateBtn.disabled = false;
+                        }
+                    }, 1000);
+                    return;
+                }
+            }
             status.innerHTML = "⚠️ " + (data.message || "Không xoay được");
             rotateBtn.disabled = false;
             return;
         }
 
-        status.innerHTML = "✅ Xoay IP thành công";
+        // Xoay thành công → cập nhật proxy mới
+        if(data.data?.proxy){
+            proxyText.innerText = data.data.proxy;
+        }
+        status.innerHTML = "✅ Xoay IP thành công: " + proxyText.innerText;
         rotateBtn.disabled = false;
 
     } catch {
@@ -156,7 +178,7 @@ rotateBtn.onclick = async () => {
     }
 };
 
-// Tự load API đã lưu
+/* ====== TỰ LOAD API ĐÃ LƯU ====== */
 const savedKey = localStorage.getItem("proxy_api_key");
 if (savedKey) {
     apiInput.value = savedKey;
@@ -166,4 +188,3 @@ if (savedKey) {
 
 </body>
 </html>
-
