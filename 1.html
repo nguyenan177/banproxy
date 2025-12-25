@@ -2,190 +2,192 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>Xoay IP Proxy</title>
+<title>Xoay IP Proxy Nhiều API</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
-    body {
-        font-family: Arial, sans-serif;
-        background: #f5f5f5;
-        padding: 30px;
-    }
-    h2 {
-        margin-bottom: 15px;
-    }
-    .box {
-        background: #fff;
-        padding: 15px;
-        border-radius: 6px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-        margin-bottom: 15px;
-    }
-    input {
-        width: 100%;
-        padding: 10px;
-        font-size: 15px;
-        border-radius: 5px;
-        border: 1px solid #ccc;
-        margin-bottom: 10px;
-    }
-    button {
-        padding: 10px 16px;
-        font-size: 15px;
-        border-radius: 6px;
-        border: none;
-        cursor: pointer;
-        color: #fff;
-    }
-    .btn-check { background: #17a2b8; }
-    .btn-rotate { background: #007bff; }
-    .btn-copy { background: #28a745; font-size: 14px; }
+body {
+    font-family: Arial, sans-serif;
+    background: #f5f5f5;
+    padding: 30px;
+}
+h2 { margin-bottom: 15px; }
+.box {
+    background: #fff;
+    padding: 15px;
+    border-radius: 6px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    margin-bottom: 15px;
+}
+input {
+    width: 100%;
+    padding: 10px;
+    font-size: 15px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    margin-bottom: 10px;
+}
+button {
+    padding: 8px 12px;
+    font-size: 14px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    color: #fff;
+    margin-left: 5px;
+}
+.btn-add { background: #007bff; }
+.btn-rotate { background: #17a2b8; }
+.btn-copy { background: #28a745; }
+.btn-delete { background: #dc3545; }
 
-    .proxy-box {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-bottom: 10px;
-    }
-    .proxy-text {
-        font-family: monospace;
-        flex: 1;
-        word-break: break-all;
-    }
-    .hidden { display: none; }
-
-    #status, #apiStatus {
-        margin-top: 8px;
-        font-size: 14px;
-    }
+.proxy-container {
+    margin-bottom: 10px;
+    background: #f0f0f0;
+    padding: 10px;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.proxy-text { font-family: monospace; flex: 1; word-break: break-all; }
+.status { font-size: 13px; margin-left: 5px; color: #333; }
 </style>
 </head>
 <body>
 
-<h2>🔄 Xoay IP Proxy</h2>
+<h2>🔄 Xoay IP Proxy Nhiều API</h2>
 
-<!-- NHẬP API -->
 <div class="box">
-    <input id="apiInput" placeholder="🔑 Dán API Key vào đây">
-    <button class="btn-check" id="checkBtn">Kiểm tra API</button>
+    <input id="apiInput" placeholder="🔑 Nhập API Key mới">
+    <button class="btn-add" id="addApiBtn">➕ Thêm API</button>
     <div id="apiStatus"></div>
 </div>
 
-<!-- PROXY -->
-<div class="box hidden" id="proxySection">
-    <div class="proxy-box">
-        <div class="proxy-text" id="proxyText"></div>
-        <button class="btn-copy" id="copyBtn">📋 Copy</button>
-    </div>
-
-    <button class="btn-rotate" id="rotateBtn">Xoay IP</button>
-    <div id="status"></div>
-</div>
+<div id="proxyList"></div>
 
 <script>
-/* ================== CẤU HÌNH ================== */
-
-// API → Proxy
 const API_MAP = {
     "1772007": "77.70.74.151:49655:e5L5WC:7777",
     "CTT1kQFAcep7psPnl3DBjzUd8AMKIWEX": "36.50.54.151:49643:TN4UTA:Jhza1ZF0",
-    "suIqN6ncMv4HuUVmEB16284S7RP6sPxQ": "36.50.54.151:49655:e5L5WC:mEV196j8"
+    "suIqN6ncMv4HuUVmEB16284S7RP6sPxQ": "36.50.54.151:e5L5WC:mEV196j8",
+    "Nlk7RjcifmhqRFRtcsDD7a2DaxBuvm5f": "55555.50.54.151:e5L5WC:mEV196j8"
 };
-
-// API xoay IP thật
 const ROTATE_API = "https://proxyandanh.com/api/v1/proxy/change-ip?apiKey=";
 
 const apiInput = document.getElementById("apiInput");
-const checkBtn = document.getElementById("checkBtn");
+const addApiBtn = document.getElementById("addApiBtn");
 const apiStatus = document.getElementById("apiStatus");
+const proxyList = document.getElementById("proxyList");
 
-const proxySection = document.getElementById("proxySection");
-const proxyText = document.getElementById("proxyText");
-const copyBtn = document.getElementById("copyBtn");
-const rotateBtn = document.getElementById("rotateBtn");
-const status = document.getElementById("status");
+// Lưu API đã thêm
+let savedApis = JSON.parse(localStorage.getItem("proxy_api_keys") || "[]");
 
-/* ====== COPY PROXY ====== */
-copyBtn.onclick = async () => {
-    await navigator.clipboard.writeText(proxyText.innerText);
-    copyBtn.innerText = "✅ Đã copy";
-    setTimeout(() => copyBtn.innerText = "📋 Copy", 1200);
-};
+// Tạo 1 khung proxy
+function createProxyBox(apiKey){
+    const container = document.createElement("div");
+    container.className = "proxy-container";
 
-/* ====== KIỂM TRA API ====== */
-checkBtn.onclick = () => {
-    const key = apiInput.value.trim();
+    const proxyText = document.createElement("div");
+    proxyText.className = "proxy-text";
+    proxyText.innerText = API_MAP[apiKey] || "Chưa có proxy";
 
-    if (API_MAP[key]) {
-        proxyText.innerText = API_MAP[key];
-        proxySection.classList.remove("hidden");
-        apiStatus.innerHTML = "✅ API hợp lệ";
-        localStorage.setItem("proxy_api_key", key);
-    } else {
-        proxySection.classList.add("hidden");
-        apiStatus.innerHTML = "❌ API không hợp lệ";
-        localStorage.removeItem("proxy_api_key");
+    const copyBtn = document.createElement("button");
+    copyBtn.className = "btn-copy";
+    copyBtn.innerText = "📋 Copy";
+    copyBtn.onclick = async () => {
+        await navigator.clipboard.writeText(proxyText.innerText);
+        copyBtn.innerText = "✅ Đã copy";
+        setTimeout(()=> copyBtn.innerText="📋 Copy", 1200);
     }
-};
 
-/* ====== XOAY IP ====== */
-rotateBtn.onclick = async () => {
-    const key = localStorage.getItem("proxy_api_key");
-    if (!key) return;
+    const rotateBtn = document.createElement("button");
+    rotateBtn.className = "btn-rotate";
+    rotateBtn.innerText = "🔄 Xoay IP";
+    const statusDiv = document.createElement("span");
+    statusDiv.className = "status";
 
-    rotateBtn.disabled = true;
-    status.innerHTML = "⏳ Đang xoay IP...";
+    rotateBtn.onclick = async () => {
+        rotateBtn.disabled = true;
+        statusDiv.innerText = "⏳ Đang xoay IP...";
+        try{
+            const res = await fetch(ROTATE_API + apiKey);
+            const data = await res.json();
 
-    try {
-        const res = await fetch(ROTATE_API + key);
-        const data = await res.json();
-
-        if (data.success === false) {
-            if(data.message?.includes("Chưa thể xoay")) {
-                // Lấy số giây chờ
-                const wait = data.message.match(/(\d+) giây/);
-                if(wait){
-                    let sec = parseInt(wait[1]);
-                    status.innerHTML = `⏳ Vui lòng chờ ${sec} giây`;
-                    // Đếm ngược
-                    const countdown = setInterval(() => {
-                        sec--;
-                        status.innerHTML = `⏳ Vui lòng chờ ${sec} giây`;
-                        if(sec <= 0) {
-                            clearInterval(countdown);
-                            status.innerHTML = "";
-                            rotateBtn.disabled = false;
-                        }
-                    }, 1000);
-                    return;
+            if(data.success === false){
+                if(data.message?.includes("Chưa thể xoay")){
+                    const wait = data.message.match(/(\d+) giây/);
+                    if(wait){
+                        let sec = parseInt(wait[1]);
+                        statusDiv.innerText = `⏳ Vui lòng chờ ${sec} giây`;
+                        const countdown = setInterval(()=>{
+                            sec--;
+                            statusDiv.innerText = `⏳ Vui lòng chờ ${sec} giây`;
+                            if(sec <=0){
+                                clearInterval(countdown);
+                                statusDiv.innerText = "";
+                                rotateBtn.disabled=false;
+                            }
+                        },1000);
+                        return;
+                    }
                 }
+                statusDiv.innerText = "⚠️ "+ (data.message || "Không xoay được");
+                rotateBtn.disabled=false;
+                return;
             }
-            status.innerHTML = "⚠️ " + (data.message || "Không xoay được");
-            rotateBtn.disabled = false;
-            return;
-        }
+            if(data.data?.proxy){
+                proxyText.innerText = data.data.proxy;
+            }
+            statusDiv.innerText = "✅ Xoay IP thành công";
+            rotateBtn.disabled=false;
 
-        // Xoay thành công → cập nhật proxy mới
-        if(data.data?.proxy){
-            proxyText.innerText = data.data.proxy;
+        }catch{
+            statusDiv.innerText = "❌ Lỗi kết nối API";
+            rotateBtn.disabled=false;
         }
-        status.innerHTML = "✅ Xoay IP thành công: " + proxyText.innerText;
-        rotateBtn.disabled = false;
-
-    } catch {
-        status.innerHTML = "❌ Lỗi kết nối API";
-        rotateBtn.disabled = false;
     }
-};
 
-/* ====== TỰ LOAD API ĐÃ LƯU ====== */
-const savedKey = localStorage.getItem("proxy_api_key");
-if (savedKey) {
-    apiInput.value = savedKey;
-    checkBtn.click();
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "btn-delete";
+    deleteBtn.innerText = "❌ Xóa";
+    deleteBtn.onclick = () => {
+        savedApis = savedApis.filter(k => k !== apiKey);
+        localStorage.setItem("proxy_api_keys", JSON.stringify(savedApis));
+        proxyList.removeChild(container);
+    }
+
+    container.appendChild(proxyText);
+    container.appendChild(copyBtn);
+    container.appendChild(rotateBtn);
+    container.appendChild(deleteBtn);
+    container.appendChild(statusDiv);
+
+    proxyList.appendChild(container);
 }
+
+/* ====== THÊM API ====== */
+addApiBtn.onclick = () => {
+    const key = apiInput.value.trim();
+    if(!key) return;
+    if(!API_MAP[key]){
+        apiStatus.innerText = "❌ API không hợp lệ";
+        return;
+    }
+    if(savedApis.includes(key)){
+        apiStatus.innerText = "⚠️ API đã tồn tại";
+        return;
+    }
+    savedApis.push(key);
+    localStorage.setItem("proxy_api_keys", JSON.stringify(savedApis));
+    apiStatus.innerText = "✅ Đã thêm API";
+    createProxyBox(key);
+    apiInput.value="";
+}
+
+/* ====== LOAD LẠI API LƯU ====== */
+savedApis.forEach(key => createProxyBox(key));
 </script>
 
 </body>
 </html>
-
