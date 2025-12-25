@@ -19,13 +19,15 @@ h2 { margin-bottom: 15px; }
     box-shadow: 0 2px 6px rgba(0,0,0,0.08);
     margin-bottom: 15px;
 }
-input {
+textarea {
     width: 100%;
     padding: 10px;
     font-size: 15px;
     border-radius: 5px;
     border: 1px solid #ccc;
     margin-bottom: 10px;
+    resize: vertical;
+    min-height: 80px;
 }
 button {
     padding: 8px 12px;
@@ -59,7 +61,7 @@ button {
 <h2>🔄 Xoay IP Proxy Nhiều API</h2>
 
 <div class="box">
-    <input id="apiInput" placeholder="🔑 Nhập API Key mới">
+    <textarea id="apiInput" placeholder="🔑 Nhập 1 hoặc nhiều API Key, mỗi key 1 dòng"></textarea>
     <button class="btn-add" id="addApiBtn">➕ Thêm API</button>
     <div id="apiStatus"></div>
 </div>
@@ -70,8 +72,13 @@ button {
 const API_MAP = {
     "1772007": "77.70.74.151:49655:e5L5WC:7777",
     "CTT1kQFAcep7psPnl3DBjzUd8AMKIWEX": "36.50.54.151:49643:TN4UTA:Jhza1ZF0",
-    "suIqN6ncMv4HuUVmEB16284S7RP6sPxQ": "36.50.54.151:e5L5WC:mEV196j8",
-    "Nlk7RjcifmhqRFRtcsDD7a2DaxBuvm5f": "55555.50.54.151:e5L5WC:mEV196j8"
+    "suIqN6ncMv4HuUVmEB16284S7RP6sPxQ": "36.50.54.151:49636:xzsa111:xzsa111",
+//@xzsa111
+    "Nlk7RjcifmhqRFRtcsDD7a2DaxBuvm5f": "36.50.54.151:49636:xzsa111:xzsa111",
+    "Gmu9FitvE7wvYFCx6KiC49SitMG5EGNb": "36.50.54.151:49223:xzsa111:xzsa111",
+    "LGS3o0oxmmRpLPnDP4fdGiMASgAASjGz": "36.50.54.151:49019:xzsa111:xzsa111",
+    "ZhpYGs7sj8i83isTrI05LV3pU0bBKhsg": "36.50.54.151:49454:xzsa111:xzsa111",
+    "ZOvT3th4cd2ugm3n3QqdAZC8EPcqbA24": "36.50.54.151:49052:xzsa111:xzsa111"
 };
 const ROTATE_API = "https://proxyandanh.com/api/v1/proxy/change-ip?apiKey=";
 
@@ -166,23 +173,33 @@ function createProxyBox(apiKey){
     proxyList.appendChild(container);
 }
 
-/* ====== THÊM API ====== */
+/* ====== THÊM API NHIỀU DÒNG ====== */
 addApiBtn.onclick = () => {
-    const key = apiInput.value.trim();
-    if(!key) return;
-    if(!API_MAP[key]){
-        apiStatus.innerText = "❌ API không hợp lệ";
-        return;
-    }
-    if(savedApis.includes(key)){
-        apiStatus.innerText = "⚠️ API đã tồn tại";
-        return;
-    }
-    savedApis.push(key);
+    const keys = apiInput.value.trim().split(/\r?\n/).map(k => k.trim()).filter(k => k);
+    if(keys.length === 0) return;
+
+    let added = 0;
+    let skipped = 0;
+    let invalid = 0;
+
+    keys.forEach(key => {
+        if(!API_MAP[key]){
+            invalid++;
+            return;
+        }
+        if(savedApis.includes(key)){
+            skipped++;
+            return;
+        }
+        savedApis.push(key);
+        createProxyBox(key);
+        added++;
+    });
+
     localStorage.setItem("proxy_api_keys", JSON.stringify(savedApis));
-    apiStatus.innerText = "✅ Đã thêm API";
-    createProxyBox(key);
-    apiInput.value="";
+
+    apiStatus.innerText = `✅ Thêm xong: ${added}, ⚠️ Bỏ qua: ${skipped}, ❌ Không hợp lệ: ${invalid}`;
+    apiInput.value = "";
 }
 
 /* ====== LOAD LẠI API LƯU ====== */
