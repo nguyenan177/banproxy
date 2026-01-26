@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>Xoay IP Proxy Nhiều APII</title>
+<title>Xoay IP Proxy Nhiều API</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
@@ -52,8 +52,15 @@ button {
     align-items: center;
     gap: 10px;
 }
-.proxy-text { font-family: monospace; flex: 1; word-break: break-all; }
-.status { font-size: 13px; margin-left: 5px; color: #333; }
+.proxy-text {
+    font-family: monospace;
+    flex: 1;
+    word-break: break-all;
+}
+.status {
+    font-size: 13px;
+    margin-left: 5px;
+}
 </style>
 </head>
 <body>
@@ -61,7 +68,7 @@ button {
 <h2>🔄 Xoay IP Proxy Nhiều API</h2>
 
 <div class="box">
-    <textarea id="apiInput" placeholder="🔑 Nhập 1 hoặc nhiều API Key, mỗi key 1 dòng"></textarea>
+    <textarea id="apiInput" placeholder="🔑 Nhập API Key (mỗi dòng 1 key)"></textarea>
     <button class="btn-add" id="addApiBtn">➕ Thêm API</button>
     <div id="apiStatus"></div>
 </div>
@@ -69,183 +76,141 @@ button {
 <div id="proxyList"></div>
 
 <script>
+/* ===== API MAP ===== */
 const API_MAP = {
-    "1772007": "77.70.74.151:49655:e5L5WC:7777",
-    "CTT1kQFAcep7psPnl3DBjzUd8AMKIWEX": "36.50.54.151:49643:TN4UTA:Jhza1ZF0",
-    "suIqN6ncMv4HuUVmEB16284S7RP6sPxQ": "36.50.54.151:49636:xzsa111:xzsa111",
-//@xzsa111
-    "Nlk7RjcifmhqRFRtcsDD7a2DaxBuvm5f": "36.50.54.151:49636:xzsa111:xzsa111",
-    
-    "6Rqyl5zsa84z3oiMDx7xcb0fSxyHzeH1": "proxyeagle.duckdns.org:49713:Jy0Q1v:yiXueEoi",
-    "DQAeV9sAcPm9Hi7Km3dSqXRR0Yw6ddQf": "proxyeagle.duckdns.org:49631:Jy0Q1v:yiXueEoi",
-    "FY7XKZaOHE0KYKrDJQDfo2jXvSzVZuoU": "proxyeagle.duckdns.org:49238:5rpkZX:tWlnnU93",
-    "NPguUItOEENVO4qEeyDhMQHzuWgOMlOf": "proxyeagle.duckdns.org:49885:Jy0Q1v:yiXueEoi",
-//test
-    "DvEi5DXmaks6FERAaI7nywGUAGuS92mB": "36.50.54.151:49797:testeagle:testeagle",
-    "lAFBnkbAnhsK2ffkADN3LBSZTThJSrTB": "36.50.54.151:49224:xzsa111:xzsa111",
-    "iTMHEdaWEhytnIFrOBp5WI7UQjz6b3Hw": "36.50.54.151:39563:OF2LIA:XUGeohnQ",
-    "N0Cbh1EDiYm9rtfDr0KSnHGlgAyzDhPw": "36.50.54.151:49954:xzsa111:xzsa111",
-    "GrDN3cwDBWttR0g1482JMzqqOBC4RuwR": "36.50.54.151:49068:xzsa111:xzsa111",
-//@man999km
-    "y0sEAnEPiXaFAUdVIygYkF5IAaebz1Br": "36.50.54.151:49197:man999km:man999km",
-    "FwV2y8rpwHBy0QodNwvo66tVfO4Wlgk0": "36.50.54.151:49647:man999km:man999km",
-    "wexMnjtgnlw6ZCEH4kLQgSWAqBqos5Pj": "36.50.54.151:49446:man999km:man999km",
-    "I0jiFVBKWd8BOYuWikjoFWyujrMzrNwy": "36.50.54.151:49566:49113:mongduocan:mongduocan",
-//maccao
-    "R5LcThkDdEjQEMrbaLlPxFcJAmq4eJ1J": "36.50.54.151:49644:BushMaCao:BushMaCao",
-    "NqAv6YHGDIWSizZwJfbHTcuaqzD62kfP": "36.50.54.151:49644:BushMaCao:BushMaCao",
-    "kVH10ovbmlRz6CyMox0Pye53o7zD0HbS": "36.50.54.151:49003:nguoimayman:nguoimayman",
-    "wV8p9LTLhODuQN5a65GMyyKNQYPI1bke": "36.50.54.151:49252:tuan24:tuan24",
-    "N83R6IjGLv9KOy2asEyJSFMqNtU2nY8h": "36.50.54.151:49398:tuan24:tuan24",
-    "lzL0Vj6Hc7ShBy3qMWpuYfDmTo218W32": "36.50.54.151:49069:tuan24:tuan24",
-    "0HQDAMkNXjGk3ffZiYzkpa2irjYWEyaq": "36.50.54.151:49804:tuan24:tuan24",
-    "iTMHEdaWEhytnIFrOBp5WI7UQjz6b3Hw": "36.50.54.151:39563:OF2LIA:XUGeohnQ"
+    "6Rqyl5zsa84z3oiMDx7xcb0fSxyHzeH1": {
+        proxy: "proxyeagle.duckdns.org:49713:Jy0Q1v:yiXueEoi",
+        rotate: "https://rapid-rice-50e3.dblgamingg.workers.dev/?apikey="
+    },
+    "prxserver62025.onthewifi.com:4504:user1:6sodm": {
+        proxy: "proxysachkhonglenkmladomngu.duckdns.org:5077:user1:6sodm",
+        rotate: "https://cool-feather-b380.dblgamingg.workers.dev/?apikey="
+    },
+    "DQAeV9sAcPm9Hi7Km3dSqXRR0Yw6ddQf": {
+        proxy: "proxyeagle.duckdns.org:49631:Jy0Q1v:yiXueEoi",
+        rotate: "https://rapid-rice-50e3.dblgamingg.workers.dev/?apikey="
+    },
+    "FY7XKZaOHE0KYKrDJQDfo2jXvSzVZuoU": {
+        proxy: "proxyeagle.duckdns.org:49238:5rpkZX:tWlnnU93",
+        rotate: "https://rapid-rice-50e3.dblgamingg.workers.dev/?apikey="
+    },
+    "NPguUItOEENVO4qEeyDhMQHzuWgOMlOf": {
+        proxy: "proxyeagle.duckdns.org:49885:Jy0Q1v:yiXueEoi",
+        rotate: "https://rapid-rice-50e3.dblgamingg.workers.dev/?apikey="
+    },
+    "1772007": {
+        proxy: "77.70.74.151:49655:e5L5WC:7777",
+        rotate: "https://rapid-rice-50e3.dblgamingg.workers.dev/?apikey="
+    }
 };
-const ROTATE_API = "https://rapid-rice-50e3.dblgamingg.workers.dev/?apikey=";
 
+/* ===== DOM ===== */
 const apiInput = document.getElementById("apiInput");
 const addApiBtn = document.getElementById("addApiBtn");
 const apiStatus = document.getElementById("apiStatus");
 const proxyList = document.getElementById("proxyList");
 
-// Lưu API đã thêm
 let savedApis = JSON.parse(localStorage.getItem("proxy_api_keys") || "[]");
 
-// Tạo 1 khung proxy
+/* ===== CREATE BOX ===== */
 function createProxyBox(apiKey){
-    const container = document.createElement("div");
-    container.className = "proxy-container";
+    const info = API_MAP[apiKey];
+    if(!info) return;
+
+    const box = document.createElement("div");
+    box.className = "proxy-container";
 
     const proxyText = document.createElement("div");
     proxyText.className = "proxy-text";
-    proxyText.innerText = API_MAP[apiKey] || "Chưa có proxy";
+    proxyText.innerText = info.proxy;
 
     const copyBtn = document.createElement("button");
     copyBtn.className = "btn-copy";
     copyBtn.innerText = "📋 Copy";
     copyBtn.onclick = async () => {
         await navigator.clipboard.writeText(proxyText.innerText);
-        copyBtn.innerText = "✅ Đã copy";
-        setTimeout(()=> copyBtn.innerText="📋 Copy", 1200);
-    }
+        copyBtn.innerText = "✅";
+        setTimeout(()=>copyBtn.innerText="📋 Copy",1000);
+    };
 
     const rotateBtn = document.createElement("button");
     rotateBtn.className = "btn-rotate";
-    rotateBtn.innerText = "🔄 Xoay IP";
-    const statusDiv = document.createElement("span");
-    statusDiv.className = "status";
+    rotateBtn.innerText = "🔄 Xoay";
+
+    const status = document.createElement("span");
+    status.className = "status";
 
     rotateBtn.onclick = async () => {
         rotateBtn.disabled = true;
-        statusDiv.innerText = "⏳ Đang xoay IP...";
-        try{
-            const res = await fetch(ROTATE_API + apiKey);
+        status.innerText = "⏳ Đang xoay...";
+
+        try {
+            let url = info.rotate;
+
+            // 🔥 API reset → truyền proxy
+            if (url.includes("reset?proxy=")) {
+                url += encodeURIComponent(info.proxy);
+            } else {
+                url += apiKey;
+            }
+
+            const res = await fetch(url);
             const data = await res.json();
 
-            if(data.success === false){
-                if(data.message?.includes("Chưa thể xoay")){
-                    const wait = data.message.match(/(\d+) giây/);
-                    if(wait){
-                        let sec = parseInt(wait[1]);
-                        statusDiv.innerText = `⏳ Vui lòng chờ ${sec} giây`;
-                        const countdown = setInterval(()=>{
-                            sec--;
-                            statusDiv.innerText = `⏳ Vui lòng chờ ${sec} giây`;
-                            if(sec <=0){
-                                clearInterval(countdown);
-                                statusDiv.innerText = "";
-                                rotateBtn.disabled=false;
-                            }
-                        },1000);
-                        return;
-                    }
-                }
-                statusDiv.innerText = "⚠️ "+ (data.message || "Không xoay được");
-                rotateBtn.disabled=false;
+            if (data.success === false) {
+                status.innerText = "⚠️ " + (data.message || "Không xoay được");
+                rotateBtn.disabled = false;
                 return;
             }
-            if(data.data?.proxy){
+
+            if (data.data?.proxy) {
+                info.proxy = data.data.proxy;
                 proxyText.innerText = data.data.proxy;
             }
-            statusDiv.innerText = "✅ Xoay IP thành công";
-            rotateBtn.disabled=false;
 
-        }catch{
-            statusDiv.innerText = "❌ Lỗi kết nối API";
-            rotateBtn.disabled=false;
+            status.innerText = "✅ " + (data.message || "Xoay thành công");
+            rotateBtn.disabled = false;
+
+        } catch (e) {
+            status.innerText = "❌ Bị chặn HTTP/HTTPS (mở file bằng file://)";
+            rotateBtn.disabled = false;
         }
-    }
+    };
 
-    const deleteBtn = document.createElement("button");
-    deleteBtn.className = "btn-delete";
-    deleteBtn.innerText = "❌ Xóa";
-    deleteBtn.onclick = () => {
+    const delBtn = document.createElement("button");
+    delBtn.className = "btn-delete";
+    delBtn.innerText = "❌";
+    delBtn.onclick = () => {
         savedApis = savedApis.filter(k => k !== apiKey);
         localStorage.setItem("proxy_api_keys", JSON.stringify(savedApis));
-        proxyList.removeChild(container);
-    }
+        proxyList.removeChild(box);
+    };
 
-    container.appendChild(proxyText);
-    container.appendChild(copyBtn);
-    container.appendChild(rotateBtn);
-    container.appendChild(deleteBtn);
-    container.appendChild(statusDiv);
-
-    proxyList.appendChild(container);
+    box.append(proxyText, copyBtn, rotateBtn, delBtn, status);
+    proxyList.appendChild(box);
 }
 
-/* ====== THÊM API NHIỀU DÒNG ====== */
+/* ===== ADD API ===== */
 addApiBtn.onclick = () => {
-    const keys = apiInput.value.trim().split(/\r?\n/).map(k => k.trim()).filter(k => k);
-    if(keys.length === 0) return;
+    const keys = apiInput.value.trim().split(/\r?\n/).map(k=>k.trim()).filter(Boolean);
+    let a=0,s=0,i=0;
 
-    let added = 0;
-    let skipped = 0;
-    let invalid = 0;
-
-    keys.forEach(key => {
-        if(!API_MAP[key]){
-            invalid++;
-            return;
-        }
-        if(savedApis.includes(key)){
-            skipped++;
-            return;
-        }
-        savedApis.push(key);
-        createProxyBox(key);
-        added++;
+    keys.forEach(k=>{
+        if(!API_MAP[k]){ i++; return; }
+        if(savedApis.includes(k)){ s++; return; }
+        savedApis.push(k);
+        createProxyBox(k);
+        a++;
     });
 
     localStorage.setItem("proxy_api_keys", JSON.stringify(savedApis));
+    apiStatus.innerText = `✅ Thêm ${a} | ⚠️ Trùng ${s} | ❌ Sai ${i}`;
+    apiInput.value="";
+};
 
-    apiStatus.innerText = `✅ Thêm xong: ${added}, ⚠️ Bỏ qua: ${skipped}, ❌ Không hợp lệ: ${invalid}`;
-    apiInput.value = "";
-}
-
-/* ====== LOAD LẠI API LƯU ====== */
-savedApis.forEach(key => createProxyBox(key));
+/* ===== LOAD ===== */
+savedApis.forEach(createProxyBox);
 </script>
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
