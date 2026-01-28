@@ -6,60 +6,188 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
+:root {
+    --bg: #f7f8fa;
+    --card: #ffffff;
+    --primary: #1f2937;
+    --accent: #2563eb;
+    --success: #16a34a;
+    --danger: #dc2626;
+    --border: #e5e7eb;
+    --text: #111827;
+    --muted: #6b7280;
+}
+
+* {
+    box-sizing: border-box;
+}
+
 body {
-    font-family: Arial, sans-serif;
-    background: #f5f5f5;
-    padding: 30px;
+    margin: 0;
+    padding: 16px;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
 }
-h2 { margin-bottom: 15px; }
+
+h2 {
+    text-align: center;
+    margin-bottom: 18px;
+    font-weight: 600;
+    color: var(--primary);
+}
+
+/* ===== Card ===== */
 .box {
-    background: #fff;
-    padding: 15px;
-    border-radius: 6px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-    margin-bottom: 15px;
+    background: var(--card);
+    padding: 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    margin-bottom: 16px;
 }
+
+/* ===== Input ===== */
 textarea {
     width: 100%;
-    padding: 10px;
-    font-size: 15px;
-    border-radius: 5px;
-    border: 1px solid #ccc;
-    margin-bottom: 10px;
-    resize: vertical;
-    min-height: 80px;
-}
-button {
-    padding: 8px 12px;
+    padding: 12px;
     font-size: 14px;
-    border-radius: 6px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    resize: vertical;
+    min-height: 90px;
+    transition: border .15s ease, box-shadow .15s ease;
+}
+
+textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(37,99,235,.15);
+}
+
+/* ===== Button ===== */
+button {
+    padding: 10px 14px;
+    font-size: 13px;
+    border-radius: 8px;
     border: none;
     cursor: pointer;
     color: #fff;
-    margin-left: 5px;
+    white-space: nowrap;
+    transition: transform .08s ease, opacity .15s ease, box-shadow .15s ease;
 }
-.btn-add { background: #007bff; }
-.btn-rotate { background: #17a2b8; }
-.btn-copy { background: #28a745; }
-.btn-delete { background: #dc3545; }
 
-.proxy-container {
-    margin-bottom: 10px;
-    background: #f0f0f0;
-    padding: 10px;
-    border-radius: 5px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
+button:active {
+    transform: scale(.96);
 }
+
+button:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+    filter: grayscale(.3);
+}
+
+.btn-add { background: var(--primary); }
+.btn-rotate { background: var(--accent); }
+.btn-copy { background: var(--success); }
+.btn-delete { background: var(--danger); }
+
+/* ===== Status ===== */
+#apiStatus {
+    margin-top: 10px;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+/* ===== List ===== */
+#proxyList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* ===== Animation ===== */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+    0% { opacity: .5; }
+    50% { opacity: 1; }
+    100% { opacity: .5; }
+}
+
+/* ===== Proxy Box ===== */
+.proxy-container {
+    background: var(--card);
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    animation: fadeIn .2s ease;
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+
+@media (hover:hover) {
+    .proxy-container:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0,0,0,.08);
+    }
+}
+
 .proxy-text {
     font-family: monospace;
-    flex: 1;
-    word-break: break-all;
-}
-.status {
     font-size: 13px;
-    margin-left: 5px;
+    background: #f9fafb;
+    border: 1px dashed var(--border);
+    padding: 10px;
+    border-radius: 6px;
+    word-break: break-all;
+    color: #000;
+}
+
+.proxy-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.status {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+/* pulse khi đang xoay */
+button:disabled + .status {
+    animation: pulse 1.2s infinite;
+}
+
+/* ===== Desktop ===== */
+@media (min-width: 768px) {
+    body {
+        max-width: 900px;
+        margin: auto;
+    }
+
+    .proxy-container {
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .proxy-text {
+        flex: 1;
+    }
+
+    .proxy-actions {
+        flex-wrap: nowrap;
+    }
+
+    .status {
+        min-width: 150px;
+        text-align: right;
+    }
 }
 </style>
 </head>
@@ -76,29 +204,20 @@ button {
 <div id="proxyList"></div>
 
 <script>
-/* ===== API MAP (LOAD FROM LINK) ===== */
 let API_MAP = {};
-
-// 🔴 ĐỔI LINK NÀY
 const API_MAP_URL = "https://raw.githubusercontent.com/nguyenan177/apiv2/refs/heads/main/api_map.json";
 
 async function loadApiMap() {
     try {
         const res = await fetch(API_MAP_URL, { cache: "no-store" });
         API_MAP = await res.json();
-
-        // render lại proxy đã lưu
         proxyList.innerHTML = "";
         savedApis.forEach(createProxyBox);
-
-        console.log("✅ API_MAP loaded");
-    } catch (e) {
+    } catch {
         alert("❌ Không tải được API MAP");
-        console.error(e);
     }
 }
 
-/* ===== DOM ===== */
 const apiInput = document.getElementById("apiInput");
 const addApiBtn = document.getElementById("addApiBtn");
 const apiStatus = document.getElementById("apiStatus");
@@ -106,7 +225,6 @@ const proxyList = document.getElementById("proxyList");
 
 let savedApis = JSON.parse(localStorage.getItem("proxy_api_keys") || "[]");
 
-/* ===== CREATE BOX ===== */
 function createProxyBox(apiKey){
     const info = API_MAP[apiKey];
     if(!info) return;
@@ -140,34 +258,25 @@ function createProxyBox(apiKey){
 
         try {
             let url = info.rotate;
-
-            if (url.includes("reset?proxy=")) {
-                url += encodeURIComponent(info.proxy);
-            } else {
-                url += apiKey;
-            }
+            if (url.includes("reset?proxy=")) url += encodeURIComponent(info.proxy);
+            else url += apiKey;
 
             const res = await fetch(url);
             const data = await res.json();
 
             if (data.success === false) {
                 status.innerText = "⚠️ " + (data.message || "Không xoay được");
-                rotateBtn.disabled = false;
-                return;
+            } else {
+                if (data.data?.proxy) {
+                    info.proxy = data.data.proxy;
+                    proxyText.innerText = data.data.proxy;
+                }
+                status.innerText = "✅ " + (data.message || "Xoay thành công");
             }
-
-            if (data.data?.proxy) {
-                info.proxy = data.data.proxy;
-                proxyText.innerText = data.data.proxy;
-            }
-
-            status.innerText = "✅ " + (data.message || "Xoay thành công");
-            rotateBtn.disabled = false;
-
-        } catch (e) {
+        } catch {
             status.innerText = "❌ Lỗi kết nối";
-            rotateBtn.disabled = false;
         }
+        rotateBtn.disabled = false;
     };
 
     const delBtn = document.createElement("button");
@@ -179,11 +288,14 @@ function createProxyBox(apiKey){
         proxyList.removeChild(box);
     };
 
-    box.append(proxyText, copyBtn, rotateBtn, delBtn, status);
+    const actions = document.createElement("div");
+    actions.className = "proxy-actions";
+    actions.append(copyBtn, rotateBtn, delBtn);
+
+    box.append(proxyText, actions, status);
     proxyList.appendChild(box);
 }
 
-/* ===== ADD API ===== */
 addApiBtn.onclick = () => {
     const keys = apiInput.value.trim().split(/\r?\n/).map(k=>k.trim()).filter(Boolean);
     let a=0,s=0,i=0;
@@ -197,11 +309,10 @@ addApiBtn.onclick = () => {
     });
 
     localStorage.setItem("proxy_api_keys", JSON.stringify(savedApis));
-    apiStatus.innerText = `✅ Thêm ${a} | ⚠️ Trùng ${s} | ❌ Sai ${i}`;
+    apiStatus.innerText = `Thêm ${a} | Trùng ${s} | Sai ${i}`;
     apiInput.value="";
 };
 
-/* ===== INIT ===== */
 loadApiMap();
 </script>
 
