@@ -18,9 +18,7 @@
     --muted: #6b7280;
 }
 
-* {
-    box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 body {
     margin: 0;
@@ -37,7 +35,6 @@ h2 {
     color: var(--primary);
 }
 
-/* ===== Card ===== */
 .box {
     background: var(--card);
     padding: 14px;
@@ -46,7 +43,6 @@ h2 {
     margin-bottom: 16px;
 }
 
-/* ===== Input ===== */
 textarea {
     width: 100%;
     padding: 12px;
@@ -55,7 +51,6 @@ textarea {
     border: 1px solid var(--border);
     resize: vertical;
     min-height: 90px;
-    transition: border .15s ease, box-shadow .15s ease;
 }
 
 textarea:focus {
@@ -64,7 +59,6 @@ textarea:focus {
     box-shadow: 0 0 0 2px rgba(37,99,235,.15);
 }
 
-/* ===== Button ===== */
 button {
     padding: 10px 14px;
     font-size: 13px;
@@ -73,17 +67,11 @@ button {
     cursor: pointer;
     color: #fff;
     white-space: nowrap;
-    transition: transform .08s ease, opacity .15s ease, box-shadow .15s ease;
-}
-
-button:active {
-    transform: scale(.96);
 }
 
 button:disabled {
     opacity: .6;
     cursor: not-allowed;
-    filter: grayscale(.3);
 }
 
 .btn-add { background: var(--primary); }
@@ -91,33 +79,18 @@ button:disabled {
 .btn-copy { background: var(--success); }
 .btn-delete { background: var(--danger); }
 
-/* ===== Status ===== */
 #apiStatus {
     margin-top: 10px;
     font-size: 13px;
     color: var(--muted);
 }
 
-/* ===== List ===== */
 #proxyList {
     display: flex;
     flex-direction: column;
     gap: 12px;
 }
 
-/* ===== Animation ===== */
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(4px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes pulse {
-    0% { opacity: .5; }
-    50% { opacity: 1; }
-    100% { opacity: .5; }
-}
-
-/* ===== Proxy Box ===== */
 .proxy-container {
     background: var(--card);
     padding: 12px;
@@ -126,15 +99,6 @@ button:disabled {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    animation: fadeIn .2s ease;
-    transition: transform .15s ease, box-shadow .15s ease;
-}
-
-@media (hover:hover) {
-    .proxy-container:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(0,0,0,.08);
-    }
 }
 
 .proxy-text {
@@ -145,12 +109,10 @@ button:disabled {
     padding: 10px;
     border-radius: 6px;
     word-break: break-all;
-    color: #000;
 }
 
 .proxy-actions {
     display: flex;
-    flex-wrap: wrap;
     gap: 8px;
 }
 
@@ -159,35 +121,11 @@ button:disabled {
     color: var(--muted);
 }
 
-/* pulse khi đang xoay */
-button:disabled + .status {
-    animation: pulse 1.2s infinite;
-}
-
-/* ===== Desktop ===== */
 @media (min-width: 768px) {
-    body {
-        max-width: 900px;
-        margin: auto;
-    }
-
-    .proxy-container {
-        flex-direction: row;
-        align-items: center;
-    }
-
-    .proxy-text {
-        flex: 1;
-    }
-
-    .proxy-actions {
-        flex-wrap: nowrap;
-    }
-
-    .status {
-        min-width: 150px;
-        text-align: right;
-    }
+    body { max-width: 900px; margin: auto; }
+    .proxy-container { flex-direction: row; align-items: center; }
+    .proxy-text { flex: 1; }
+    .status { min-width: 150px; text-align: right; }
 }
 </style>
 </head>
@@ -198,6 +136,8 @@ button:disabled + .status {
 <div class="box">
     <textarea id="apiInput" placeholder="🔑 Nhập API Key (mỗi dòng 1 key)"></textarea>
     <button class="btn-add" id="addApiBtn">➕ Thêm API</button>
+    <!-- ✅ THÊM MỚI -->
+    <button class="btn-rotate" id="rotateAllBtn">🔄 Xoay tất cả</button>
     <div id="apiStatus"></div>
 </div>
 
@@ -220,6 +160,7 @@ async function loadApiMap() {
 
 const apiInput = document.getElementById("apiInput");
 const addApiBtn = document.getElementById("addApiBtn");
+const rotateAllBtn = document.getElementById("rotateAllBtn");
 const apiStatus = document.getElementById("apiStatus");
 const proxyList = document.getElementById("proxyList");
 
@@ -311,6 +252,17 @@ addApiBtn.onclick = () => {
     localStorage.setItem("proxy_api_keys", JSON.stringify(savedApis));
     apiStatus.innerText = `Thêm ${a} | Trùng ${s} | Sai ${i}`;
     apiInput.value="";
+};
+
+/* ✅ XOAY TẤT CẢ – KHÔNG ĐỤNG LOGIC CŨ */
+rotateAllBtn.onclick = async () => {
+    const buttons = document.querySelectorAll(".proxy-container .btn-rotate");
+    for (const btn of buttons) {
+        if (!btn.disabled) {
+            btn.click();
+            await new Promise(r => setTimeout(r, 600));
+        }
+    }
 };
 
 loadApiMap();
