@@ -76,45 +76,27 @@ button {
 <div id="proxyList"></div>
 
 <script>
-/* ===== API MAP ===== */
-const API_MAP = {
-    "6Rqyl5zsa84z3oiMDx7xcb0fSxyHzeH1": {
-        proxy: "proxyeagle.duckdns.org:49713:Jy0Q1v:yiXueEoi",
-        rotate: "https://rapid-rice-50e3.dblgamingg.workers.dev/?apikey="
-    },
-    "prxserver62025.onthewifi.com:4504:user1:6sodm": {
-        proxy: "proxysachkhonglenkmladomngu.duckdns.org:5077:user1:6sodm",
-        rotate: "https://cool-feather-b380.dblgamingg.workers.dev/?apikey="
-    },
-    "DQAeV9sAcPm9Hi7Km3dSqXRR0Yw6ddQf": {
-        proxy: "proxyeagle.duckdns.org:49631:Jy0Q1v:yiXueEoi",
-        rotate: "https://rapid-rice-50e3.dblgamingg.workers.dev/?apikey="
-    },
-    "6FxhmiE5BJLdSJCYFpotOf4Q3RO1u2LX": {
-        proxy: "proxyeagle.duckdns.org:49612:FVITxi:jQDRDiuk",
-        rotate: "https://rapid-rice-50e3.dblgamingg.workers.dev/?apikey="
-    },
-    "FY7XKZaOHE0KYKrDJQDfo2jXvSzVZuoU": {
-        proxy: "proxyeagle.duckdns.org:49238:5rpkZX:tWlnnU93",
-        rotate: "https://rapid-rice-50e3.dblgamingg.workers.dev/?apikey="
-    },
-    "WIZk8O1yY6CqBqkFeMUq6BOAVRwyvN75": {
-        proxy: "proxyeagle.duckdns.org:49004:NavRcF:5TMvabOT",
-        rotate: "https://rapid-rice-50e3.dblgamingg.workers.dev/?apikey="
-    },
-    "1": {
-        proxy: "hethan",
-        rotate: "https://rapid-rice-50e3.dblgamingg.workers.dev/?apikey="
-    },  
-    "NPguUItOEENVO4qEeyDhMQHzuWgOMlOf": {
-        proxy: "proxyeagle.duckdns.org:49885:Jy0Q1v:yiXueEoi",
-        rotate: "https://rapid-rice-50e3.dblgamingg.workers.dev/?apikey="
-    },
-    "1772007": {
-        proxy: "77.70.74.151:49655:e5L5WC:7777",
-        rotate: "https://rapid-rice-50e3.dblgamingg.workers.dev/?apikey="
+/* ===== API MAP (LOAD FROM LINK) ===== */
+let API_MAP = {};
+
+// 🔴 ĐỔI LINK NÀY
+const API_MAP_URL = "https://raw.githubusercontent.com/nguyenan177/apiv2/refs/heads/main/api_map.json";
+
+async function loadApiMap() {
+    try {
+        const res = await fetch(API_MAP_URL, { cache: "no-store" });
+        API_MAP = await res.json();
+
+        // render lại proxy đã lưu
+        proxyList.innerHTML = "";
+        savedApis.forEach(createProxyBox);
+
+        console.log("✅ API_MAP loaded");
+    } catch (e) {
+        alert("❌ Không tải được API MAP");
+        console.error(e);
     }
-};
+}
 
 /* ===== DOM ===== */
 const apiInput = document.getElementById("apiInput");
@@ -159,7 +141,6 @@ function createProxyBox(apiKey){
         try {
             let url = info.rotate;
 
-            // 🔥 API reset → truyền proxy
             if (url.includes("reset?proxy=")) {
                 url += encodeURIComponent(info.proxy);
             } else {
@@ -184,7 +165,7 @@ function createProxyBox(apiKey){
             rotateBtn.disabled = false;
 
         } catch (e) {
-            status.innerText = "❌ Bị chặn HTTP/HTTPS (mở file bằng file://)";
+            status.innerText = "❌ Lỗi kết nối";
             rotateBtn.disabled = false;
         }
     };
@@ -220,15 +201,9 @@ addApiBtn.onclick = () => {
     apiInput.value="";
 };
 
-/* ===== LOAD ===== */
-savedApis.forEach(createProxyBox);
+/* ===== INIT ===== */
+loadApiMap();
 </script>
 
 </body>
 </html>
-
-
-
-
-
-
