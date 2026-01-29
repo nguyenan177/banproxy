@@ -17,7 +17,7 @@ body {
   border-radius: 8px;
   max-width: 820px;
   margin: auto;
-  position: relative; /* để đặt nút góc phải */
+  position: relative;
 }
 input, select, button {
   width: 100%;
@@ -71,8 +71,10 @@ pre {
 <body>
 <div class="box">
 
-<!-- NÚT PROXY GÓC PHẢI -->
-<button class="proxy-btn">🌐 PROXY</button>
+<!-- NÚT PROXY -->
+<button class="proxy-btn" onclick="window.open('1.html','_blank')">
+  🌐 PROXY
+</button>
 
 <h2>📲 Thuê SMS OKVIP</h2>
 
@@ -181,7 +183,7 @@ function renderSims() {
   });
 }
 
-/* ================= 5. OTP POLL (4s) ================= */
+/* ================= 5. OTP POLL ================= */
 function startOtp() {
   if (otpTimer) return;
 
