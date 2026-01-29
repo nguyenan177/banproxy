@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>thuê SMS OKVIP</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #f2f2f2;
+  padding: 20px;
+}
+.box {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  max-width: 820px;
+  margin: auto;
+  position: relative; /* để đặt nút góc phải */
+}
+input, select, button {
+  width: 100%;
+  padding: 10px;
+  margin: 6px 0;
+}
+button {
+  cursor: pointer;
+}
+.sim {
+  border: 1px solid #ddd;
+  padding: 10px;
+  margin-top: 10px;
+  border-radius: 6px;
+}
+.sim b {
+  font-size: 16px;
+}
+pre {
+  background: #111;
+  color: #0f0;
+  padding: 12px;
+  height: 180px;
+  overflow: auto;
+}
+.lock {
+  background: #eee;
+  padding: 10px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+
+/* ===== PROXY BUTTON ===== */
+.proxy-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  width: auto;
+  padding: 8px 14px;
+  background: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+}
+.proxy-btn:hover {
+  background: #0056b3;
+}
+</style>
+</head>
+
+<body>
+<div class="box">
+
+<!-- NÚT PROXY GÓC PHẢI -->
+<button class="proxy-btn">🌐 PROXY</button>
+
+<h2>📲 Thuê SMS OKVIP</h2>
+
+<input id="apiKey" placeholder="Nhập API key">
+
+<button onclick="loadAccount()">🔑 Lấy thông tin tài khoản</button>
+
+<div class="lock">
+  🔒 <b>Thuê sms:</b> Okvip – <b>5K</b>
+</div>
+
+<select id="network">
+  <option value="">-- Tất cả nhà mạng --</option>
+</select>
+
+<input id="prefix" placeholder="Đầu số (vd: 098 - không bắt buộc)">
+
+<button onclick="getSim()">📞 Lấy số</button>
+
+<h3>📋 Danh sách SIM(tối da 2 sim chờ)</h3>
+<div id="simList"></div>
+
+<pre id="log">Sẵn sàng</pre>
+</div>
+
+<script>
+/* ================= CONFIG ================= */
+const WORKER = "https://api.dblgamingg.workers.dev";
+const FIXED_SERVICE_ID = 49;
+
+/* ================= STATE ================= */
+let sims = [];
+let otpTimer = null;
+
+/* ================= UTILS ================= */
+const log = (t) => document.getElementById("log").textContent = t;
+const apiKey = () => document.getElementById("apiKey").value.trim();
+
+async function call(path) {
+  const res = await fetch(WORKER + path);
+  return res.json();
+}
+
+/* ================= 1. ACCOUNT ================= */
+async function loadAccount() {
+  if (!apiKey()) return alert("Nhập API key");
+
+  const d = await call(`/account?api_key=${apiKey()}`);
+  if (!d || d.status !== 200) return log("❌ Lỗi API");
+
+  log(JSON.stringify(d, null, 2));
+  loadNetworks();
+}
+
+/* ================= 2. NETWORKS ================= */
+async function loadNetworks() {
+  const d = await call(`/networks?api_key=${apiKey()}`);
+  if (!d || d.status !== 200) return;
+
+  const n = document.getElementById("network");
+  n.innerHTML = '<option value="">-- Tất cả nhà mạng --</option>';
+  d.data.forEach(x => {
+    n.innerHTML += `<option value="${x.id}">${x.name}</option>`;
+  });
+}
+
+/* ================= 3. GET SIM ================= */
+async function getSim() {
+  if (!apiKey()) return alert("Thiếu API key");
+
+  const network = document.getElementById("network").value;
+  const prefix = document.getElementById("prefix").value;
+
+  let q = `/get-sim?api_key=${apiKey()}&service_id=${FIXED_SERVICE_ID}`;
+  if (network) q += `&network_id=${network}`;
+  if (prefix) q += `&phone=${prefix}`;
+
+  const d = await call(q);
+  if (!d || d.status !== 200) return log("❌ Không lấy được số");
+
+  sims.push({
+    otpId: d.data.otpId,
+    simId: d.data.simId,
+    phone: d.data.phone,
+    code: null
+  });
+
+  renderSims();
+  startOtp();
+}
+
+/* ================= 4. RENDER ================= */
+function renderSims() {
+  const box = document.getElementById("simList");
+  box.innerHTML = "";
+
+  sims.forEach((s, i) => {
+    box.innerHTML += `
+      <div class="sim">
+        <b>📞 ${s.phone}</b><br>
+        🆔 OTP ID: ${s.otpId}<br>
+        🔐 OTP: ${s.code ?? "Đang chờ..."}<br>
+        <button onclick="cancelSim(${i})">❌ Hủy SIM</button>
+      </div>
+    `;
+  });
+}
+
+/* ================= 5. OTP POLL (4s) ================= */
+function startOtp() {
+  if (otpTimer) return;
+
+  otpTimer = setInterval(async () => {
+    for (const s of sims) {
+      if (s.code) continue;
+
+      const d = await call(`/get-otp?api_key=${apiKey()}&otp_id=${s.otpId}`);
+      if (d?.data?.code) {
+        s.code = d.data.code;
+      }
+    }
+    renderSims();
+  }, 4000);
+}
+
+/* ================= 6. CANCEL ================= */
+async function cancelSim(index) {
+  const s = sims[index];
+  await call(`/cancel?api_key=${apiKey()}&sim_id=${s.simId}`);
+
+  sims.splice(index, 1);
+  renderSims();
+
+  if (sims.length === 0) {
+    clearInterval(otpTimer);
+    otpTimer = null;
+  }
+}
+</script>
+</body>
+</html>
