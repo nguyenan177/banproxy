@@ -71,10 +71,8 @@ pre {
 <body>
 <div class="box">
 
-<!-- NÚT PROXY -->
-<button class="proxy-btn" onclick="window.open('1.html','_blank')">
-  🌐 PROXY
-</button>
+<!-- NÚT PROXY GÓC PHẢI -->
+<button class="proxy-btn" onclick="window.location.href='index.html'">🌐 PROXY</button>
 
 <h2>📲 Thuê SMS OKVIP</h2>
 
@@ -94,7 +92,7 @@ pre {
 
 <button onclick="getSim()">📞 Lấy số</button>
 
-<h3>📋 Danh sách SIM(tối da 2 sim chờ)</h3>
+<h3>📋 Danh sách SIM (tối đa 2 sim chờ)</h3>
 <div id="simList"></div>
 
 <pre id="log">Sẵn sàng</pre>
@@ -183,7 +181,7 @@ function renderSims() {
   });
 }
 
-/* ================= 5. OTP POLL ================= */
+/* ================= 5. OTP POLL (4s) ================= */
 function startOtp() {
   if (otpTimer) return;
 
