@@ -71,7 +71,6 @@ pre {
 <body>
 <div class="box">
 
-<!-- NÚT PROXY GÓC PHẢI -->
 <button class="proxy-btn" onclick="window.location.href='index.html'">🌐 PROXY</button>
 
 <h2>📲 Thuê SMS OKVIP</h2>
@@ -106,6 +105,25 @@ const FIXED_SERVICE_ID = 49;
 /* ================= STATE ================= */
 let sims = [];
 let otpTimer = null;
+
+/* ================= STORAGE FIX ================= */
+const STORAGE_KEY = "okvip_sims";
+
+function saveSims() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(sims));
+}
+
+function loadSims() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return;
+  try {
+    sims = JSON.parse(raw);
+    if (sims.length > 0) {
+      renderSims();
+      startOtp();
+    }
+  } catch {}
+}
 
 /* ================= UTILS ================= */
 const log = (t) => document.getElementById("log").textContent = t;
@@ -160,6 +178,7 @@ async function getSim() {
     code: null
   });
 
+  saveSims();
   renderSims();
   startOtp();
 }
@@ -192,6 +211,7 @@ function startOtp() {
       const d = await call(`/get-otp?api_key=${apiKey()}&otp_id=${s.otpId}`);
       if (d?.data?.code) {
         s.code = d.data.code;
+        saveSims();
       }
     }
     renderSims();
@@ -204,13 +224,20 @@ async function cancelSim(index) {
   await call(`/cancel?api_key=${apiKey()}&sim_id=${s.simId}`);
 
   sims.splice(index, 1);
+  saveSims();
   renderSims();
 
   if (sims.length === 0) {
     clearInterval(otpTimer);
     otpTimer = null;
+    localStorage.removeItem(STORAGE_KEY);
   }
 }
+
+/* ================= INIT ================= */
+window.onload = () => {
+  loadSims();
+};
 </script>
 </body>
 </html>
