@@ -49,8 +49,6 @@ pre {
   border-radius: 6px;
   margin-bottom: 10px;
 }
-
-/* ===== PROXY BUTTON ===== */
 .proxy-btn {
   position: absolute;
   top: 15px;
@@ -102,23 +100,36 @@ pre {
 const WORKER = "https://api.dblgamingg.workers.dev";
 const FIXED_SERVICE_ID = 49;
 
+/* ================= STORAGE KEYS ================= */
+const SIM_KEY = "okvip_sims";
+const API_KEY_STORE = "okvip_api_key";
+
 /* ================= STATE ================= */
 let sims = [];
 let otpTimer = null;
 
-/* ================= STORAGE FIX ================= */
-const STORAGE_KEY = "okvip_sims";
+/* ================= API KEY FIX ================= */
+const apiKeyInput = () => document.getElementById("apiKey");
 
+function getApiKey() {
+  return apiKeyInput().value.trim();
+}
+
+function saveApiKey() {
+  localStorage.setItem(API_KEY_STORE, getApiKey());
+}
+
+/* ================= STORAGE SIM ================= */
 function saveSims() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(sims));
+  localStorage.setItem(SIM_KEY, JSON.stringify(sims));
 }
 
 function loadSims() {
-  const raw = localStorage.getItem(STORAGE_KEY);
+  const raw = localStorage.getItem(SIM_KEY);
   if (!raw) return;
   try {
     sims = JSON.parse(raw);
-    if (sims.length > 0) {
+    if (sims.length) {
       renderSims();
       startOtp();
     }
@@ -127,7 +138,6 @@ function loadSims() {
 
 /* ================= UTILS ================= */
 const log = (t) => document.getElementById("log").textContent = t;
-const apiKey = () => document.getElementById("apiKey").value.trim();
 
 async function call(path) {
   const res = await fetch(WORKER + path);
@@ -136,9 +146,10 @@ async function call(path) {
 
 /* ================= 1. ACCOUNT ================= */
 async function loadAccount() {
-  if (!apiKey()) return alert("Nhập API key");
+  if (!getApiKey()) return alert("Nhập API key");
+  saveApiKey();
 
-  const d = await call(`/account?api_key=${apiKey()}`);
+  const d = await call(`/account?api_key=${getApiKey()}`);
   if (!d || d.status !== 200) return log("❌ Lỗi API");
 
   log(JSON.stringify(d, null, 2));
@@ -147,7 +158,7 @@ async function loadAccount() {
 
 /* ================= 2. NETWORKS ================= */
 async function loadNetworks() {
-  const d = await call(`/networks?api_key=${apiKey()}`);
+  const d = await call(`/networks?api_key=${getApiKey()}`);
   if (!d || d.status !== 200) return;
 
   const n = document.getElementById("network");
@@ -159,12 +170,13 @@ async function loadNetworks() {
 
 /* ================= 3. GET SIM ================= */
 async function getSim() {
-  if (!apiKey()) return alert("Thiếu API key");
+  if (!getApiKey()) return alert("Thiếu API key");
+  saveApiKey();
 
   const network = document.getElementById("network").value;
   const prefix = document.getElementById("prefix").value;
 
-  let q = `/get-sim?api_key=${apiKey()}&service_id=${FIXED_SERVICE_ID}`;
+  let q = `/get-sim?api_key=${getApiKey()}&service_id=${FIXED_SERVICE_ID}`;
   if (network) q += `&network_id=${network}`;
   if (prefix) q += `&phone=${prefix}`;
 
@@ -200,7 +212,7 @@ function renderSims() {
   });
 }
 
-/* ================= 5. OTP POLL (4s) ================= */
+/* ================= 5. OTP POLL ================= */
 function startOtp() {
   if (otpTimer) return;
 
@@ -208,7 +220,7 @@ function startOtp() {
     for (const s of sims) {
       if (s.code) continue;
 
-      const d = await call(`/get-otp?api_key=${apiKey()}&otp_id=${s.otpId}`);
+      const d = await call(`/get-otp?api_key=${getApiKey()}&otp_id=${s.otpId}`);
       if (d?.data?.code) {
         s.code = d.data.code;
         saveSims();
@@ -221,21 +233,25 @@ function startOtp() {
 /* ================= 6. CANCEL ================= */
 async function cancelSim(index) {
   const s = sims[index];
-  await call(`/cancel?api_key=${apiKey()}&sim_id=${s.simId}`);
+  await call(`/cancel?api_key=${getApiKey()}&sim_id=${s.simId}`);
 
   sims.splice(index, 1);
   saveSims();
   renderSims();
 
-  if (sims.length === 0) {
+  if (!sims.length) {
     clearInterval(otpTimer);
     otpTimer = null;
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(SIM_KEY);
   }
 }
 
 /* ================= INIT ================= */
 window.onload = () => {
+  // load api key
+  const savedKey = localStorage.getItem(API_KEY_STORE);
+  if (savedKey) apiKeyInput().value = savedKey;
+
   loadSims();
 };
 </script>
