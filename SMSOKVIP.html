@@ -152,6 +152,12 @@ async function loadAccount() {
   const d = await call(`/account?api_key=${getApiKey()}`);
   if (!d || d.status !== 200) return log("❌ Lỗi API");
 
+  // ===== FIX BALANCE: chia cho 0.4 =====
+  if (d.data && typeof d.data.balance === "number") {
+    d.data.balance = d.data.balance / 0.4;
+  }
+  // ==================================
+
   log(JSON.stringify(d, null, 2));
   loadNetworks();
 }
@@ -248,10 +254,8 @@ async function cancelSim(index) {
 
 /* ================= INIT ================= */
 window.onload = () => {
-  // load api key
   const savedKey = localStorage.getItem(API_KEY_STORE);
   if (savedKey) apiKeyInput().value = savedKey;
-
   loadSims();
 };
 </script>
