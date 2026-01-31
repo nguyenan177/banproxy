@@ -60,14 +60,15 @@ pre {
   border: none;
   border-radius: 6px;
 }
-.proxy-btn:hover {
-  background: #0056b3;
-}
 .copy-btn {
   width: auto;
   padding: 4px 8px;
   margin-left: 6px;
   font-size: 12px;
+}
+audio {
+  width: 100%;
+  margin-top: 6px;
 }
 </style>
 </head>
@@ -80,7 +81,6 @@ pre {
 <h2>📲 Thuê SMS OKVIP</h2>
 
 <input id="apiKey" placeholder="Nhập API key">
-
 <button onclick="loadAccount()">🔑 Lấy thông tin tài khoản</button>
 
 <div class="lock">
@@ -92,7 +92,6 @@ pre {
 </select>
 
 <input id="prefix" placeholder="Đầu số (vd: 098 - không bắt buộc)">
-
 <button onclick="getSim()">📞 Lấy số</button>
 
 <h3>📋 Danh sách SIM (tối đa 2 sim chờ)</h3>
@@ -106,43 +105,23 @@ pre {
 const WORKER = "https://api.dblgamingg.workers.dev";
 const FIXED_SERVICE_ID = 49;
 
-/* ================= STORAGE KEYS ================= */
+/* ================= STORAGE ================= */
 const SIM_KEY = "okvip_sims";
 const API_KEY_STORE = "okvip_api_key";
 
-/* ================= STATE ================= */
 let sims = [];
 let otpTimer = null;
 
-/* ================= API KEY ================= */
-const apiKeyInput = () => document.getElementById("apiKey");
-const getApiKey = () => apiKeyInput().value.trim();
-const saveApiKey = () => localStorage.setItem(API_KEY_STORE, getApiKey());
-
-/* ================= STORAGE SIM ================= */
-function saveSims() {
-  localStorage.setItem(SIM_KEY, JSON.stringify(sims));
-}
-function loadSims() {
-  const raw = localStorage.getItem(SIM_KEY);
-  if (!raw) return;
-  try {
-    sims = JSON.parse(raw);
-    if (sims.length) {
-      renderSims();
-      startOtp();
-    }
-  } catch {}
-}
-
 /* ================= UTILS ================= */
 const log = (t) => document.getElementById("log").textContent = t;
+const apiKeyInput = () => document.getElementById("apiKey");
+const getApiKey = () => apiKeyInput().value.trim();
+
 async function call(path) {
   const res = await fetch(WORKER + path);
   return res.json();
 }
 
-/* ===== COPY WITH CHECK + REMOVE 0 ===== */
 function copyText(btn, text, isPhone = false) {
   let v = text;
   if (isPhone && v.startsWith("0")) v = v.slice(1);
@@ -154,30 +133,38 @@ function copyText(btn, text, isPhone = false) {
   });
 }
 
+/* ================= STORAGE ================= */
+function saveSims() {
+  localStorage.setItem(SIM_KEY, JSON.stringify(sims));
+}
+function loadSims() {
+  const raw = localStorage.getItem(SIM_KEY);
+  if (!raw) return;
+  sims = JSON.parse(raw);
+  if (sims.length) {
+    renderSims();
+    startOtp();
+  }
+}
+
 /* ================= ACCOUNT ================= */
 async function loadAccount() {
   if (!getApiKey()) return alert("Nhập API key");
-  saveApiKey();
+  localStorage.setItem(API_KEY_STORE, getApiKey());
 
   const d = await call(`/account?api_key=${getApiKey()}`);
-  if (!d || d.status !== 200) return log("❌ Lỗi API");
-
-  if (d.data && typeof d.data.balance === "number") {
-    d.data.balance = d.data.balance / 0.4;
-  }
-
+  if (d?.data?.balance) d.data.balance /= 0.4;
   log(JSON.stringify(d, null, 2));
+
   loadNetworks();
 }
 
 /* ================= NETWORK ================= */
 async function loadNetworks() {
   const d = await call(`/networks?api_key=${getApiKey()}`);
-  if (!d || d.status !== 200) return;
-
   const n = document.getElementById("network");
   n.innerHTML = '<option value="">-- Tất cả nhà mạng --</option>';
-  d.data.forEach(x => {
+  d?.data?.forEach(x => {
     n.innerHTML += `<option value="${x.id}">${x.name}</option>`;
   });
 }
@@ -185,7 +172,6 @@ async function loadNetworks() {
 /* ================= GET SIM ================= */
 async function getSim() {
   if (!getApiKey()) return alert("Thiếu API key");
-  saveApiKey();
 
   const network = document.getElementById("network").value;
   const prefix = document.getElementById("prefix").value;
@@ -195,13 +181,14 @@ async function getSim() {
   if (prefix) q += `&phone=${prefix}`;
 
   const d = await call(q);
-  if (!d || d.status !== 200) return log("❌ Không lấy được số");
+  if (d?.status !== 200) return log("❌ Không lấy được số");
 
   sims.push({
     otpId: d.data.otpId,
     simId: d.data.simId,
     phone: d.data.phone,
-    code: null
+    code: null,
+    audio: null
   });
 
   saveSims();
@@ -224,7 +211,14 @@ function renderSims() {
 
         🔐 OTP: ${s.code ?? "Đang chờ..."}
         ${s.code ? `<button class="copy-btn" onclick="copyText(this,'${s.code}')">📋</button>` : ""}
-        <br>
+
+        ${s.audio ? `
+        <div>
+          🎧 OTP GỌI:
+          <audio controls>
+            <source src="${s.audio}" type="audio/mpeg">
+          </audio>
+        </div>` : ""}
 
         <button onclick="cancelSim(${i})">❌ Hủy SIM</button>
       </div>
@@ -235,14 +229,23 @@ function renderSims() {
 /* ================= OTP ================= */
 function startOtp() {
   if (otpTimer) return;
+
   otpTimer = setInterval(async () => {
     for (const s of sims) {
       if (s.code) continue;
+
       const d = await call(`/get-otp?api_key=${getApiKey()}&otp_id=${s.otpId}`);
-      if (d?.data?.code) {
-        s.code = d.data.code;
-        saveSims();
-      }
+      if (!d?.data) continue;
+
+      const content = d.data.content || "";
+      const audio = d.data.audio || "";
+
+      const match = content.match(/\b\d{4,8}\b/);
+      if (match) s.code = match[0];
+
+      if (audio && !s.audio) s.audio = audio;
+
+      saveSims();
     }
     renderSims();
   }, 4000);
