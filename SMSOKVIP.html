@@ -24,18 +24,14 @@ input, select, button {
   padding: 10px;
   margin: 6px 0;
 }
-button {
-  cursor: pointer;
-}
+button { cursor: pointer; }
 .sim {
   border: 1px solid #ddd;
   padding: 10px;
   margin-top: 10px;
   border-radius: 6px;
 }
-.sim b {
-  font-size: 16px;
-}
+.sim b { font-size: 16px; }
 pre {
   background: #111;
   color: #0f0;
@@ -69,6 +65,10 @@ pre {
 audio {
   width: 100%;
   margin-top: 6px;
+}
+.done {
+  color: green;
+  font-weight: bold;
 }
 </style>
 </head>
@@ -125,7 +125,6 @@ async function call(path) {
 function copyText(btn, text, isPhone = false) {
   let v = text;
   if (isPhone && v.startsWith("0")) v = v.slice(1);
-
   navigator.clipboard.writeText(v).then(() => {
     const old = btn.textContent;
     btn.textContent = "✅";
@@ -188,7 +187,8 @@ async function getSim() {
     simId: d.data.simId,
     phone: d.data.phone,
     code: null,
-    audio: null
+    audio: null,
+    done: false
   });
 
   saveSims();
@@ -209,13 +209,14 @@ function renderSims() {
 
         🆔 OTP ID: ${s.otpId}<br>
 
-        🔐 OTP: ${s.code ?? "Đang chờ..."}
+        🔐 OTP:
+        ${s.code ? `<span class="done">${s.code}</span>` : "Đang chờ..."}
         ${s.code ? `<button class="copy-btn" onclick="copyText(this,'${s.code}')">📋</button>` : ""}
 
         ${s.audio ? `
         <div>
-          🎧 OTP GỌI:
-          <audio controls>
+          🎧 OTP GỌI (vui lòng nghe):
+          <audio controls preload="none">
             <source src="${s.audio}" type="audio/mpeg">
           </audio>
         </div>` : ""}
@@ -226,13 +227,15 @@ function renderSims() {
   });
 }
 
-/* ================= OTP ================= */
+/* ================= OTP POLLING ================= */
 function startOtp() {
   if (otpTimer) return;
 
   otpTimer = setInterval(async () => {
+    let changed = false;
+
     for (const s of sims) {
-      if (s.code) continue;
+      if (s.done) continue;
 
       const d = await call(`/get-otp?api_key=${getApiKey()}&otp_id=${s.otpId}`);
       if (!d?.data) continue;
@@ -240,14 +243,28 @@ function startOtp() {
       const content = d.data.content || "";
       const audio = d.data.audio || "";
 
+      // SMS OTP
       const match = content.match(/\b\d{4,8}\b/);
-      if (match) s.code = match[0];
+      if (match) {
+        s.code = match[0];
+        s.done = true;
+        changed = true;
+        continue;
+      }
 
-      if (audio && !s.audio) s.audio = audio;
-
-      saveSims();
+      // VOICE OTP
+      if (audio) {
+        s.audio = audio;
+        s.done = true;
+        changed = true;
+      }
     }
-    renderSims();
+
+    if (changed) {
+      saveSims();
+      renderSims();
+    }
+
   }, 4000);
 }
 
