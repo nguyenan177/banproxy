@@ -24,46 +24,18 @@ input, select, button {
   padding: 10px;
   margin: 6px 0;
 }
-button { cursor: pointer; }
-
+button {
+  cursor: pointer;
+}
 .sim {
   border: 1px solid #ddd;
   padding: 10px;
   margin-top: 10px;
   border-radius: 6px;
 }
-.sim b { font-size: 16px; }
-
-.inline {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 4px 0;
+.sim b {
+  font-size: 16px;
 }
-
-/* COPY ICON */
-.copy-icon {
-  width: 26px;
-  height: 26px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: #e9ecef;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  user-select: none;
-}
-.copy-icon:hover {
-  background: #007bff;
-  color: #fff;
-}
-.copy-icon.done {
-  background: #28a745;
-  color: #fff;
-}
-
 pre {
   background: #111;
   color: #0f0;
@@ -88,6 +60,15 @@ pre {
   border: none;
   border-radius: 6px;
 }
+.proxy-btn:hover {
+  background: #0056b3;
+}
+.copy-btn {
+  width: auto;
+  padding: 4px 8px;
+  margin-left: 6px;
+  font-size: 12px;
+}
 </style>
 </head>
 
@@ -99,6 +80,7 @@ pre {
 <h2>📲 Thuê SMS OKVIP</h2>
 
 <input id="apiKey" placeholder="Nhập API key">
+
 <button onclick="loadAccount()">🔑 Lấy thông tin tài khoản</button>
 
 <div class="lock">
@@ -110,6 +92,7 @@ pre {
 </select>
 
 <input id="prefix" placeholder="Đầu số (vd: 098 - không bắt buộc)">
+
 <button onclick="getSim()">📞 Lấy số</button>
 
 <h3>📋 Danh sách SIM (tối đa 2 sim chờ)</h3>
@@ -119,73 +102,100 @@ pre {
 </div>
 
 <script>
+/* ================= CONFIG ================= */
 const WORKER = "https://api.dblgamingg.workers.dev";
 const FIXED_SERVICE_ID = 49;
+
+/* ================= STORAGE KEYS ================= */
 const SIM_KEY = "okvip_sims";
 const API_KEY_STORE = "okvip_api_key";
 
+/* ================= STATE ================= */
 let sims = [];
 let otpTimer = null;
 
+/* ================= API KEY ================= */
 const apiKeyInput = () => document.getElementById("apiKey");
 const getApiKey = () => apiKeyInput().value.trim();
 const saveApiKey = () => localStorage.setItem(API_KEY_STORE, getApiKey());
+
+/* ================= STORAGE SIM ================= */
+function saveSims() {
+  localStorage.setItem(SIM_KEY, JSON.stringify(sims));
+}
+function loadSims() {
+  const raw = localStorage.getItem(SIM_KEY);
+  if (!raw) return;
+  try {
+    sims = JSON.parse(raw);
+    if (sims.length) {
+      renderSims();
+      startOtp();
+    }
+  } catch {}
+}
+
+/* ================= UTILS ================= */
 const log = (t) => document.getElementById("log").textContent = t;
-
 async function call(path) {
-  const r = await fetch(WORKER + path);
-  return r.json();
+  const res = await fetch(WORKER + path);
+  return res.json();
 }
 
-/* COPY WITH CHECK */
-function copyWithCheck(el, text, msg) {
-  navigator.clipboard.writeText(text);
-  const old = el.textContent;
-  el.textContent = "✅";
-  el.classList.add("done");
-  log(msg);
+/* ===== COPY WITH CHECK + REMOVE 0 ===== */
+function copyText(btn, text, isPhone = false) {
+  let v = text;
+  if (isPhone && v.startsWith("0")) v = v.slice(1);
 
-  setTimeout(() => {
-    el.textContent = old;
-    el.classList.remove("done");
-  }, 1500);
+  navigator.clipboard.writeText(v).then(() => {
+    const old = btn.textContent;
+    btn.textContent = "✅";
+    setTimeout(() => btn.textContent = old, 1200);
+  });
 }
 
-function copyPhone(el, phone) {
-  const p = phone.startsWith("0") ? phone.slice(1) : phone;
-  copyWithCheck(el, p, "📋 Đã copy SĐT: " + p);
-}
-
-function copyOtp(el, code) {
-  if (!code) return;
-  copyWithCheck(el, code, "📋 Đã copy OTP: " + code);
-}
-
-/* ACCOUNT */
+/* ================= ACCOUNT ================= */
 async function loadAccount() {
   if (!getApiKey()) return alert("Nhập API key");
   saveApiKey();
+
   const d = await call(`/account?api_key=${getApiKey()}`);
-  if (d?.data?.balance) d.data.balance /= 0.4;
+  if (!d || d.status !== 200) return log("❌ Lỗi API");
+
+  if (d.data && typeof d.data.balance === "number") {
+    d.data.balance = d.data.balance / 0.4;
+  }
+
   log(JSON.stringify(d, null, 2));
   loadNetworks();
 }
 
+/* ================= NETWORK ================= */
 async function loadNetworks() {
   const d = await call(`/networks?api_key=${getApiKey()}`);
+  if (!d || d.status !== 200) return;
+
   const n = document.getElementById("network");
   n.innerHTML = '<option value="">-- Tất cả nhà mạng --</option>';
-  d.data?.forEach(x => n.innerHTML += `<option value="${x.id}">${x.name}</option>`);
+  d.data.forEach(x => {
+    n.innerHTML += `<option value="${x.id}">${x.name}</option>`;
+  });
 }
 
-/* GET SIM */
+/* ================= GET SIM ================= */
 async function getSim() {
+  if (!getApiKey()) return alert("Thiếu API key");
+  saveApiKey();
+
+  const network = document.getElementById("network").value;
+  const prefix = document.getElementById("prefix").value;
+
   let q = `/get-sim?api_key=${getApiKey()}&service_id=${FIXED_SERVICE_ID}`;
-  if (network.value) q += `&network_id=${network.value}`;
-  if (prefix.value) q += `&phone=${prefix.value}`;
+  if (network) q += `&network_id=${network}`;
+  if (prefix) q += `&phone=${prefix}`;
 
   const d = await call(q);
-  if (!d?.data) return log("❌ Không lấy được số");
+  if (!d || d.status !== 200) return log("❌ Không lấy được số");
 
   sims.push({
     otpId: d.data.otpId,
@@ -194,12 +204,12 @@ async function getSim() {
     code: null
   });
 
-  localStorage.setItem(SIM_KEY, JSON.stringify(sims));
+  saveSims();
   renderSims();
   startOtp();
 }
 
-/* RENDER */
+/* ================= RENDER ================= */
 function renderSims() {
   const box = document.getElementById("simList");
   box.innerHTML = "";
@@ -207,53 +217,58 @@ function renderSims() {
   sims.forEach((s, i) => {
     box.innerHTML += `
       <div class="sim">
-        <div class="inline">
-          <b>📞 ${s.phone}</b>
-          <span class="copy-icon"
-            onclick="copyPhone(this,'${s.phone}')">📋</span>
-        </div>
+        <b>📞 ${s.phone}</b>
+        <button class="copy-btn" onclick="copyText(this,'${s.phone}',true)">📋</button><br>
 
-        <div class="inline">
-          🔐 OTP: ${s.code ?? "Đang chờ..."}
-          ${s.code ? `
-          <span class="copy-icon"
-            onclick="copyOtp(this,'${s.code}')">📋</span>` : ""}
-        </div>
+        🆔 OTP ID: ${s.otpId}<br>
 
-        🆔 OTP ID: ${s.otpId}<br><br>
+        🔐 OTP: ${s.code ?? "Đang chờ..."}
+        ${s.code ? `<button class="copy-btn" onclick="copyText(this,'${s.code}')">📋</button>` : ""}
+        <br>
+
         <button onclick="cancelSim(${i})">❌ Hủy SIM</button>
       </div>
     `;
   });
 }
 
-/* OTP */
+/* ================= OTP ================= */
 function startOtp() {
   if (otpTimer) return;
   otpTimer = setInterval(async () => {
     for (const s of sims) {
       if (s.code) continue;
       const d = await call(`/get-otp?api_key=${getApiKey()}&otp_id=${s.otpId}`);
-      if (d?.data?.code) s.code = d.data.code;
+      if (d?.data?.code) {
+        s.code = d.data.code;
+        saveSims();
+      }
     }
-    localStorage.setItem(SIM_KEY, JSON.stringify(sims));
     renderSims();
   }, 4000);
 }
 
-async function cancelSim(i) {
-  await call(`/cancel?api_key=${getApiKey()}&sim_id=${sims[i].simId}`);
-  sims.splice(i, 1);
-  localStorage.setItem(SIM_KEY, JSON.stringify(sims));
+/* ================= CANCEL ================= */
+async function cancelSim(index) {
+  const s = sims[index];
+  await call(`/cancel?api_key=${getApiKey()}&sim_id=${s.simId}`);
+
+  sims.splice(index, 1);
+  saveSims();
   renderSims();
+
+  if (!sims.length) {
+    clearInterval(otpTimer);
+    otpTimer = null;
+    localStorage.removeItem(SIM_KEY);
+  }
 }
 
-/* INIT */
+/* ================= INIT ================= */
 window.onload = () => {
-  const k = localStorage.getItem(API_KEY_STORE);
-  if (k) apiKeyInput().value = k;
-  const s = localStorage.getItem(SIM_KEY);
-  if (s) { sims = JSON.parse(s); renderSims(); startOtp(); }
+  const savedKey = localStorage.getItem(API_KEY_STORE);
+  if (savedKey) apiKeyInput().value = savedKey;
+  loadSims();
 };
 </script>
 </body>
