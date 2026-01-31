@@ -24,17 +24,19 @@ input, select, button {
   padding: 10px;
   margin: 6px 0;
 }
-button {
-  cursor: pointer;
-}
+button { cursor: pointer; }
 .sim {
   border: 1px solid #ddd;
   padding: 10px;
   margin-top: 10px;
   border-radius: 6px;
 }
-.sim b {
-  font-size: 16px;
+.sim b { font-size: 16px; }
+.copy-btn {
+  width: auto;
+  padding: 4px 10px;
+  margin-left: 6px;
+  font-size: 12px;
 }
 pre {
   background: #111;
@@ -60,9 +62,6 @@ pre {
   border: none;
   border-radius: 6px;
 }
-.proxy-btn:hover {
-  background: #0056b3;
-}
 </style>
 </head>
 
@@ -74,7 +73,6 @@ pre {
 <h2>📲 Thuê SMS OKVIP</h2>
 
 <input id="apiKey" placeholder="Nhập API key">
-
 <button onclick="loadAccount()">🔑 Lấy thông tin tài khoản</button>
 
 <div class="lock">
@@ -86,7 +84,6 @@ pre {
 </select>
 
 <input id="prefix" placeholder="Đầu số (vd: 098 - không bắt buộc)">
-
 <button onclick="getSim()">📞 Lấy số</button>
 
 <h3>📋 Danh sách SIM (tối đa 2 sim chờ)</h3>
@@ -96,95 +93,106 @@ pre {
 </div>
 
 <script>
-/* ================= CONFIG ================= */
 const WORKER = "https://api.dblgamingg.workers.dev";
 const FIXED_SERVICE_ID = 49;
 
-/* ================= STORAGE KEYS ================= */
 const SIM_KEY = "okvip_sims";
 const API_KEY_STORE = "okvip_api_key";
 
-/* ================= STATE ================= */
 let sims = [];
 let otpTimer = null;
 
-/* ================= API KEY FIX ================= */
+/* ===== AUDIO ===== */
+let audioCtx = null;
+function unlockAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === "suspended") audioCtx.resume();
+}
+function playBeep(freq = 1200, gainValue = 0.05, duration = 0.08) {
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = "sine";
+  osc.frequency.value = freq;
+  gain.gain.value = gainValue;
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + duration);
+}
+
+/* ===== loading anim ===== */
+let loadingDot = 0;
+setInterval(() => {
+  loadingDot = (loadingDot + 1) % 4;
+  renderSims();
+}, 500);
+
+/* ===== copy state ===== */
+let copiedState = {};
+
+/* ===== utils ===== */
+const log = t => document.getElementById("log").textContent = t;
 const apiKeyInput = () => document.getElementById("apiKey");
+const getApiKey = () => apiKeyInput().value.trim();
+const saveApiKey = () => localStorage.setItem(API_KEY_STORE, getApiKey());
+const stripZero = p => p.startsWith("0") ? p.slice(1) : p;
 
-function getApiKey() {
-  return apiKeyInput().value.trim();
+/* ===== copy ===== */
+function copyText(key, text) {
+  unlockAudio();
+  navigator.clipboard.writeText(text);
+  playBeep();
+  copiedState[key] = true;
+  setTimeout(() => {
+    delete copiedState[key];
+    renderSims();
+  }, 1500);
+  renderSims();
 }
-
-function saveApiKey() {
-  localStorage.setItem(API_KEY_STORE, getApiKey());
-}
-
-/* ================= STORAGE SIM ================= */
-function saveSims() {
-  localStorage.setItem(SIM_KEY, JSON.stringify(sims));
-}
-
-function loadSims() {
-  const raw = localStorage.getItem(SIM_KEY);
-  if (!raw) return;
-  try {
-    sims = JSON.parse(raw);
-    if (sims.length) {
-      renderSims();
-      startOtp();
-    }
-  } catch {}
-}
-
-/* ================= UTILS ================= */
-const log = (t) => document.getElementById("log").textContent = t;
 
 async function call(path) {
-  const res = await fetch(WORKER + path);
-  return res.json();
+  const r = await fetch(WORKER + path);
+  return r.json();
 }
 
-/* ================= 1. ACCOUNT ================= */
+/* ===== account ===== */
 async function loadAccount() {
+  unlockAudio();
+  playBeep(900, 0.04, 0.05);
+
   if (!getApiKey()) return alert("Nhập API key");
   saveApiKey();
 
   const d = await call(`/account?api_key=${getApiKey()}`);
   if (!d || d.status !== 200) return log("❌ Lỗi API");
 
-  // ===== FIX BALANCE: chia cho 0.4 =====
-  if (d.data && typeof d.data.balance === "number") {
-    d.data.balance = d.data.balance / 0.4;
-  }
-  // ==================================
-
+  if (d.data?.balance) d.data.balance /= 0.4;
   log(JSON.stringify(d, null, 2));
   loadNetworks();
 }
 
-/* ================= 2. NETWORKS ================= */
+/* ===== networks ===== */
 async function loadNetworks() {
   const d = await call(`/networks?api_key=${getApiKey()}`);
   if (!d || d.status !== 200) return;
 
-  const n = document.getElementById("network");
-  n.innerHTML = '<option value="">-- Tất cả nhà mạng --</option>';
+  network.innerHTML = '<option value="">-- Tất cả nhà mạng --</option>';
   d.data.forEach(x => {
-    n.innerHTML += `<option value="${x.id}">${x.name}</option>`;
+    network.innerHTML += `<option value="${x.id}">${x.name}</option>`;
   });
 }
 
-/* ================= 3. GET SIM ================= */
+/* ===== get sim ===== */
 async function getSim() {
+  unlockAudio();
+
   if (!getApiKey()) return alert("Thiếu API key");
   saveApiKey();
 
-  const network = document.getElementById("network").value;
-  const prefix = document.getElementById("prefix").value;
-
   let q = `/get-sim?api_key=${getApiKey()}&service_id=${FIXED_SERVICE_ID}`;
-  if (network) q += `&network_id=${network}`;
-  if (prefix) q += `&phone=${prefix}`;
+  if (network.value) q += `&network_id=${network.value}`;
+  if (prefix.value) q += `&phone=${prefix.value}`;
 
   const d = await call(q);
   if (!d || d.status !== 200) return log("❌ Không lấy được số");
@@ -201,24 +209,54 @@ async function getSim() {
   startOtp();
 }
 
-/* ================= 4. RENDER ================= */
+/* ===== storage ===== */
+const saveSims = () => localStorage.setItem(SIM_KEY, JSON.stringify(sims));
+const loadSims = () => {
+  const r = localStorage.getItem(SIM_KEY);
+  if (!r) return;
+  sims = JSON.parse(r);
+  renderSims();
+  startOtp();
+};
+
+/* ===== render ===== */
 function renderSims() {
   const box = document.getElementById("simList");
+  if (!box) return;
   box.innerHTML = "";
 
+  const dots = ".".repeat(loadingDot || 1);
+
   sims.forEach((s, i) => {
+    const phoneKey = "p" + s.phone;
+    const otpKey = "o" + s.otpId;
+
     box.innerHTML += `
-      <div class="sim">
-        <b>📞 ${s.phone}</b><br>
-        🆔 OTP ID: ${s.otpId}<br>
-        🔐 OTP: ${s.code ?? "Đang chờ..."}<br>
-        <button onclick="cancelSim(${i})">❌ Hủy SIM</button>
-      </div>
-    `;
+    <div class="sim">
+      <b>📞 ${s.phone}</b>
+      <button class="copy-btn"
+        onclick="copyText('${phoneKey}','${stripZero(s.phone)}')">
+        ${copiedState[phoneKey] ? "✅" : "📋"}
+      </button><br>
+
+      🆔 OTP ID: ${s.otpId}<br>
+
+      🔐 OTP: ${
+        s.code
+        ? `${s.code}
+          <button class="copy-btn"
+            onclick="copyText('${otpKey}','${s.code}')">
+            ${copiedState[otpKey] ? "✅" : "📋"}
+          </button>`
+        : `Đang chờ${dots}`
+      }<br>
+
+      <button onclick="cancelSim(${i})">❌ Hủy SIM</button>
+    </div>`;
   });
 }
 
-/* ================= 5. OTP POLL ================= */
+/* ===== otp poll (OTP VỀ KÊU TO) ===== */
 function startOtp() {
   if (otpTimer) return;
 
@@ -230,32 +268,28 @@ function startOtp() {
       if (d?.data?.code) {
         s.code = d.data.code;
         saveSims();
+
+        // 🔊 OTP VỀ → ÂM THANH TO + DÀI
+        unlockAudio();
+        playBeep(1500, 0.15, 0.35);
       }
     }
-    renderSims();
   }, 4000);
 }
 
-/* ================= 6. CANCEL ================= */
-async function cancelSim(index) {
-  const s = sims[index];
-  await call(`/cancel?api_key=${getApiKey()}&sim_id=${s.simId}`);
-
-  sims.splice(index, 1);
+/* ===== cancel ===== */
+async function cancelSim(i) {
+  await call(`/cancel?api_key=${getApiKey()}&sim_id=${sims[i].simId}`);
+  sims.splice(i, 1);
   saveSims();
   renderSims();
-
-  if (!sims.length) {
-    clearInterval(otpTimer);
-    otpTimer = null;
-    localStorage.removeItem(SIM_KEY);
-  }
+  if (!sims.length) clearInterval(otpTimer);
 }
 
-/* ================= INIT ================= */
+/* ===== init ===== */
 window.onload = () => {
-  const savedKey = localStorage.getItem(API_KEY_STORE);
-  if (savedKey) apiKeyInput().value = savedKey;
+  const k = localStorage.getItem(API_KEY_STORE);
+  if (k) apiKeyInput().value = k;
   loadSims();
 };
 </script>
