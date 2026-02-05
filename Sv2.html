@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>thuê SMS OKVIP</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #f2f2f2;
+  padding: 20px;
+}
+.box {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  max-width: 820px;
+  margin: auto;
+  position: relative;
+}
+input, select, button {
+  width: 100%;
+  padding: 10px;
+  margin: 6px 0;
+}
+button { cursor: pointer; }
+.sim {
+  border: 1px solid #ddd;
+  padding: 10px;
+  margin-top: 10px;
+  border-radius: 6px;
+}
+.sim b { font-size: 16px; }
+pre {
+  background: #111;
+  color: #0f0;
+  padding: 12px;
+  height: 180px;
+  overflow: auto;
+}
+.lock {
+  background: #eee;
+  padding: 10px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+.done {
+  color: green;
+  font-weight: bold;
+}
+</style>
+</head>
+
+<body>
+<div class="box">
+
+<h2>📲 Thuê SMS OKVIP</h2>
+
+<input id="apiKey" placeholder="Nhập API key">
+<button onclick="loadAccount()">🔑 Lấy thông tin tài khoản</button>
+
+<div class="lock">
+  🔒 <b>Thuê sms:</b> Other – <b>Giá theo API</b>
+</div>
+
+<select id="operator">
+  <option value="">-- Tất cả nhà mạng --</option>
+  <option value="viettel">Viettel</option>
+  <option value="mobifone">Mobifone</option>
+  <option value="vinaphone">Vinaphone</option>
+  <option value="vietnamobile">Vietnamobile</option>
+</select>
+
+<button onclick="getSim()">📞 Lấy số</button>
+
+<h3>📋 Danh sách SIM</h3>
+<div id="simList"></div>
+
+<pre id="log">Sẵn sàng</pre>
+</div>
+
+<script>
+/* ================= CONFIG ================= */
+const WORKER = "https://apiv2.dblgamingg.workers.dev/";
+const SERVICE = "other";
+
+/* ================= STORAGE (EAGLEOTP) ================= */
+const SIM_KEY = "eagleotp_sim";
+const API_KEY_STORE = "eagleotp_api_key";
+
+let sims = [];
+let timer = null;
+
+/* ================= UTILS ================= */
+const log = (t) => document.getElementById("log").textContent = t;
+const apiKeyInput = () => document.getElementById("apiKey");
+const getApiKey = () => apiKeyInput().value.trim();
+
+function saveKey() {
+  localStorage.setItem(API_KEY_STORE, getApiKey());
+}
+
+async function call(params) {
+  saveKey();
+  const url = WORKER + "?" + new URLSearchParams({
+    ...params,
+    apikey: getApiKey()
+  });
+  return fetch(url).then(r => r.json());
+}
+
+/* ================= LOAD LOCAL ================= */
+function loadLocal() {
+  const k = localStorage.getItem(API_KEY_STORE);
+  if (k) apiKeyInput().value = k;
+
+  const raw = localStorage.getItem(SIM_KEY);
+  if (raw) {
+    sims = JSON.parse(raw);
+    renderSims();
+    startTimer();
+  }
+}
+
+/* ================= ACCOUNT ================= */
+async function loadAccount() {
+  if (!getApiKey()) return alert("Nhập API key");
+  const d = await call({ action: "account" });
+  if (d.ResponseCode === 0) {
+    d.Result.balance = Math.floor(d.Result.balance * 1.4);
+  }
+  log(JSON.stringify(d, null, 2));
+}
+
+/* ================= GET SIM ================= */
+async function getSim() {
+  const op = document.getElementById("operator").value;
+  const q = { action: "number", service: SERVICE };
+  if (op) q.operator = op;
+
+  const d = await call(q);
+  if (d.ResponseCode !== 0) return log("❌ Không lấy được số");
+
+  sims.push({
+    id: d.Result.id,
+    phone: d.Result.number,
+    end: new Date(d.Result.end).getTime(),
+    otp: null
+  });
+
+  saveSims();
+  renderSims();
+  startTimer();
+}
+
+/* ================= RENDER ================= */
+function renderSims() {
+  const box = document.getElementById("simList");
+  box.innerHTML = "";
+
+  sims.forEach(s => {
+    box.innerHTML += `
+      <div class="sim">
+        <b>📞 ${s.phone}</b><br>
+        🆔 ID: ${s.id}<br>
+        🔐 OTP:
+        ${s.otp ? `<span class="done">${s.otp}</span>` : "Đang chờ..."}<br>
+        ⏱️ <span id="t-${s.id}"></span>
+      </div>
+    `;
+  });
+}
+
+/* ================= TIMER + AUTO CLEAR ================= */
+function startTimer() {
+  if (timer) return;
+  timer = setInterval(() => {
+    const now = Date.now();
+    let changed = false;
+
+    sims = sims.filter(s => {
+      const left = Math.floor((s.end - now) / 1000);
+      const el = document.getElementById("t-" + s.id);
+      if (el) el.textContent = left > 0 ? `${left}s` : "Hết hạn";
+      if (left <= 0) changed = true;
+      return left > 0;
+    });
+
+    if (changed) {
+      saveSims();
+      renderSims();
+    }
+
+    if (!sims.length) {
+      clearInterval(timer);
+      timer = null;
+      localStorage.removeItem(SIM_KEY);
+    }
+  }, 1000);
+}
+
+/* ================= OTP POLLING ================= */
+async function pollOtp() {
+  for (const s of sims) {
+    if (s.otp) continue;
+    const d = await call({ action: "code", id: s.id });
+    if (d.ResponseCode === 0 && d.Result.otp) {
+      s.otp = d.Result.otp;
+      saveSims();
+      renderSims();
+    }
+  }
+}
+setInterval(pollOtp, 4000);
+
+/* ================= STORAGE ================= */
+function saveSims() {
+  localStorage.setItem(SIM_KEY, JSON.stringify(sims));
+}
+
+window.onload = loadLocal;
+</script>
+</body>
+</html>
