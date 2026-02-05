@@ -56,6 +56,18 @@ pre {
   border: none;
   border-radius: 6px;
 }
+.sv2-btn {
+  position: absolute;
+  top: 15px;
+  right: 120px;
+  width: auto;
+  padding: 8px 14px;
+  background: #28a745;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
 .copy-btn {
   width: auto;
   padding: 4px 8px;
@@ -76,6 +88,7 @@ audio {
 <body>
 <div class="box">
 
+<button class="sv2-btn" onclick="window.location.href='Sv2.html'">⚡ SV2</button>
 <button class="proxy-btn" onclick="window.location.href='index.html'">🌐 PROXY</button>
 
 <h2>📲 Thuê SMS OKVIP</h2>
@@ -243,7 +256,6 @@ function startOtp() {
       const content = d.data.content || "";
       const audio = d.data.audio || "";
 
-      // SMS OTP
       const match = content.match(/\b\d{4,8}\b/);
       if (match) {
         s.code = match[0];
@@ -252,7 +264,6 @@ function startOtp() {
         continue;
       }
 
-      // VOICE OTP
       if (audio) {
         s.audio = audio;
         s.done = true;
