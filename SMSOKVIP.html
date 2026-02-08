@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>thuê SMS OKVIP</title>
+<title>Thuê SMS OKVIP</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
@@ -114,6 +114,17 @@ audio {
 </div>
 
 <script>
+/* ================= CHỐNG INSPECT (KHÔNG CHẶN CTRL+A) ================= */
+document.addEventListener("contextmenu", e => e.preventDefault());
+
+document.addEventListener("keydown", e => {
+  if (e.key === "F12") e.preventDefault();
+  if (e.ctrlKey && e.key.toLowerCase() === "u") e.preventDefault();
+  if (e.ctrlKey && e.shiftKey && ["i","j","c"].includes(e.key.toLowerCase())) e.preventDefault();
+  if (e.ctrlKey && ["s","p"].includes(e.key.toLowerCase())) e.preventDefault();
+  if (e.ctrlKey && e.key.toLowerCase() === "a") return;
+});
+
 /* ================= CONFIG ================= */
 const WORKER = "https://api.dblgamingg.workers.dev";
 const FIXED_SERVICE_ID = 49;
@@ -167,7 +178,6 @@ async function loadAccount() {
   const d = await call(`/account?api_key=${getApiKey()}`);
   if (d?.data?.balance) d.data.balance /= 0.4;
   log(JSON.stringify(d, null, 2));
-
   loadNetworks();
 }
 
@@ -228,7 +238,7 @@ function renderSims() {
 
         ${s.audio ? `
         <div>
-          🎧 OTP GỌI (vui lòng nghe):
+          🎧 OTP GỌI:
           <audio controls preload="none">
             <source src="${s.audio}" type="audio/mpeg">
           </audio>
@@ -302,5 +312,6 @@ window.onload = () => {
   loadSims();
 };
 </script>
+
 </body>
 </html>
