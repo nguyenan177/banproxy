@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>thuê SMS OKVIP</title>
+<title>Thuê SMS OKVIP</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
@@ -51,18 +51,19 @@ pre {
   height: 180px;
   overflow: auto;
 }
+
 .lock {
   background: #eee;
   padding: 10px;
   border-radius: 6px;
   margin-bottom: 10px;
 }
+
 .done {
   color: green;
   font-weight: bold;
 }
 
-/* copy ID góc phải dưới */
 .copy-id {
   position: absolute;
   bottom: 6px;
@@ -70,12 +71,14 @@ pre {
   font-size: 13px;
   cursor: pointer;
   opacity: 0.65;
+  user-select: text;
 }
 .copy-id:hover { opacity: 1; }
 </style>
 </head>
 
 <body>
+
 <div class="box">
 
 <div class="top-btns">
@@ -109,6 +112,18 @@ pre {
 </div>
 
 <script>
+/* ================= CHỐNG INSPECT (KHÔNG CHẶN CTRL+A) ================= */
+document.addEventListener("contextmenu", e => e.preventDefault());
+
+document.addEventListener("keydown", e => {
+  if (e.key === "F12") e.preventDefault();
+  if (e.ctrlKey && e.key.toLowerCase() === "u") e.preventDefault();
+  if (e.ctrlKey && e.shiftKey && ["i","j","c"].includes(e.key.toLowerCase())) e.preventDefault();
+  if (e.ctrlKey && ["s","p"].includes(e.key.toLowerCase())) e.preventDefault();
+  if (e.ctrlKey && e.key.toLowerCase() === "a") return; // cho Ctrl+A
+});
+
+/* ================= APP LOGIC ================= */
 const WORKER = "https://apiv2.dblgamingg.workers.dev/";
 const SERVICE = "other";
 
@@ -185,7 +200,6 @@ function renderSims() {
     box.innerHTML += `
       <div class="sim">
         <b>📞 ${s.phone}</b><br>
-
         🔐 OTP:
         ${s.otp
           ? `<span class="done">${s.otp}</span>
@@ -195,7 +209,6 @@ function renderSims() {
              </div>`
           : "Đang chờ..."
         }<br>
-
         ⏱️ <span id="t-${s.id}"></span>
 
         <span class="copy-id" onclick="copyId('${s.id}', this)">
@@ -241,7 +254,6 @@ function startTimer() {
 async function pollOtp() {
   for (const s of sims) {
     if (s.otp) continue;
-
     const d = await call({ action: "code", id: s.id });
     if (d.ResponseCode === 0 && d.Result.otp) {
       s.otp = d.Result.otp;
@@ -265,5 +277,6 @@ function copyId(id, el) {
 
 window.onload = loadLocal;
 </script>
+
 </body>
 </html>
