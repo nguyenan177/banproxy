@@ -17,9 +17,7 @@
     --text: #111827;
     --muted: #6b7280;
 }
-
 * { box-sizing: border-box; }
-
 body {
     margin: 0;
     padding: 16px;
@@ -27,8 +25,6 @@ body {
     background: var(--bg);
     color: var(--text);
 }
-
-/* ✅ NÚT SMS OKVIP */
 .sms-okvip-btn {
     position: fixed;
     top: 16px;
@@ -43,17 +39,13 @@ body {
     box-shadow: 0 6px 18px rgba(0,0,0,.15);
     z-index: 999;
 }
-.sms-okvip-btn:hover {
-    opacity: .9;
-}
-
+.sms-okvip-btn:hover { opacity: .9; }
 h2 {
     text-align: center;
     margin-bottom: 18px;
     font-weight: 600;
     color: var(--primary);
 }
-
 .box {
     background: var(--card);
     padding: 14px;
@@ -61,7 +53,6 @@ h2 {
     border: 1px solid var(--border);
     margin-bottom: 16px;
 }
-
 textarea {
     width: 100%;
     padding: 12px;
@@ -71,13 +62,11 @@ textarea {
     resize: vertical;
     min-height: 90px;
 }
-
 textarea:focus {
     outline: none;
     border-color: var(--accent);
     box-shadow: 0 0 0 2px rgba(37,99,235,.15);
 }
-
 button {
     padding: 10px 14px;
     font-size: 13px;
@@ -85,31 +74,22 @@ button {
     border: none;
     cursor: pointer;
     color: #fff;
-    white-space: nowrap;
 }
-
-button:disabled {
-    opacity: .6;
-    cursor: not-allowed;
-}
-
+button:disabled { opacity: .6; cursor: not-allowed; }
 .btn-add { background: var(--primary); }
 .btn-rotate { background: var(--accent); }
 .btn-copy { background: var(--success); }
 .btn-delete { background: var(--danger); }
-
 #apiStatus {
     margin-top: 10px;
     font-size: 13px;
     color: var(--muted);
 }
-
 #proxyList {
     display: flex;
     flex-direction: column;
     gap: 12px;
 }
-
 .proxy-container {
     background: var(--card);
     padding: 12px;
@@ -119,7 +99,6 @@ button:disabled {
     flex-direction: column;
     gap: 10px;
 }
-
 .proxy-text {
     font-family: monospace;
     font-size: 13px;
@@ -128,18 +107,16 @@ button:disabled {
     padding: 10px;
     border-radius: 6px;
     word-break: break-all;
+    user-select: text; /* ✅ cho copy */
 }
-
 .proxy-actions {
     display: flex;
     gap: 8px;
 }
-
 .status {
     font-size: 12px;
     color: var(--muted);
 }
-
 @media (min-width: 768px) {
     body { max-width: 900px; margin: auto; }
     .proxy-container { flex-direction: row; align-items: center; }
@@ -150,7 +127,6 @@ button:disabled {
 </head>
 <body>
 
-<!-- ✅ NÚT THUÊ SMS OKVIP -->
 <a href="SMSOKVIP.html" class="sms-okvip-btn">📱 Thuê SMS OKVIP</a>
 
 <h2>🔄 Xoay IP Proxy Nhiều API</h2>
@@ -165,8 +141,30 @@ button:disabled {
 <div id="proxyList"></div>
 
 <script>
+/* ================= CHỐNG INSPECT (KHÔNG CHẶN CTRL+A) ================= */
+document.addEventListener("contextmenu", e => e.preventDefault());
+
+document.addEventListener("keydown", e => {
+    if (e.key === "F12") e.preventDefault();
+    if (e.ctrlKey && e.key.toLowerCase() === "u") e.preventDefault();
+    if (e.ctrlKey && e.shiftKey && ["i","j","c"].includes(e.key.toLowerCase())) e.preventDefault();
+    if (e.ctrlKey && ["s","p"].includes(e.key.toLowerCase())) e.preventDefault();
+
+    // ✅ CHO PHÉP CTRL + A
+    if (e.ctrlKey && e.key.toLowerCase() === "a") return;
+});
+
+/* ================= APP LOGIC ================= */
 let API_MAP = {};
 const API_MAP_URL = "https://raw.githubusercontent.com/nguyenan177/apiv2/refs/heads/main/api_map.json";
+
+const apiInput = document.getElementById("apiInput");
+const addApiBtn = document.getElementById("addApiBtn");
+const rotateAllBtn = document.getElementById("rotateAllBtn");
+const apiStatus = document.getElementById("apiStatus");
+const proxyList = document.getElementById("proxyList");
+
+let savedApis = JSON.parse(localStorage.getItem("proxy_api_keys") || "[]");
 
 async function loadApiMap() {
     try {
@@ -178,14 +176,6 @@ async function loadApiMap() {
         alert("❌ Không tải được API MAP");
     }
 }
-
-const apiInput = document.getElementById("apiInput");
-const addApiBtn = document.getElementById("addApiBtn");
-const rotateAllBtn = document.getElementById("rotateAllBtn");
-const apiStatus = document.getElementById("apiStatus");
-const proxyList = document.getElementById("proxyList");
-
-let savedApis = JSON.parse(localStorage.getItem("proxy_api_keys") || "[]");
 
 function createProxyBox(apiKey){
     const info = API_MAP[apiKey];
@@ -204,7 +194,7 @@ function createProxyBox(apiKey){
     copyBtn.onclick = async () => {
         await navigator.clipboard.writeText(proxyText.innerText);
         copyBtn.innerText = "✅";
-        setTimeout(()=>copyBtn.innerText="📋 Copy",1000);
+        setTimeout(()=>copyBtn.innerText="📋 Copy",800);
     };
 
     const rotateBtn = document.createElement("button");
@@ -217,7 +207,6 @@ function createProxyBox(apiKey){
     rotateBtn.onclick = async () => {
         rotateBtn.disabled = true;
         status.innerText = "⏳ Đang xoay...";
-
         try {
             let url = info.rotate;
             if (url.includes("reset?proxy=")) url += encodeURIComponent(info.proxy);
@@ -233,7 +222,7 @@ function createProxyBox(apiKey){
                     info.proxy = data.data.proxy;
                     proxyText.innerText = data.data.proxy;
                 }
-                status.innerText = "✅ " + (data.message || "Xoay thành công");
+                status.innerText = "✅ Xoay thành công";
             }
         } catch {
             status.innerText = "❌ Lỗi kết nối";
@@ -261,7 +250,6 @@ function createProxyBox(apiKey){
 addApiBtn.onclick = () => {
     const keys = apiInput.value.trim().split(/\r?\n/).map(k=>k.trim()).filter(Boolean);
     let a=0,s=0,i=0;
-
     keys.forEach(k=>{
         if(!API_MAP[k]){ i++; return; }
         if(savedApis.includes(k)){ s++; return; }
@@ -269,14 +257,13 @@ addApiBtn.onclick = () => {
         createProxyBox(k);
         a++;
     });
-
     localStorage.setItem("proxy_api_keys", JSON.stringify(savedApis));
     apiStatus.innerText = `Thêm ${a} | Trùng ${s} | Sai ${i}`;
     apiInput.value="";
 };
 
 rotateAllBtn.onclick = async () => {
-    const buttons = document.querySelectorAll(".proxy-container .btn-rotate");
+    const buttons = document.querySelectorAll(".btn-rotate");
     for (const btn of buttons) {
         if (!btn.disabled) {
             btn.click();
@@ -290,5 +277,3 @@ loadApiMap();
 
 </body>
 </html>
-
-
