@@ -107,7 +107,7 @@ button:disabled { opacity: .6; cursor: not-allowed; }
     padding: 10px;
     border-radius: 6px;
     word-break: break-all;
-    user-select: text; /* ✅ cho copy */
+    user-select: text;
 }
 .proxy-actions {
     display: flex;
@@ -135,13 +135,13 @@ button:disabled { opacity: .6; cursor: not-allowed; }
     <textarea id="apiInput" placeholder="🔑 Nhập API Key (mỗi dòng 1 key)"></textarea>
     <button class="btn-add" id="addApiBtn">➕ Thêm API</button>
     <button class="btn-rotate" id="rotateAllBtn">🔄 Xoay tất cả</button>
+    <button class="btn-copy" id="copyAllBtn">📋 Copy tất cả</button>
     <div id="apiStatus"></div>
 </div>
 
 <div id="proxyList"></div>
 
 <script>
-/* ================= CHỐNG INSPECT (KHÔNG CHẶN CTRL+A) ================= */
 document.addEventListener("contextmenu", e => e.preventDefault());
 
 document.addEventListener("keydown", e => {
@@ -149,18 +149,16 @@ document.addEventListener("keydown", e => {
     if (e.ctrlKey && e.key.toLowerCase() === "u") e.preventDefault();
     if (e.ctrlKey && e.shiftKey && ["i","j","c"].includes(e.key.toLowerCase())) e.preventDefault();
     if (e.ctrlKey && ["s","p"].includes(e.key.toLowerCase())) e.preventDefault();
-
-    // ✅ CHO PHÉP CTRL + A
     if (e.ctrlKey && e.key.toLowerCase() === "a") return;
 });
 
-/* ================= APP LOGIC ================= */
 let API_MAP = {};
 const API_MAP_URL = "https://raw.githubusercontent.com/nguyenan177/apiv2/refs/heads/main/api_map.json";
 
 const apiInput = document.getElementById("apiInput");
 const addApiBtn = document.getElementById("addApiBtn");
 const rotateAllBtn = document.getElementById("rotateAllBtn");
+const copyAllBtn = document.getElementById("copyAllBtn");
 const apiStatus = document.getElementById("apiStatus");
 const proxyList = document.getElementById("proxyList");
 
@@ -225,7 +223,7 @@ function createProxyBox(apiKey){
                 status.innerText = "✅ Xoay thành công";
             }
         } catch {
-            status.innerText = "❌ Lỗi kết nối";
+            status.innerText = "❌ Bình tẽn xoay tutu";
         }
         rotateBtn.disabled = false;
     };
@@ -270,6 +268,22 @@ rotateAllBtn.onclick = async () => {
             await new Promise(r => setTimeout(r, 600));
         }
     }
+};
+
+copyAllBtn.onclick = async () => {
+    const proxies = [...document.querySelectorAll(".proxy-text")]
+        .map(el => el.innerText.trim())
+        .filter(Boolean);
+
+    if (proxies.length === 0) {
+        alert("Không có proxy để copy");
+        return;
+    }
+
+    await navigator.clipboard.writeText(proxies.join("\n"));
+
+    copyAllBtn.innerText = "✅ Đã copy";
+    setTimeout(() => copyAllBtn.innerText = "📋 Copy tất cả", 1200);
 };
 
 loadApiMap();
