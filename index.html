@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>Proxy Xoay EAGLE</title>
+<title>Xoay IP Proxy Nhiều API</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
@@ -160,7 +160,7 @@ button:disabled { opacity: .6; cursor: not-allowed; }
 
 <a href="SMSOKVIP.html" class="sms-okvip-btn">📱 Thuê SMS OKVIP</a>
 
-<h2>🔄 Proxy Xoay Eagle</h2>
+<h2>🔄 Xoay IP Proxy Nhiều API</h2>
 
 <div class="box">
     <textarea id="apiInput" placeholder="🔑 Nhập API Key (mỗi dòng 1 key)&#10;Hỗ trợ key thường và key UUID (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)"></textarea>
@@ -284,8 +284,49 @@ async function createUuidProxyBox(apiKey) {
                 rowH.append(lH, vH);
 
                 const rowIP = document.createElement("div");
-                rowIP.style.cssText = "text-align:right;font-size:11px;color:#6b7280;font-family:monospace;padding:0 2px;";
-                rowIP.innerText = "🌐 " + (p.real_ip || "");
+                rowIP.style.cssText = "display:flex;justify-content:flex-end;align-items:center;gap:8px;padding:0 2px;";
+
+                const realIpText = document.createElement("span");
+                realIpText.style.cssText = "font-size:11px;color:#6b7280;font-family:monospace;";
+                realIpText.innerText = "🌐 " + (p.real_ip || "");
+
+                const testKmBtn = document.createElement("button");
+                testKmBtn.innerText = "Test KM";
+                testKmBtn.style.cssText = "background:#d97706;padding:2px 8px;font-size:11px;border-radius:5px;cursor:pointer;";
+                testKmBtn.onclick = async () => {
+                    const ip = p.real_ip;
+                    if (!ip) return;
+                    testKmBtn.disabled = true;
+                    testKmBtn.innerText = "⏳";
+                    try {
+                        const res = await fetch("https://testdodam.nguyenanlk2872.workers.dev/?ip=" + ip, { cache: "no-store" });
+                        const text = await res.text();
+                        if (text.includes("Duplicate entry")) {
+                            testKmBtn.innerText = "📉 Tỉ Lệ KM Thấp";
+                            testKmBtn.style.background = "#dc2626";
+                        } else {
+                            try {
+                                const json = JSON.parse(text);
+                                if (json.status === "success") {
+                                    testKmBtn.innerText = "📈 Tỉ Lệ KM Cao";
+                                    testKmBtn.style.background = "#16a34a";
+                                } else {
+                                    testKmBtn.innerText = "❓ " + (json.message || "?");
+                                    testKmBtn.style.background = "#6b7280";
+                                }
+                            } catch {
+                                testKmBtn.innerText = "❓";
+                                testKmBtn.style.background = "#6b7280";
+                            }
+                        }
+                    } catch {
+                        testKmBtn.innerText = "❌ Lỗi";
+                        testKmBtn.style.background = "#6b7280";
+                    }
+                    testKmBtn.disabled = false;
+                };
+
+                rowIP.append(realIpText, testKmBtn);
 
                 const rowS = document.createElement("div"); rowS.className = "proxy-line";
                 const lS = document.createElement("span"); lS.className = "proxy-label socks5"; lS.innerText = "SOCKS5";
@@ -528,4 +569,3 @@ loadApiMap();
 </script>
 </body>
 </html>
-
