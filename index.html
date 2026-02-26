@@ -283,12 +283,16 @@ async function createUuidProxyBox(apiKey) {
                 const vH = document.createElement("span"); vH.className = "proxy-value"; vH.innerText = http;
                 rowH.append(lH, vH);
 
+                const rowIP = document.createElement("div");
+                rowIP.style.cssText = "text-align:right;font-size:11px;color:#6b7280;font-family:monospace;padding:0 2px;";
+                rowIP.innerText = "🌐 " + (p.real_ip || "");
+
                 const rowS = document.createElement("div"); rowS.className = "proxy-line";
                 const lS = document.createElement("span"); lS.className = "proxy-label socks5"; lS.innerText = "SOCKS5";
                 const vS = document.createElement("span"); vS.className = "proxy-value"; vS.innerText = socks5;
                 rowS.append(lS, vS);
 
-                proxyArea.append(rowH, rowS);
+                proxyArea.append(rowH, rowIP, rowS);
             });
 
             status.innerText = `✅ ${entries.length} proxy`;
