@@ -153,7 +153,49 @@ button:disabled { opacity: .6; cursor: not-allowed; }
     .status { min-width: 150px; text-align: right; }
 }
 
-
+/* ── Copy All Dropdown ── */
+.copy-all-wrapper {
+    position: relative;
+    display: inline-block;
+}
+.copy-all-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.12);
+    z-index: 100;
+    min-width: 180px;
+    overflow: hidden;
+}
+.copy-all-dropdown.open { display: block; }
+.copy-all-dropdown button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 10px 14px;
+    font-size: 13px;
+    border-radius: 0;
+    background: #fff;
+    color: var(--text);
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    transition: background .15s;
+}
+.copy-all-dropdown button:last-child { border-bottom: none; }
+.copy-all-dropdown button:hover { background: #f3f4f6; }
+.copy-all-dropdown button .dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.dot-http   { background: #2563eb; }
+.dot-socks5 { background: #7c3aed; }
+.dot-all    { background: linear-gradient(135deg,#2563eb 50%,#7c3aed 50%); }
 </style>
 </head>
 <body>
@@ -166,7 +208,23 @@ button:disabled { opacity: .6; cursor: not-allowed; }
     <textarea id="apiInput" placeholder="🔑 Nhập API Key (mỗi dòng 1 key)&#10;Hỗ trợ key thường và key UUID (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)"></textarea>
     <button class="btn-add" id="addApiBtn">➕ Thêm API</button>
     <button class="btn-rotate" id="rotateAllBtn">🔄 Xoay tất cả</button>
-    <button class="btn-copy" id="copyAllBtn">📋 Copy tất cả</button>
+
+    <!-- Copy All Dropdown -->
+    <div class="copy-all-wrapper" id="copyAllWrapper">
+        <button class="btn-copy" id="copyAllBtn">📋 Copy tất cả ▾</button>
+        <div class="copy-all-dropdown" id="copyAllDropdown">
+            <button id="copyHttpBtn">
+                <span class="dot dot-http"></span> Chỉ HTTP
+            </button>
+            <button id="copySocksBtn">
+                <span class="dot dot-socks5"></span> Chỉ SOCKS5
+            </button>
+            <button id="copyBothBtn">
+                <span class="dot dot-all"></span> HTTP + SOCKS5
+            </button>
+        </div>
+    </div>
+
     <div id="apiStatus"></div>
 </div>
 
@@ -192,9 +250,51 @@ const API_MAP_URL = "https://raw.githubusercontent.com/nguyenan177/apiv2/refs/he
 const apiInput     = document.getElementById("apiInput");
 const addApiBtn    = document.getElementById("addApiBtn");
 const rotateAllBtn = document.getElementById("rotateAllBtn");
-const copyAllBtn   = document.getElementById("copyAllBtn");
 const apiStatus    = document.getElementById("apiStatus");
 const proxyList    = document.getElementById("proxyList");
+
+// ── Copy All Dropdown logic ──
+const copyAllBtn      = document.getElementById("copyAllBtn");
+const copyAllDropdown = document.getElementById("copyAllDropdown");
+const copyAllWrapper  = document.getElementById("copyAllWrapper");
+
+copyAllBtn.onclick = (e) => {
+    e.stopPropagation();
+    copyAllDropdown.classList.toggle("open");
+};
+document.addEventListener("click", (e) => {
+    if (!copyAllWrapper.contains(e.target)) copyAllDropdown.classList.remove("open");
+});
+
+async function copyAndFlash(lines, btn, label) {
+    if (!lines.length) { alert("Không có proxy để copy"); return; }
+    await navigator.clipboard.writeText(lines.join("\n"));
+    copyAllDropdown.classList.remove("open");
+    const orig = btn.innerHTML;
+    btn.innerHTML = `✅ Đã copy ${lines.length} proxy`;
+    setTimeout(() => btn.innerHTML = orig, 1500);
+}
+
+document.getElementById("copyHttpBtn").onclick = async () => {
+    const lines = [];
+    document.querySelectorAll(".proxy-text:not(.uuid-proxies)").forEach(el => { const t = el.innerText.trim(); if (t) lines.push(t); });
+    document.querySelectorAll(".proxy-container.uuid-type").forEach(b => { if (b._httpLines) lines.push(...b._httpLines); });
+    await copyAndFlash(lines, document.getElementById("copyHttpBtn"), "HTTP");
+};
+
+document.getElementById("copySocksBtn").onclick = async () => {
+    const lines = [];
+    document.querySelectorAll(".proxy-container.uuid-type").forEach(b => { if (b._socksLines) lines.push(...b._socksLines); });
+    await copyAndFlash(lines, document.getElementById("copySocksBtn"), "SOCKS5");
+};
+
+document.getElementById("copyBothBtn").onclick = async () => {
+    const lines = [];
+    document.querySelectorAll(".proxy-text:not(.uuid-proxies)").forEach(el => { const t = el.innerText.trim(); if (t) lines.push(t); });
+    document.querySelectorAll(".proxy-container.uuid-type").forEach(b => { if (b._proxyLines) lines.push(...b._proxyLines); });
+    await copyAndFlash(lines, document.getElementById("copyBothBtn"), "HTTP + SOCKS5");
+};
+
 let savedApis = JSON.parse(localStorage.getItem("proxy_api_keys") || "[]");
 
 // ─── Load API MAP ─────────────────────────────────────────────
@@ -249,7 +349,6 @@ async function createUuidProxyBox(apiKey) {
             const res  = await fetch(url, { cache: "no-store" });
             const data = await res.json();
 
-
             if (data.status !== "success" || !data.proxies) {
                 proxyArea.innerText = "⚠️ Không lấy được proxy";
                 status.innerText = "❌ Lỗi";
@@ -275,8 +374,6 @@ async function createUuidProxyBox(apiKey) {
                 box._proxyLines.push(http, socks5);
                 box._httpLines.push(http);
                 box._socksLines.push(socks5);
-
-
 
                 const rowH = document.createElement("div"); rowH.className = "proxy-line";
                 const lH = document.createElement("span"); lH.className = "proxy-label http"; lH.innerText = "HTTP";
@@ -356,8 +453,6 @@ async function createUuidProxyBox(apiKey) {
                 const res  = await fetch(url, { cache: "no-store" });
                 const data = await res.json();
 
-
-                // Tìm port object trong data.data để lấy status và msg
                 let portMsg = "";
                 let portError = false;
                 if (data.data && typeof data.data === "object") {
@@ -388,22 +483,22 @@ async function createUuidProxyBox(apiKey) {
         }
     }
 
-    const copyHttpBtn = document.createElement("button");
-    copyHttpBtn.className = "btn-copy"; copyHttpBtn.style.background = "#2563eb"; copyHttpBtn.innerText = "HTTP";
-    copyHttpBtn.onclick = async () => {
+    const copyHttpBtn2 = document.createElement("button");
+    copyHttpBtn2.className = "btn-copy"; copyHttpBtn2.style.background = "#2563eb"; copyHttpBtn2.innerText = "HTTP";
+    copyHttpBtn2.onclick = async () => {
         const lines = box._httpLines || [];
         if (!lines.length) { alert("Chưa có proxy HTTP"); return; }
         await navigator.clipboard.writeText(lines.join("\n"));
-        copyHttpBtn.innerText = "✅"; setTimeout(() => copyHttpBtn.innerText = "HTTP", 800);
+        copyHttpBtn2.innerText = "✅"; setTimeout(() => copyHttpBtn2.innerText = "HTTP", 800);
     };
 
-    const copySocksBtn = document.createElement("button");
-    copySocksBtn.className = "btn-copy"; copySocksBtn.style.background = "#7c3aed"; copySocksBtn.innerText = "SOCKS5";
-    copySocksBtn.onclick = async () => {
+    const copySocksBtn2 = document.createElement("button");
+    copySocksBtn2.className = "btn-copy"; copySocksBtn2.style.background = "#7c3aed"; copySocksBtn2.innerText = "SOCKS5";
+    copySocksBtn2.onclick = async () => {
         const lines = box._socksLines || [];
         if (!lines.length) { alert("Chưa có proxy SOCKS5"); return; }
         await navigator.clipboard.writeText(lines.join("\n"));
-        copySocksBtn.innerText = "✅"; setTimeout(() => copySocksBtn.innerText = "SOCKS5", 800);
+        copySocksBtn2.innerText = "✅"; setTimeout(() => copySocksBtn2.innerText = "SOCKS5", 800);
     };
 
     // ── Lọc đầu IP ──
@@ -420,7 +515,6 @@ async function createUuidProxyBox(apiKey) {
                 const url = `${UUID_API_BASE}${apiKey}/update?filter_ip=${encodeURIComponent(ipPrefix)}&minute_change_ip=0&id=${id}&change_ip=`;
                 const res  = await fetch(url, { cache: "no-store" });
                 const data = await res.json();
-
 
                 let portMsg = "";
                 let portError = false;
@@ -440,7 +534,6 @@ async function createUuidProxyBox(apiKey) {
             if (ok > 0) {
                 status.innerText = "✅ Lọc IP thành công";
                 setTimeout(fetchAndRender, 1500);
-            } else {
             }
         } catch(err) {
             status.innerText = "❌ Lỗi lọc IP";
@@ -450,7 +543,6 @@ async function createUuidProxyBox(apiKey) {
 
     changeIpBtn.onclick = changeAllIPs;
 
-    // ── Filter IP input + button ──
     const filterInput = document.createElement("input");
     filterInput.type = "text";
     filterInput.placeholder = "Đầu IP (vd: 27)";
@@ -468,7 +560,7 @@ async function createUuidProxyBox(apiKey) {
 
     const actions = document.createElement("div");
     actions.className = "proxy-actions";
-    actions.append(copyHttpBtn, copySocksBtn, changeIpBtn, delBtn);
+    actions.append(copyHttpBtn2, copySocksBtn2, changeIpBtn, delBtn);
     box.append(proxyArea, filterRow, actions, status);
     proxyList.appendChild(box);
     await fetchAndRender();
@@ -529,14 +621,12 @@ addApiBtn.onclick = async () => {
     const keys = apiInput.value.trim().split(/\r?\n/).map(k => k.trim()).filter(Boolean);
     let a = 0, s = 0, i = 0;
     for (const k of keys) {
-        if (savedApis.includes(k)) { s++;
- continue; }
+        if (savedApis.includes(k)) { s++; continue; }
         if (UUID_REGEX.test(k)) {
             savedApis.push(k);
             await createUuidProxyBox(k); a++;
         } else {
-            if (!API_MAP[k]) { i++;
- continue; }
+            if (!API_MAP[k]) { i++; continue; }
             savedApis.push(k); createProxyBox(k); a++;
         }
     }
@@ -553,20 +643,8 @@ rotateAllBtn.onclick = async () => {
     }
 };
 
-// ─── Copy tất cả ─────────────────────────────────────────────
-copyAllBtn.onclick = async () => {
-    const allLines = [];
-    document.querySelectorAll(".proxy-text:not(.uuid-proxies)").forEach(el => { const t = el.innerText.trim(); if (t) allLines.push(t); });
-    document.querySelectorAll(".proxy-container.uuid-type").forEach(b => { if (b._proxyLines) allLines.push(...b._proxyLines); });
-    if (!allLines.length) { alert("Không có proxy để copy"); return; }
-    await navigator.clipboard.writeText(allLines.join("\n"));
-    copyAllBtn.innerText = "✅ Đã copy";
-    setTimeout(() => copyAllBtn.innerText = "📋 Copy tất cả", 1200);
-};
-
 // ─── Start ────────────────────────────────────────────────────
 loadApiMap();
 </script>
 </body>
 </html>
-
