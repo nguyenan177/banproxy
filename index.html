@@ -3,225 +3,537 @@
 <head>
 <meta charset="UTF-8">
 <title>PROXY XOAY EAGLE</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Barlow+Condensed:wght@400;600;700;800&display=swap" rel="stylesheet">
 
 <style>
 :root {
-    --bg: #f7f8fa;
-    --card: #ffffff;
-    --primary: #1f2937;
-    --accent: #2563eb;
-    --success: #16a34a;
-    --danger: #dc2626;
-    --border: #e5e7eb;
-    --text: #111827;
-    --muted: #6b7280;
+    --bg: #ffffff;
+    --surface: #f5f5f8;
+    --card: #fafafa;
+    --card2: #f0f0f5;
+    --border: #e2e2ec;
+    --border2: #d0d0de;
+    --text: #1a1a2e;
+    --muted: #9090a8;
+    --muted2: #6a6a88;
+    --accent: #5254cc;
+    --accent2: #4446b8;
+    --orange: #f97316;
+    --green: #16a34a;
+    --red: #dc2626;
+    --blue: #2563eb;
+    --purple: #7c3aed;
+    --cyan: #0891b2;
+    --glow: rgba(82,84,204,.12);
+    --glow-sm: rgba(82,84,204,.08);
 }
-* { box-sizing: border-box; }
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
 body {
-    margin: 0;
-    padding: 16px;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     background: var(--bg);
     color: var(--text);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 15px;
+    min-height: 100vh;
+    overflow-x: hidden;
 }
+
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(82,84,204,.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(82,84,204,.04) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.page-wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 28px 16px 60px;
+}
+
+/* ── SMS Button ── */
 .sms-okvip-btn {
     position: fixed;
-    top: 16px;
-    right: 16px;
-    background: #f59e0b;
+    top: 18px;
+    right: 18px;
+    background: linear-gradient(135deg, #f59e0b, #f97316);
     color: #fff;
-    padding: 10px 14px;
-    font-size: 13px;
-    border-radius: 999px;
+    padding: 9px 16px;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: 'Barlow Condensed', sans-serif;
+    letter-spacing: 0.5px;
+    border-radius: 6px;
     text-decoration: none;
-    font-weight: 600;
-    box-shadow: 0 6px 18px rgba(0,0,0,.15);
+    box-shadow: 0 0 20px rgba(249,115,22,.25), 0 2px 8px rgba(0,0,0,.12);
     z-index: 999;
+    transition: all .2s;
+    text-transform: uppercase;
 }
-.sms-okvip-btn:hover { opacity: .9; }
-h2 {
-    text-align: center;
-    margin-bottom: 18px;
-    font-weight: 600;
-    color: var(--primary);
+.sms-okvip-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 0 28px rgba(249,115,22,.4), 0 4px 12px rgba(0,0,0,.15);
 }
-.box {
+
+/* ── Header ── */
+.header { text-align: center; margin-bottom: 32px; padding-top: 12px; }
+.header-tag {
+    display: inline-block;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    background: rgba(82,84,204,.07);
+    border: 1px solid rgba(82,84,204,.18);
+    padding: 3px 10px;
+    border-radius: 3px;
+}
+.header h1 {
+    font-size: 42px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    line-height: 1;
+    background: linear-gradient(135deg, #1a1a2e 0%, var(--accent) 50%, #7c3aed 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-transform: uppercase;
+}
+.header-sub {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    margin-top: 8px;
+}
+.header-line {
+    width: 80px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    margin: 14px auto 0;
+}
+
+/* ── Panel ── */
+.panel {
     background: var(--card);
-    padding: 14px;
-    border-radius: 10px;
     border: 1px solid var(--border);
-    margin-bottom: 16px;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 18px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 1px 6px rgba(0,0,0,.06);
 }
+.panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent 5%, var(--accent) 50%, transparent 95%);
+    opacity: .4;
+}
+.panel-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--muted2);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.panel-label::before {
+    content: '';
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 6px rgba(82,84,204,.5);
+}
+
+/* ── Textarea ── */
 textarea {
     width: 100%;
-    padding: 12px;
-    font-size: 14px;
-    border-radius: 8px;
+    background: var(--surface);
     border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 12px 14px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
     resize: vertical;
-    min-height: 90px;
+    min-height: 88px;
+    transition: border-color .2s, box-shadow .2s;
+    line-height: 1.6;
 }
+textarea::placeholder { color: var(--muted); }
 textarea:focus {
     outline: none;
     border-color: var(--accent);
-    box-shadow: 0 0 0 2px rgba(37,99,235,.15);
+    box-shadow: 0 0 0 3px var(--glow-sm);
+}
+
+/* ── Buttons ── */
+.btn-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+    align-items: center;
 }
 button {
-    padding: 10px 14px;
+    font-family: 'Barlow Condensed', sans-serif;
     font-size: 13px;
-    border-radius: 8px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    padding: 9px 16px;
+    border-radius: 6px;
     border: none;
     cursor: pointer;
     color: #fff;
+    transition: all .15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
 }
-button:disabled { opacity: .6; cursor: not-allowed; }
-.btn-add { background: var(--primary); }
-.btn-rotate { background: var(--accent); }
-.btn-copy { background: var(--success); }
-.btn-delete { background: var(--danger); }
+button:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.08); }
+button:active:not(:disabled) { transform: translateY(0); filter: brightness(.96); }
+button:disabled { opacity: .4; cursor: not-allowed; }
+
+.btn-add {
+    background: #ffffff;
+    border: 1.5px solid var(--border2);
+    color: var(--text);
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+}
+.btn-add:hover:not(:disabled) { border-color: var(--accent); box-shadow: 0 0 12px var(--glow-sm); color: var(--accent); }
+.btn-rotate {
+    background: linear-gradient(135deg, var(--accent), #4f46e5);
+    box-shadow: 0 2px 10px rgba(82,84,204,.25);
+}
+.btn-rotate:hover:not(:disabled) { box-shadow: 0 4px 16px rgba(82,84,204,.38); }
+.btn-copy {
+    background: linear-gradient(135deg, #15803d, #16a34a);
+    box-shadow: 0 2px 8px rgba(22,163,74,.18);
+}
+.btn-delete {
+    background: linear-gradient(135deg, #b91c1c, #dc2626);
+    box-shadow: 0 2px 8px rgba(220,38,38,.18);
+}
+
 #apiStatus {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted2);
     margin-top: 10px;
-    font-size: 13px;
-    color: var(--muted);
+    padding: 6px 10px;
+    background: var(--surface);
+    border-left: 2px solid var(--accent);
+    border-radius: 0 4px 4px 0;
+    display: none;
 }
-#proxyList {
+#apiStatus.visible { display: block; }
+
+/* ── Copy All Dropdown ── */
+.copy-all-wrapper { position: relative; display: inline-block; }
+.copy-all-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    background: #ffffff;
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.12), 0 0 0 1px rgba(0,0,0,.04);
+    z-index: 200;
+    min-width: 200px;
+    overflow: hidden;
+}
+.copy-all-dropdown.open { display: block; animation: dropIn .12s ease; }
+@keyframes dropIn { from { opacity:0; transform: translateY(-4px) scale(.98); } to { opacity:1; transform:none; } }
+.copy-all-dropdown button {
     display: flex;
-    flex-direction: column;
-    gap: 12px;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 11px 14px;
+    font-size: 12px;
+    border-radius: 0;
+    background: transparent;
+    color: var(--text);
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transform: none;
+    box-shadow: none;
 }
+.copy-all-dropdown button:last-child { border-bottom: none; }
+.copy-all-dropdown button:hover { background: rgba(82,84,204,.06); transform: none; filter: none; }
+.copy-all-dropdown button .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dot-http   { background: var(--blue); }
+.dot-socks5 { background: var(--purple); }
+.dot-all    { background: conic-gradient(var(--blue) 0% 50%, var(--purple) 50% 100%); }
+
+/* ── Proxy List ── */
+#proxyList { display: flex; flex-direction: column; gap: 12px; }
+
+/* ── Proxy Card ── */
 .proxy-container {
     background: var(--card);
-    padding: 12px;
-    border-radius: 10px;
     border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
     display: flex;
     flex-direction: column;
     gap: 10px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color .2s, box-shadow .2s;
+    animation: cardIn .25s ease;
+    box-shadow: 0 1px 4px rgba(0,0,0,.05);
 }
-.proxy-container.uuid-type {
-    border-left: 3px solid #7c3aed;
+@keyframes cardIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: none; } }
+.proxy-container::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(82,84,204,.2), transparent);
 }
+.proxy-container:hover { border-color: var(--border2); box-shadow: 0 4px 18px rgba(0,0,0,.08); }
+.proxy-container.uuid-type { border-left: 2px solid var(--purple); }
+.proxy-container.uuid-type::before {
+    background: linear-gradient(90deg, transparent, rgba(124,58,237,.2), transparent);
+}
+
+/* ── Proxy Text ── */
 .proxy-text {
-    font-family: monospace;
-    font-size: 13px;
-    background: #f9fafb;
-    border: 1px dashed var(--border);
-    padding: 10px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
     border-radius: 6px;
+    padding: 12px 14px;
     word-break: break-all;
+    overflow-wrap: anywhere;
     user-select: text;
+    color: var(--accent2);
+    line-height: 1.6;
+    flex: 1;
+    overflow-x: auto;
 }
 .proxy-text.uuid-proxies {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
+    background: transparent;
+    border: none;
+    padding: 0;
 }
+
+/* ── Proxy lines ── */
 .proxy-line {
     display: flex;
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
 }
 .proxy-label {
-    font-size: 11px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 10px;
     font-weight: 700;
-    padding: 2px 7px;
-    border-radius: 4px;
+    letter-spacing: 1.5px;
+    padding: 2px 8px;
+    border-radius: 3px;
     color: #fff;
     white-space: nowrap;
+    text-transform: uppercase;
 }
-.proxy-label.http   { background: #2563eb; }
-.proxy-label.socks5 { background: #7c3aed; }
+.proxy-label.http   { background: var(--blue); }
+.proxy-label.socks5 { background: var(--purple); }
 .proxy-value {
-    font-family: monospace;
-    font-size: 13px;
-    word-break: break-all;
-}
-.proxy-actions {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-.status {
+    font-family: 'Space Mono', monospace;
     font-size: 12px;
-    color: var(--muted);
-}
-@media (min-width: 768px) {
-    .proxy-container { flex-direction: row; align-items: center; }
-    .proxy-text { flex: 1; }
-    .status { min-width: 150px; text-align: right; }
+    color: var(--text);
+    word-break: break-all;
+    overflow-wrap: anywhere;
+    flex: 1;
+    min-width: 0;
 }
 
-/* ── Copy All Dropdown ── */
-.copy-all-wrapper {
-    position: relative;
-    display: inline-block;
-}
-.copy-all-dropdown {
-    display: none;
-    position: absolute;
-    top: calc(100% + 6px);
-    left: 0;
-    background: #fff;
+/* ── Status ── */
+.status {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted2);
+    padding: 4px 8px;
+    background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 10px;
-    box-shadow: 0 8px 24px rgba(0,0,0,.12);
-    z-index: 100;
-    min-width: 180px;
-    overflow: hidden;
+    border-radius: 4px;
+    white-space: nowrap;
+    width: 100%;
+    text-align: center;
 }
-.copy-all-dropdown.open { display: block; }
-.copy-all-dropdown button {
+@media (min-width: 540px) {
+    .status { width: auto; text-align: left; align-self: center; }
+}
+
+/* ── Proxy actions wrapper ── */
+.proxy-actions {
     display: flex;
+    flex-direction: column;
+    gap: 7px;
+    width: 100%;
+}
+
+/* ── Filter row ── */
+.filter-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    width: 100%;
+}
+.filter-row input {
+    background: var(--surface);
+    border: 1.5px solid var(--border2);
+    border-radius: 6px;
+    padding: 7px 10px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--text);
+    flex: 1;
+    min-width: 0;
+    transition: border-color .2s;
+}
+.filter-row input::placeholder { color: var(--muted); }
+.filter-row input:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 2px rgba(8,145,178,.1); }
+
+/* ── Action buttons row ── */
+.action-btns {
+    display: flex;
+    gap: 6px;
+    flex-wrap: nowrap;
+    width: 100%;
+}
+.action-btns button {
+    flex: 1 1 0;
+    min-width: 0;
+    font-size: 11px;
+    padding: 8px 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    justify-content: center;
+}
+
+/* ── Desktop: 1 hàng ── */
+@media (min-width: 540px) {
+    .proxy-actions { flex-direction: row; align-items: center; }
+    .filter-row { flex: 1.6 1 0; width: auto; }
+    .action-btns { flex: 3 1 0; width: auto; }
+}
+
+/* ── IP row ── */
+.ip-info-row {
+    display: flex;
+    justify-content: space-between;
     align-items: center;
     gap: 8px;
-    width: 100%;
-    padding: 10px 14px;
-    font-size: 13px;
-    border-radius: 0;
-    background: #fff;
-    color: var(--text);
-    text-align: left;
-    border-bottom: 1px solid var(--border);
-    transition: background .15s;
+    padding: 0 2px;
+    flex-wrap: wrap;
 }
-.copy-all-dropdown button:last-child { border-bottom: none; }
-.copy-all-dropdown button:hover { background: #f3f4f6; }
-.copy-all-dropdown button .dot {
-    width: 10px; height: 10px;
-    border-radius: 50%;
-    flex-shrink: 0;
+.real-ip-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
-.dot-http   { background: #2563eb; }
-.dot-socks5 { background: #7c3aed; }
-.dot-all    { background: linear-gradient(135deg,#2563eb 50%,#7c3aed 50%); }
+.real-ip-label::before { content: '◉'; font-size: 9px; color: var(--green); }
+
+.btn-test-km {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    background: rgba(217,119,6,.08);
+    border: 1px solid rgba(217,119,6,.3);
+    color: #b45309;
+    padding: 3px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all .15s;
+    text-transform: uppercase;
+}
+.btn-test-km:hover:not(:disabled) { background: rgba(217,119,6,.15); border-color: #d97706; transform: none; filter: none; }
+
+/* ── Proxy divider ── */
+.proxy-divider { height: 1px; background: var(--border); margin: 2px 0; }
+
+/* ── Loading ── */
+@keyframes blink { 0%,100% { opacity:1; } 50% { opacity:.35; } }
+.loading-text {
+    animation: blink 1.2s infinite;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 </style>
 </head>
 <body>
 
-<a href="SMSOKVIP.html" class="sms-okvip-btn">📱 Thuê SMS OKVIP</a>
+<a href="SMSOKVIP.html" class="sms-okvip-btn">📱 THUÊ SMS OKVIP</a>
 
-<h2>🔄 PROXY XOAY EAGLE</h2>
+<div class="page-wrap">
 
-<div class="box">
-    <textarea id="apiInput" placeholder="🔑 Nhập API Key (mỗi dòng 1 key)&#10;Hỗ trợ key thường và key UUID (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)"></textarea>
-    <button class="btn-add" id="addApiBtn">➕ Thêm API</button>
-    <button class="btn-rotate" id="rotateAllBtn">🔄 Xoay tất cả</button>
+<div class="header">
+    <div class="header-tag">// ROTATING PROXY SYSTEM v2.0</div>
+    <h1>🦅 EAGLE PROXY</h1>
+    <div class="header-sub">HIGH-PERFORMANCE · ROTATING · MULTI-PROTOCOL</div>
+    <div class="header-line"></div>
+</div>
 
-    <!-- Copy All Dropdown -->
-    <div class="copy-all-wrapper" id="copyAllWrapper">
-        <button class="btn-copy" id="copyAllBtn">📋 Copy tất cả ▾</button>
-        <div class="copy-all-dropdown" id="copyAllDropdown">
-            <button id="copyHttpBtn">
-                <span class="dot dot-http"></span> Chỉ HTTP
-            </button>
-            <button id="copySocksBtn">
-                <span class="dot dot-socks5"></span> Chỉ SOCKS5
-            </button>
-            <button id="copyBothBtn">
-                <span class="dot dot-all"></span> HTTP + SOCKS5
-            </button>
+<div class="panel">
+    <div class="panel-label">API KEY INPUT</div>
+    <textarea id="apiInput" placeholder="Nhập API Key — mỗi dòng 1 key&#10;Hỗ trợ key thường và UUID key&#10;(xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)"></textarea>
+
+    <div class="btn-row">
+        <button class="btn-add" id="addApiBtn">＋ THÊM API</button>
+        <button class="btn-rotate" id="rotateAllBtn">⟳ XOAY TẤT CẢ</button>
+
+        <div class="copy-all-wrapper" id="copyAllWrapper">
+            <button class="btn-copy" id="copyAllBtn">⎘ COPY TẤT CẢ ▾</button>
+            <div class="copy-all-dropdown" id="copyAllDropdown">
+                <button id="copyHttpBtn"><span class="dot dot-http"></span> Chỉ HTTP</button>
+                <button id="copySocksBtn"><span class="dot dot-socks5"></span> Chỉ SOCKS5</button>
+                <button id="copyBothBtn"><span class="dot dot-all"></span> HTTP + SOCKS5</button>
+            </div>
         </div>
     </div>
 
@@ -230,6 +542,7 @@ button:disabled { opacity: .6; cursor: not-allowed; }
 
 <div id="proxyList"></div>
 
+</div>
 
 <script>
 document.addEventListener("contextmenu", e => e.preventDefault());
@@ -241,7 +554,6 @@ document.addEventListener("keydown", e => {
     if (e.ctrlKey && e.key.toLowerCase() === "a") return;
 });
 
-// ─── Hằng số ─────────────────────────────────────────────────
 const UUID_REGEX    = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const UUID_API_BASE = "https://svproxy2.nguyenanlk2872.workers.dev/proxy/access_key/";
 let API_MAP = {};
@@ -253,7 +565,6 @@ const rotateAllBtn = document.getElementById("rotateAllBtn");
 const apiStatus    = document.getElementById("apiStatus");
 const proxyList    = document.getElementById("proxyList");
 
-// ── Copy All Dropdown logic ──
 const copyAllBtn      = document.getElementById("copyAllBtn");
 const copyAllDropdown = document.getElementById("copyAllDropdown");
 const copyAllWrapper  = document.getElementById("copyAllWrapper");
@@ -271,7 +582,7 @@ async function copyAndFlash(lines, btn, label) {
     await navigator.clipboard.writeText(lines.join("\n"));
     copyAllDropdown.classList.remove("open");
     const orig = btn.innerHTML;
-    btn.innerHTML = `✅ Đã copy ${lines.length} proxy`;
+    btn.innerHTML = `✅ ĐÃ COPY ${lines.length} PROXY`;
     setTimeout(() => btn.innerHTML = orig, 1500);
 }
 
@@ -297,7 +608,6 @@ document.getElementById("copyBothBtn").onclick = async () => {
 
 let savedApis = JSON.parse(localStorage.getItem("proxy_api_keys") || "[]");
 
-// ─── Load API MAP ─────────────────────────────────────────────
 async function loadApiMap() {
     try {
         const res = await fetch(API_MAP_URL, { cache: "no-store" });
@@ -309,11 +619,9 @@ async function loadApiMap() {
     }
 }
 
-// ─── Helpers ─────────────────────────────────────────────────
 function buildHttpProxy(p)   { return `${p.host}:${p.port}:${p.username}:${p.password}`; }
 function buildSocks5Proxy(p) { return `${p.host}:${p.socks5_port}:${p.username}:${p.password}`; }
 
-// ─── Box UUID ─────────────────────────────────────────────────
 async function createUuidProxyBox(apiKey) {
     const box = document.createElement("div");
     box.className = "proxy-container uuid-type";
@@ -321,29 +629,34 @@ async function createUuidProxyBox(apiKey) {
 
     const proxyArea = document.createElement("div");
     proxyArea.className = "proxy-text uuid-proxies";
-    proxyArea.innerText = "⏳ Đang tải proxy...";
+    proxyArea.innerHTML = `<span class="loading-text">⏳ Đang tải proxy...</span>`;
 
     const status = document.createElement("span");
     status.className = "status";
 
     const changeIpBtn = document.createElement("button");
-    changeIpBtn.className = "btn-rotate";
-    changeIpBtn.style.background = "#ea580c";
-    changeIpBtn.innerText = "🌐 Đổi IP";
+    changeIpBtn.className = "btn-orange";
+    changeIpBtn.style.background = "linear-gradient(135deg, #c2410c, #ea580c)";
+    changeIpBtn.style.boxShadow = "0 2px 10px rgba(234,88,12,.2)";
+    changeIpBtn.innerHTML = "🌐 ĐỔI IP";
 
     const delBtn = document.createElement("button");
-    delBtn.className = "btn-delete";
-    delBtn.innerText = "❌";
+    delBtn.className = "btn-red";
+    delBtn.innerHTML = "✕ XÓA";
     delBtn.onclick = () => {
         savedApis = savedApis.filter(k => k !== apiKey);
         localStorage.setItem("proxy_api_keys", JSON.stringify(savedApis));
-        proxyList.removeChild(box);
+        box.style.animation = "none";
+        box.style.opacity = "0";
+        box.style.transform = "translateY(-6px)";
+        box.style.transition = "all .2s";
+        setTimeout(() => proxyList.removeChild(box), 200);
     };
 
     async function fetchAndRender() {
         changeIpBtn.disabled = true;
-        status.innerText = "⏳ Đang tải...";
-        proxyArea.innerHTML = "";
+        status.innerText = "Đang tải...";
+        proxyArea.innerHTML = `<span class="loading-text">⏳ Đang tải proxy...</span>`;
         const url = UUID_API_BASE + apiKey;
         try {
             const res  = await fetch(url, { cache: "no-store" });
@@ -357,7 +670,6 @@ async function createUuidProxyBox(apiKey) {
             }
 
             const entries = Object.values(data.proxies);
-
             if (!entries.length) {
                 proxyArea.innerText = "⚠️ Không có proxy nào";
                 status.innerText = "";
@@ -367,13 +679,20 @@ async function createUuidProxyBox(apiKey) {
 
             box._proxyLines = []; box._httpLines = []; box._socksLines = [];
             box._proxyIds   = entries.map(p => p.id);
+            proxyArea.innerHTML = "";
 
-            entries.forEach(p => {
+            entries.forEach((p, idx) => {
                 const http   = buildHttpProxy(p);
                 const socks5 = buildSocks5Proxy(p);
                 box._proxyLines.push(http, socks5);
                 box._httpLines.push(http);
                 box._socksLines.push(socks5);
+
+                if (idx > 0) {
+                    const div2 = document.createElement("div");
+                    div2.className = "proxy-divider";
+                    proxyArea.appendChild(div2);
+                }
 
                 const rowH = document.createElement("div"); rowH.className = "proxy-line";
                 const lH = document.createElement("span"); lH.className = "proxy-label http"; lH.innerText = "HTTP";
@@ -381,44 +700,48 @@ async function createUuidProxyBox(apiKey) {
                 rowH.append(lH, vH);
 
                 const rowIP = document.createElement("div");
-                rowIP.style.cssText = "display:flex;justify-content:flex-end;align-items:center;gap:8px;padding:0 2px;";
+                rowIP.className = "ip-info-row";
 
                 const realIpText = document.createElement("span");
-                realIpText.style.cssText = "font-size:11px;color:#6b7280;font-family:monospace;";
-                realIpText.innerText = "🌐 " + (p.real_ip || "");
+                realIpText.className = "real-ip-label";
+                realIpText.innerText = p.real_ip || "";
 
                 const testKmBtn = document.createElement("button");
-                testKmBtn.innerText = "Test KM";
-                testKmBtn.style.cssText = "background:#d97706;padding:2px 8px;font-size:11px;border-radius:5px;cursor:pointer;";
+                testKmBtn.className = "btn-test-km";
+                testKmBtn.innerText = "TEST KM";
                 testKmBtn.onclick = async () => {
                     const ip = p.real_ip;
                     if (!ip) return;
                     testKmBtn.disabled = true;
-                    testKmBtn.innerText = "⏳";
+                    testKmBtn.innerText = "⏳...";
                     try {
                         const res = await fetch("https://testdodam.nguyenanlk2872.workers.dev/?ip=" + ip, { cache: "no-store" });
                         const text = await res.text();
                         if (text.includes("Duplicate entry")) {
                             testKmBtn.innerText = "📉 Tỉ Lệ KM Thấp";
-                            testKmBtn.style.background = "#dc2626";
+                            testKmBtn.style.background = "rgba(220,38,38,.1)";
+                            testKmBtn.style.borderColor = "rgba(220,38,38,.4)";
+                            testKmBtn.style.color = "#dc2626";
                         } else {
                             try {
                                 const json = JSON.parse(text);
                                 if (json.status === "success") {
                                     testKmBtn.innerText = "📈 Tỉ Lệ KM Cao";
-                                    testKmBtn.style.background = "#16a34a";
+                                    testKmBtn.style.background = "rgba(22,163,74,.1)";
+                                    testKmBtn.style.borderColor = "rgba(22,163,74,.4)";
+                                    testKmBtn.style.color = "#16a34a";
                                 } else {
                                     testKmBtn.innerText = "❓ " + (json.message || "?");
-                                    testKmBtn.style.background = "#6b7280";
+                                    testKmBtn.style.background = "rgba(107,114,128,.1)";
+                                    testKmBtn.style.color = "#6b7280";
                                 }
                             } catch {
-                                testKmBtn.innerText = "❓";
-                                testKmBtn.style.background = "#6b7280";
+                                testKmBtn.innerText = "❓ Unknown";
+                                testKmBtn.style.background = "rgba(107,114,128,.1)";
                             }
                         }
                     } catch {
                         testKmBtn.innerText = "❌ Lỗi";
-                        testKmBtn.style.background = "#6b7280";
                     }
                     testKmBtn.disabled = false;
                 };
@@ -445,7 +768,7 @@ async function createUuidProxyBox(apiKey) {
         const ids = box._proxyIds || [];
         if (!ids.length) { status.innerText = "⚠️ Chưa có proxy"; return; }
         changeIpBtn.disabled = true;
-        status.innerText = "⏳ Đang đổi IP...";
+        status.innerText = "⏳ Đổi IP...";
         try {
             let ok = 0, fail = 0;
             for (const id of ids) {
@@ -472,7 +795,7 @@ async function createUuidProxyBox(apiKey) {
                 }
             }
             if (ok > 0) {
-                status.innerText = "✅ Xoay thành công";
+                status.innerText = "✅ Xoay xong";
                 setTimeout(fetchAndRender, 1500);
             } else {
                 changeIpBtn.disabled = false;
@@ -484,60 +807,49 @@ async function createUuidProxyBox(apiKey) {
     }
 
     const copyHttpBtn2 = document.createElement("button");
-    copyHttpBtn2.className = "btn-copy"; copyHttpBtn2.style.background = "#2563eb"; copyHttpBtn2.innerText = "HTTP";
+    copyHttpBtn2.className = "btn-blue";
+    copyHttpBtn2.innerHTML = "HTTP";
     copyHttpBtn2.onclick = async () => {
         const lines = box._httpLines || [];
         if (!lines.length) { alert("Chưa có proxy HTTP"); return; }
         await navigator.clipboard.writeText(lines.join("\n"));
-        copyHttpBtn2.innerText = "✅"; setTimeout(() => copyHttpBtn2.innerText = "HTTP", 800);
+        copyHttpBtn2.innerHTML = "✅"; setTimeout(() => copyHttpBtn2.innerHTML = "HTTP", 800);
     };
 
     const copySocksBtn2 = document.createElement("button");
-    copySocksBtn2.className = "btn-copy"; copySocksBtn2.style.background = "#7c3aed"; copySocksBtn2.innerText = "SOCKS5";
+    copySocksBtn2.className = "btn-purple";
+    copySocksBtn2.innerHTML = "SOCKS5";
     copySocksBtn2.onclick = async () => {
         const lines = box._socksLines || [];
         if (!lines.length) { alert("Chưa có proxy SOCKS5"); return; }
         await navigator.clipboard.writeText(lines.join("\n"));
-        copySocksBtn2.innerText = "✅"; setTimeout(() => copySocksBtn2.innerText = "SOCKS5", 800);
+        copySocksBtn2.innerHTML = "✅"; setTimeout(() => copySocksBtn2.innerHTML = "SOCKS5", 800);
     };
 
-    // ── Lọc đầu IP ──
     async function filterIp() {
         const ipPrefix = filterInput.value.trim();
         if (!ipPrefix) { alert("Nhập đầu IP muốn lọc"); return; }
         const ids = box._proxyIds || [];
         if (!ids.length) { status.innerText = "⚠️ Chưa có proxy"; return; }
         filterBtn.disabled = true;
-        status.innerText = "⏳ Đang lọc IP...";
+        status.innerText = "⏳ Lọc IP...";
         try {
             let ok = 0, fail = 0;
             for (const id of ids) {
                 const url = `${UUID_API_BASE}${apiKey}/update?filter_ip=${encodeURIComponent(ipPrefix)}&minute_change_ip=0&id=${id}&change_ip=`;
                 const res  = await fetch(url, { cache: "no-store" });
                 const data = await res.json();
-
                 let portMsg = "";
                 let portError = false;
                 if (data.data && typeof data.data === "object") {
                     const portObj = Object.values(data.data).find(v => v && typeof v === "object" && v.status);
                     if (portObj) { portError = portObj.status === "error"; portMsg = portObj.msg || ""; }
                 }
-
-                if (data.status === "success" && !portError) {
-                    ok++;
-                } else {
-                    fail++;
-                    const showMsg = portMsg || data.msg || data.message || "Lỗi lọc IP";
-                    status.innerText = "⏳ " + showMsg;
-                }
+                if (data.status === "success" && !portError) { ok++; }
+                else { fail++; status.innerText = "⏳ " + (portMsg || data.msg || data.message || "Lỗi lọc IP"); }
             }
-            if (ok > 0) {
-                status.innerText = "✅ Lọc IP thành công";
-                setTimeout(fetchAndRender, 1500);
-            }
-        } catch(err) {
-            status.innerText = "❌ Lỗi lọc IP";
-        }
+            if (ok > 0) { status.innerText = "✅ Lọc IP xong"; setTimeout(fetchAndRender, 1500); }
+        } catch(err) { status.innerText = "❌ Lỗi lọc IP"; }
         filterBtn.disabled = false;
     }
 
@@ -545,57 +857,71 @@ async function createUuidProxyBox(apiKey) {
 
     const filterInput = document.createElement("input");
     filterInput.type = "text";
-    filterInput.placeholder = "Đầu IP (vd: 27)";
-    filterInput.style.cssText = "padding:8px 10px;font-size:13px;border-radius:8px;border:1px solid #e5e7eb;width:140px;outline:none;";
+    filterInput.placeholder = "Lọc đầu IP (vd: 27)";
     filterInput.addEventListener("keydown", e => { if (e.key === "Enter") filterIp(); });
 
     const filterBtn = document.createElement("button");
-    filterBtn.style.background = "#0891b2";
-    filterBtn.innerText = "🔍 Lọc IP";
+    filterBtn.className = "btn-cyan";
+    filterBtn.innerHTML = "🔍 Lọc IP";
     filterBtn.onclick = filterIp;
 
     const filterRow = document.createElement("div");
-    filterRow.style.cssText = "display:flex;gap:6px;align-items:center;flex-wrap:wrap;";
+    filterRow.className = "filter-row";
     filterRow.append(filterInput, filterBtn);
+
+    const actionBtns = document.createElement("div");
+    actionBtns.className = "action-btns";
+    actionBtns.append(copyHttpBtn2, copySocksBtn2, changeIpBtn, delBtn);
 
     const actions = document.createElement("div");
     actions.className = "proxy-actions";
-    actions.append(copyHttpBtn2, copySocksBtn2, changeIpBtn, delBtn);
-    box.append(proxyArea, filterRow, actions, status);
+    actions.append(filterRow, actionBtns);
+
+    const rightCol = document.createElement("div");
+    rightCol.className = "proxy-container-right";
+
+    const proxyBody = document.createElement("div");
+    proxyBody.className = "proxy-body";
+    proxyBody.append(proxyArea);
+
+    const proxyFooter = document.createElement("div");
+    proxyFooter.className = "proxy-footer";
+    proxyFooter.append(actions, status);
+
+    box.append(proxyBody, proxyFooter);
     proxyList.appendChild(box);
     await fetchAndRender();
 }
 
-// ─── Box key thường ──────────────────────────────────────────
 function createProxyBox(apiKey) {
     const info = API_MAP[apiKey];
     if (!info) return;
     const box = document.createElement("div"); box.className = "proxy-container";
+
     const proxyText = document.createElement("div"); proxyText.className = "proxy-text"; proxyText.innerText = info.proxy;
 
-    const copyBtn = document.createElement("button"); copyBtn.className = "btn-copy"; copyBtn.innerText = "📋 Copy";
+    const copyBtn = document.createElement("button"); copyBtn.className = "btn-copy"; copyBtn.innerHTML = "⎘ COPY";
     copyBtn.onclick = async () => {
         await navigator.clipboard.writeText(proxyText.innerText);
-        copyBtn.innerText = "✅"; setTimeout(() => copyBtn.innerText = "📋 Copy", 800);
+        copyBtn.innerHTML = "✅ Copied"; setTimeout(() => copyBtn.innerHTML = "⎘ COPY", 800);
     };
 
-    const rotateBtn = document.createElement("button"); rotateBtn.className = "btn-rotate"; rotateBtn.innerText = "🔄 Xoay";
+    const rotateBtn = document.createElement("button"); rotateBtn.className = "btn-primary"; rotateBtn.innerHTML = "⟳ Xoay";
     const status = document.createElement("span"); status.className = "status";
 
     rotateBtn.onclick = async () => {
-        rotateBtn.disabled = true; status.innerText = "⏳ Đang xoay...";
+        rotateBtn.disabled = true; status.innerText = "⏳ Xoay...";
         try {
             let url = info.rotate;
             if (url.includes("reset?proxy=")) url += encodeURIComponent(info.proxy);
             else url += apiKey;
             const res  = await fetch(url);
             const data = await res.json();
-
             if (data.success === false) {
                 status.innerText = "⚠️ " + (data.message || "Không xoay được");
             } else {
                 if (data.data?.proxy) { info.proxy = data.data.proxy; proxyText.innerText = data.data.proxy; }
-                status.innerText = "✅ Xoay thành công";
+                status.innerText = "✅ Xoay xong";
             }
         } catch(err) {
             status.innerText = "❌ Bình tẽn xoay tutu";
@@ -603,20 +929,34 @@ function createProxyBox(apiKey) {
         rotateBtn.disabled = false;
     };
 
-    const delBtn = document.createElement("button"); delBtn.className = "btn-delete"; delBtn.innerText = "❌";
+    const delBtn = document.createElement("button"); delBtn.className = "btn-red"; delBtn.innerHTML = "✕ XÓA";
     delBtn.onclick = () => {
         savedApis = savedApis.filter(k => k !== apiKey);
         localStorage.setItem("proxy_api_keys", JSON.stringify(savedApis));
-        proxyList.removeChild(box);
+        box.style.opacity = "0";
+        box.style.transform = "translateY(-6px)";
+        box.style.transition = "all .2s";
+        setTimeout(() => proxyList.removeChild(box), 200);
     };
 
     const actions = document.createElement("div"); actions.className = "proxy-actions";
     actions.append(copyBtn, rotateBtn, delBtn);
-    box.append(proxyText, actions, status);
+
+    const proxyBody2 = document.createElement("div");
+    proxyBody2.className = "proxy-body";
+    proxyBody2.append(proxyText);
+
+    const proxyFooter2 = document.createElement("div");
+    proxyFooter2.className = "proxy-footer";
+    proxyFooter2.style.flexDirection = "row";
+    proxyFooter2.style.flexWrap = "wrap";
+    proxyFooter2.style.alignItems = "center";
+    proxyFooter2.append(actions, status);
+
+    box.append(proxyBody2, proxyFooter2);
     proxyList.appendChild(box);
 }
 
-// ─── Thêm API ─────────────────────────────────────────────────
 addApiBtn.onclick = async () => {
     const keys = apiInput.value.trim().split(/\r?\n/).map(k => k.trim()).filter(Boolean);
     let a = 0, s = 0, i = 0;
@@ -631,11 +971,11 @@ addApiBtn.onclick = async () => {
         }
     }
     localStorage.setItem("proxy_api_keys", JSON.stringify(savedApis));
-    apiStatus.innerText = `Thêm ${a} | Trùng ${s} | Sai ${i}`;
+    apiStatus.innerText = `+ Thêm ${a}  ·  ~ Trùng ${s}  ·  ✕ Sai ${i}`;
+    apiStatus.classList.add("visible");
     apiInput.value = "";
 };
 
-// ─── Xoay tất cả ─────────────────────────────────────────────
 rotateAllBtn.onclick = async () => {
     const buttons = document.querySelectorAll(".btn-rotate");
     for (const btn of buttons) {
@@ -643,7 +983,6 @@ rotateAllBtn.onclick = async () => {
     }
 };
 
-// ─── Start ────────────────────────────────────────────────────
 loadApiMap();
 </script>
 </body>
