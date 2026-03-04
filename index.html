@@ -386,6 +386,40 @@ button:disabled { opacity: .4; cursor: not-allowed; }
     border: 1px solid var(--border);
     border-radius: 6px;
     padding: 8px 10px;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+    position: relative;
+}
+.proxy-line:hover {
+    background: rgba(82,84,204,.06);
+    border-color: var(--accent);
+}
+.proxy-line:hover::after {
+    content: '⎘ COPY';
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--accent);
+    background: rgba(82,84,204,.1);
+    border: 1px solid rgba(82,84,204,.25);
+    border-radius: 3px;
+    padding: 2px 7px;
+    pointer-events: none;
+}
+.proxy-line.copied {
+    background: rgba(22,163,74,.08) !important;
+    border-color: var(--green) !important;
+}
+.proxy-line.copied::after {
+    content: '✅ COPIED' !important;
+    color: var(--green) !important;
+    background: rgba(22,163,74,.1) !important;
+    border-color: rgba(22,163,74,.3) !important;
 }
 .proxy-label {
     font-family: 'Barlow Condensed', sans-serif;
@@ -725,6 +759,11 @@ async function createUuidProxyBox(apiKey) {
                 const lH = document.createElement("span"); lH.className = "proxy-label http"; lH.innerText = "HTTP";
                 const vH = document.createElement("span"); vH.className = "proxy-value"; vH.innerText = http;
                 rowH.append(lH, vH);
+                rowH.onclick = async () => {
+                    await navigator.clipboard.writeText(http);
+                    rowH.classList.add("copied");
+                    setTimeout(() => rowH.classList.remove("copied"), 1200);
+                };
 
                 const rowIP = document.createElement("div");
                 rowIP.className = "ip-info-row";
@@ -779,6 +818,11 @@ async function createUuidProxyBox(apiKey) {
                 const lS = document.createElement("span"); lS.className = "proxy-label socks5"; lS.innerText = "SOCKS5";
                 const vS = document.createElement("span"); vS.className = "proxy-value"; vS.innerText = socks5;
                 rowS.append(lS, vS);
+                rowS.onclick = async () => {
+                    await navigator.clipboard.writeText(socks5);
+                    rowS.classList.add("copied");
+                    setTimeout(() => rowS.classList.remove("copied"), 1200);
+                };
 
                 proxyArea.append(rowH, rowIP, rowS);
             });
@@ -1001,9 +1045,9 @@ addApiBtn.onclick = async () => {
 };
 
 rotateAllBtn.onclick = async () => {
-    const buttons = document.querySelectorAll(".btn-rotate");
+    const buttons = document.querySelectorAll(".btn-orange, .btn-primary");
     for (const btn of buttons) {
-        if (!btn.disabled) { btn.click(); await new Promise(r => setTimeout(r, 600)); }
+        if (!btn.disabled) { btn.click(); await new Promise(r => setTimeout(r, 800)); }
     }
 };
 
