@@ -133,7 +133,7 @@ body::before {
     padding: 20px;
     margin-bottom: 18px;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
     box-shadow: 0 1px 6px rgba(0,0,0,.06);
 }
 .panel::before {
@@ -143,6 +143,8 @@ body::before {
     height: 2px;
     background: linear-gradient(90deg, transparent 5%, var(--accent) 50%, transparent 95%);
     opacity: .4;
+    border-radius: 10px 10px 0 0;
+    pointer-events: none;
 }
 .panel-label {
     font-family: 'Space Mono', monospace;
@@ -239,7 +241,6 @@ button:disabled { opacity: .4; cursor: not-allowed; }
     box-shadow: 0 2px 8px rgba(220,38,38,.18);
 }
 
-/* ── Dynamic button classes (used in JS) ── */
 .btn-red {
     background: linear-gradient(135deg, #b91c1c, #dc2626);
     box-shadow: 0 2px 8px rgba(220,38,38,.18);
@@ -622,6 +623,9 @@ const UUID_API_BASE = "https://svproxy2.nguyenanlk2872.workers.dev/proxy/access_
 let API_MAP = {};
 const API_MAP_URL = "https://raw.githubusercontent.com/nguyenan177/apiv2/refs/heads/main/api_map.json";
 
+// ── FIX: Dùng Map toàn cục để lưu proxy data, tránh mất data khi re-render ──
+const proxyDataStore = new Map(); // key: apiKey → { httpLines, socksLines, proxyLines, proxyIds }
+
 const apiInput     = document.getElementById("apiInput");
 const addApiBtn    = document.getElementById("addApiBtn");
 const rotateAllBtn = document.getElementById("rotateAllBtn");
@@ -649,23 +653,46 @@ async function copyAndFlash(lines, btn, label) {
     setTimeout(() => btn.innerHTML = orig, 1500);
 }
 
+// ── FIX: Đọc data từ proxyDataStore thay vì từ DOM element property ──
 document.getElementById("copyHttpBtn").onclick = async () => {
     const lines = [];
-    document.querySelectorAll(".proxy-text:not(.uuid-proxies)").forEach(el => { const t = el.innerText.trim(); if (t) lines.push(t); });
-    document.querySelectorAll(".proxy-container.uuid-type").forEach(b => { if (b._httpLines) lines.push(...b._httpLines); });
+    // Proxy thường (non-UUID): lấy từ .proxy-text có data-api-key
+    document.querySelectorAll(".proxy-container:not(.uuid-type) .proxy-text").forEach(el => {
+        const t = el.innerText.trim();
+        if (t) lines.push(t);
+    });
+    // UUID proxy: lấy từ store
+    document.querySelectorAll(".proxy-container.uuid-type").forEach(box => {
+        const key = box.dataset.uuid;
+        const data = proxyDataStore.get(key);
+        if (data && data.httpLines) lines.push(...data.httpLines);
+    });
     await copyAndFlash(lines, document.getElementById("copyHttpBtn"), "HTTP");
 };
 
 document.getElementById("copySocksBtn").onclick = async () => {
     const lines = [];
-    document.querySelectorAll(".proxy-container.uuid-type").forEach(b => { if (b._socksLines) lines.push(...b._socksLines); });
+    document.querySelectorAll(".proxy-container.uuid-type").forEach(box => {
+        const key = box.dataset.uuid;
+        const data = proxyDataStore.get(key);
+        if (data && data.socksLines) lines.push(...data.socksLines);
+    });
     await copyAndFlash(lines, document.getElementById("copySocksBtn"), "SOCKS5");
 };
 
 document.getElementById("copyBothBtn").onclick = async () => {
     const lines = [];
-    document.querySelectorAll(".proxy-text:not(.uuid-proxies)").forEach(el => { const t = el.innerText.trim(); if (t) lines.push(t); });
-    document.querySelectorAll(".proxy-container.uuid-type").forEach(b => { if (b._proxyLines) lines.push(...b._proxyLines); });
+    // Proxy thường
+    document.querySelectorAll(".proxy-container:not(.uuid-type) .proxy-text").forEach(el => {
+        const t = el.innerText.trim();
+        if (t) lines.push(t);
+    });
+    // UUID proxy: lấy từ store
+    document.querySelectorAll(".proxy-container.uuid-type").forEach(box => {
+        const key = box.dataset.uuid;
+        const data = proxyDataStore.get(key);
+        if (data && data.proxyLines) lines.push(...data.proxyLines);
+    });
     await copyAndFlash(lines, document.getElementById("copyBothBtn"), "HTTP + SOCKS5");
 };
 
@@ -690,6 +717,9 @@ async function createUuidProxyBox(apiKey) {
     box.className = "proxy-container uuid-type";
     box.dataset.uuid = apiKey;
 
+    // Khởi tạo store entry
+    proxyDataStore.set(apiKey, { httpLines: [], socksLines: [], proxyLines: [], proxyIds: [] });
+
     const proxyArea = document.createElement("div");
     proxyArea.className = "proxy-text uuid-proxies";
     proxyArea.innerHTML = `<span class="loading-text">⏳ Đang tải proxy...</span>`;
@@ -707,11 +737,12 @@ async function createUuidProxyBox(apiKey) {
     delBtn.onclick = () => {
         savedApis = savedApis.filter(k => k !== apiKey);
         localStorage.setItem("proxy_api_keys", JSON.stringify(savedApis));
+        proxyDataStore.delete(apiKey); // xoá khỏi store
         box.style.animation = "none";
         box.style.opacity = "0";
         box.style.transform = "translateY(-6px)";
         box.style.transition = "all .2s";
-        setTimeout(() => proxyList.removeChild(box), 200);
+        setTimeout(() => { if (box.parentNode) proxyList.removeChild(box); }, 200);
     };
 
     async function fetchAndRender() {
@@ -738,16 +769,16 @@ async function createUuidProxyBox(apiKey) {
                 return;
             }
 
-            box._proxyLines = []; box._httpLines = []; box._socksLines = [];
-            box._proxyIds   = entries.map(p => p.id);
+            // ── FIX: Cập nhật store thay vì gán lên box ──
+            const store = { httpLines: [], socksLines: [], proxyLines: [], proxyIds: entries.map(p => p.id) };
             proxyArea.innerHTML = "";
 
             entries.forEach((p, idx) => {
                 const http   = buildHttpProxy(p);
                 const socks5 = buildSocks5Proxy(p);
-                box._proxyLines.push(http, socks5);
-                box._httpLines.push(http);
-                box._socksLines.push(socks5);
+                store.proxyLines.push(http, socks5);
+                store.httpLines.push(http);
+                store.socksLines.push(socks5);
 
                 if (idx > 0) {
                     const div2 = document.createElement("div");
@@ -827,6 +858,9 @@ async function createUuidProxyBox(apiKey) {
                 proxyArea.append(rowH, rowIP, rowS);
             });
 
+            // ── FIX: Lưu vào store sau khi build xong ──
+            proxyDataStore.set(apiKey, store);
+
             status.innerText = `✅ ${entries.length} proxy`;
         } catch(err) {
             proxyArea.innerText = "❌ Lỗi kết nối";
@@ -836,7 +870,8 @@ async function createUuidProxyBox(apiKey) {
     }
 
     async function changeAllIPs() {
-        const ids = box._proxyIds || [];
+        const storeData = proxyDataStore.get(apiKey);
+        const ids = (storeData && storeData.proxyIds) || [];
         if (!ids.length) { status.innerText = "⚠️ Chưa có proxy"; return; }
         changeIpBtn.disabled = true;
         status.innerText = "⏳ Đổi IP...";
@@ -881,7 +916,8 @@ async function createUuidProxyBox(apiKey) {
     copyHttpBtn2.className = "btn-blue";
     copyHttpBtn2.innerHTML = "HTTP";
     copyHttpBtn2.onclick = async () => {
-        const lines = box._httpLines || [];
+        const storeData = proxyDataStore.get(apiKey);
+        const lines = (storeData && storeData.httpLines) || [];
         if (!lines.length) { alert("Chưa có proxy HTTP"); return; }
         await navigator.clipboard.writeText(lines.join("\n"));
         copyHttpBtn2.innerHTML = "✅"; setTimeout(() => copyHttpBtn2.innerHTML = "HTTP", 800);
@@ -891,7 +927,8 @@ async function createUuidProxyBox(apiKey) {
     copySocksBtn2.className = "btn-purple";
     copySocksBtn2.innerHTML = "SOCKS5";
     copySocksBtn2.onclick = async () => {
-        const lines = box._socksLines || [];
+        const storeData = proxyDataStore.get(apiKey);
+        const lines = (storeData && storeData.socksLines) || [];
         if (!lines.length) { alert("Chưa có proxy SOCKS5"); return; }
         await navigator.clipboard.writeText(lines.join("\n"));
         copySocksBtn2.innerHTML = "✅"; setTimeout(() => copySocksBtn2.innerHTML = "SOCKS5", 800);
@@ -900,7 +937,8 @@ async function createUuidProxyBox(apiKey) {
     async function filterIp() {
         const ipPrefix = filterInput.value.trim();
         if (!ipPrefix) { alert("Nhập đầu IP muốn lọc"); return; }
-        const ids = box._proxyIds || [];
+        const storeData = proxyDataStore.get(apiKey);
+        const ids = (storeData && storeData.proxyIds) || [];
         if (!ids.length) { status.innerText = "⚠️ Chưa có proxy"; return; }
         filterBtn.disabled = true;
         status.innerText = "⏳ Lọc IP...";
@@ -1004,7 +1042,7 @@ function createProxyBox(apiKey) {
         box.style.opacity = "0";
         box.style.transform = "translateY(-6px)";
         box.style.transition = "all .2s";
-        setTimeout(() => proxyList.removeChild(box), 200);
+        setTimeout(() => { if (box.parentNode) proxyList.removeChild(box); }, 200);
     };
 
     const actions = document.createElement("div"); actions.className = "proxy-actions";
