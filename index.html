@@ -222,18 +222,47 @@ button:disabled { opacity: .4; cursor: not-allowed; }
     box-shadow: 0 1px 4px rgba(0,0,0,.08);
 }
 .btn-add:hover:not(:disabled) { border-color: var(--accent); box-shadow: 0 0 12px var(--glow-sm); color: var(--accent); }
+
 .btn-rotate {
     background: linear-gradient(135deg, var(--accent), #4f46e5);
     box-shadow: 0 2px 10px rgba(82,84,204,.25);
 }
 .btn-rotate:hover:not(:disabled) { box-shadow: 0 4px 16px rgba(82,84,204,.38); }
+
 .btn-copy {
     background: linear-gradient(135deg, #15803d, #16a34a);
     box-shadow: 0 2px 8px rgba(22,163,74,.18);
 }
+
 .btn-delete {
     background: linear-gradient(135deg, #b91c1c, #dc2626);
     box-shadow: 0 2px 8px rgba(220,38,38,.18);
+}
+
+/* ── Dynamic button classes (used in JS) ── */
+.btn-red {
+    background: linear-gradient(135deg, #b91c1c, #dc2626);
+    box-shadow: 0 2px 8px rgba(220,38,38,.18);
+}
+.btn-orange {
+    background: linear-gradient(135deg, #c2410c, #ea580c);
+    box-shadow: 0 2px 10px rgba(234,88,12,.2);
+}
+.btn-blue {
+    background: linear-gradient(135deg, #1d4ed8, #2563eb);
+    box-shadow: 0 2px 8px rgba(37,99,235,.2);
+}
+.btn-purple {
+    background: linear-gradient(135deg, #6d28d9, #7c3aed);
+    box-shadow: 0 2px 8px rgba(124,58,237,.2);
+}
+.btn-cyan {
+    background: linear-gradient(135deg, #0e7490, #0891b2);
+    box-shadow: 0 2px 8px rgba(8,145,178,.2);
+}
+.btn-primary {
+    background: linear-gradient(135deg, var(--accent), #4f46e5);
+    box-shadow: 0 2px 10px rgba(82,84,204,.25);
 }
 
 #apiStatus {
@@ -636,8 +665,6 @@ async function createUuidProxyBox(apiKey) {
 
     const changeIpBtn = document.createElement("button");
     changeIpBtn.className = "btn-orange";
-    changeIpBtn.style.background = "linear-gradient(135deg, #c2410c, #ea580c)";
-    changeIpBtn.style.boxShadow = "0 2px 10px rgba(234,88,12,.2)";
     changeIpBtn.innerHTML = "🌐 ĐỔI IP";
 
     const delBtn = document.createElement("button");
@@ -876,9 +903,6 @@ async function createUuidProxyBox(apiKey) {
     const actions = document.createElement("div");
     actions.className = "proxy-actions";
     actions.append(filterRow, actionBtns);
-
-    const rightCol = document.createElement("div");
-    rightCol.className = "proxy-container-right";
 
     const proxyBody = document.createElement("div");
     proxyBody.className = "proxy-body";
