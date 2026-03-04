@@ -504,9 +504,40 @@ async function copyAndFlash(lines,btn){
     copyAllDropdown.classList.remove("open");
     const orig=btn.innerHTML; btn.innerHTML=`✅ ĐÃ COPY ${lines.length} PROXY`; setTimeout(()=>btn.innerHTML=orig,1500);
 }
-document.getElementById("copyHttpBtn").onclick=async()=>{const l=[];document.querySelectorAll(".proxy-container:not(.uuid-type) .proxy-text").forEach(el=>{const t=el.innerText.trim();if(t)l.push(t);});document.querySelectorAll(".proxy-container.uuid-type").forEach(b=>{const d=proxyDataStore.get(b.dataset.uuid);if(d&&d.httpLines)l.push(...d.httpLines);});await copyAndFlash(l,document.getElementById("copyHttpBtn"));};
-document.getElementById("copySocksBtn").onclick=async()=>{const l=[];document.querySelectorAll(".proxy-container.uuid-type").forEach(b=>{const d=proxyDataStore.get(b.dataset.uuid);if(d&&d.socksLines)l.push(...d.socksLines);});await copyAndFlash(l,document.getElementById("copySocksBtn"));};
-document.getElementById("copyBothBtn").onclick=async()=>{const l=[];document.querySelectorAll(".proxy-container:not(.uuid-type) .proxy-text").forEach(el=>{const t=el.innerText.trim();if(t)l.push(t);});document.querySelectorAll(".proxy-container.uuid-type").forEach(b=>{const d=proxyDataStore.get(b.dataset.uuid);if(d&&d.proxyLines)l.push(...d.proxyLines);});await copyAndFlash(l,document.getElementById("copyBothBtn"));};
+
+function getAllHttpLines(){
+    const l=[];
+    // proxy thường (non-UUID): lấy từ data store nếu có, fallback innerText
+    document.querySelectorAll(".proxy-container:not(.uuid-type)").forEach(box=>{
+        const pt=box.querySelector(".proxy-text");if(pt){const t=pt.innerText.trim();if(t)l.push(t);}
+    });
+    // UUID proxy: luôn lấy từ store
+    document.querySelectorAll(".proxy-container.uuid-type").forEach(b=>{
+        const d=proxyDataStore.get(b.dataset.uuid);if(d&&d.httpLines&&d.httpLines.length)l.push(...d.httpLines);
+    });
+    return l;
+}
+function getAllSocksLines(){
+    const l=[];
+    document.querySelectorAll(".proxy-container.uuid-type").forEach(b=>{
+        const d=proxyDataStore.get(b.dataset.uuid);if(d&&d.socksLines&&d.socksLines.length)l.push(...d.socksLines);
+    });
+    return l;
+}
+function getAllProxyLines(){
+    const l=[];
+    document.querySelectorAll(".proxy-container:not(.uuid-type)").forEach(box=>{
+        const pt=box.querySelector(".proxy-text");if(pt){const t=pt.innerText.trim();if(t)l.push(t);}
+    });
+    document.querySelectorAll(".proxy-container.uuid-type").forEach(b=>{
+        const d=proxyDataStore.get(b.dataset.uuid);if(d&&d.proxyLines&&d.proxyLines.length)l.push(...d.proxyLines);
+    });
+    return l;
+}
+
+document.getElementById("copyHttpBtn").onclick=async(e)=>{e.stopPropagation();await copyAndFlash(getAllHttpLines(),document.getElementById("copyHttpBtn"));};
+document.getElementById("copySocksBtn").onclick=async(e)=>{e.stopPropagation();await copyAndFlash(getAllSocksLines(),document.getElementById("copySocksBtn"));};
+document.getElementById("copyBothBtn").onclick=async(e)=>{e.stopPropagation();await copyAndFlash(getAllProxyLines(),document.getElementById("copyBothBtn"));};
 
 let savedApis=JSON.parse(localStorage.getItem("proxy_api_keys")||"[]");
 async function loadApiMap(){try{const res=await fetch(API_MAP_URL,{cache:"no-store"});API_MAP=await res.json();proxyList.innerHTML="";savedApis.forEach(k=>UUID_REGEX.test(k)?createUuidProxyBox(k):createProxyBox(k));}catch(err){alert("❌ Không tải được API MAP");}}
