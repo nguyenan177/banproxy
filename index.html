@@ -41,6 +41,18 @@ body {
     overflow-x: hidden;
 }
 
+/* ── Matrix Canvas ── */
+#matrix-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.55;
+}
+
 body::before {
     content: '';
     position: fixed;
@@ -50,12 +62,22 @@ body::before {
         linear-gradient(90deg, rgba(82,84,204,.04) 1px, transparent 1px);
     background-size: 48px 48px;
     pointer-events: none;
-    z-index: 0;
+    z-index: 1;
+}
+
+/* Overlay nhẹ để content dễ đọc hơn */
+body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 50%, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.45) 60%, rgba(255,255,255,0.25) 100%);
+    pointer-events: none;
+    z-index: 2;
 }
 
 .page-wrap {
     position: relative;
-    z-index: 1;
+    z-index: 10;
     max-width: 860px;
     margin: 0 auto;
     padding: 28px 16px 60px;
@@ -127,7 +149,7 @@ body::before {
 
 /* ── Panel ── */
 .panel {
-    background: var(--card);
+    background: rgba(250,250,250,0.88);
     border: 1px solid var(--border);
     border-radius: 10px;
     padding: 20px;
@@ -135,6 +157,8 @@ body::before {
     position: relative;
     overflow: visible;
     box-shadow: 0 1px 6px rgba(0,0,0,.06);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 .panel::before {
     content: '';
@@ -325,7 +349,7 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 
 /* ── Proxy Card ── */
 .proxy-container {
-    background: var(--card);
+    background: rgba(250,250,250,0.88);
     border: 1px solid var(--border);
     border-radius: 10px;
     padding: 16px;
@@ -337,6 +361,8 @@ button:disabled { opacity: .4; cursor: not-allowed; }
     transition: border-color .2s, box-shadow .2s;
     animation: cardIn .25s ease;
     box-shadow: 0 1px 4px rgba(0,0,0,.05);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 @keyframes cardIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: none; } }
 .proxy-container::before {
@@ -572,6 +598,9 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 </head>
 <body>
 
+<!-- Matrix Canvas -->
+<canvas id="matrix-canvas"></canvas>
+
 <a href="SMSOKVIP.html" class="sms-okvip-btn">📱 THUÊ SMS OKVIP</a>
 
 <div class="page-wrap">
@@ -609,6 +638,106 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 </div>
 
 <script>
+// ══════════════════════════════════════════════
+//  MATRIX / HACKER CODE RAIN EFFECT
+// ══════════════════════════════════════════════
+(function() {
+    const canvas = document.getElementById('matrix-canvas');
+    const ctx = canvas.getContext('2d');
+
+    // Ký tự hacker: mix IP, hex, binary, code snippets, katakana
+    const chars = (
+        '0123456789ABCDEF' +
+        'abcdefghijklmnopqrstuvwxyz' +
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZ' +
+        '{}[]()=><>/\\|;:.,!@#$%^&*' +
+        '01' +
+        '192.168.0.proxy.rotate.api.key.http.socks5.tunnel.auth.pass.' +
+        'ｦｧｨｩｪｫｬｭｮｯｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ'
+    ).split('');
+
+    // Màu sắc cho các column (mix accent, green, blue, purple)
+    const COLORS = [
+        { r: 82,  g: 84,  b: 204 }, // accent blue-purple
+        { r: 22,  g: 163, b: 74  }, // green
+        { r: 37,  g: 99,  b: 235 }, // blue
+        { r: 124, g: 58,  b: 237 }, // purple
+        { r: 8,   g: 145, b: 178 }, // cyan
+    ];
+
+    const FONT_SIZE = 13;
+    let cols = 0;
+    let drops = [];
+    let colorsArr = [];
+    let speedArr = [];
+    let frameCount = 0;
+
+    function resize() {
+        canvas.width  = window.innerWidth;
+        canvas.height = window.innerHeight;
+        cols = Math.floor(canvas.width / FONT_SIZE);
+
+        // Reset / extend arrays
+        const prev = drops.length;
+        drops     = Array.from({ length: cols }, (_, i) => drops[i] ?? Math.random() * -80);
+        colorsArr = Array.from({ length: cols }, (_, i) => colorsArr[i] ?? COLORS[Math.floor(Math.random() * COLORS.length)]);
+        speedArr  = Array.from({ length: cols }, (_, i) => speedArr[i]  ?? (0.3 + Math.random() * 0.7));
+    }
+
+    resize();
+    window.addEventListener('resize', resize);
+
+    function draw() {
+        frameCount++;
+
+        // Fade background — dùng màu trắng với alpha thấp để tạo trail
+        ctx.fillStyle = 'rgba(255,255,255, 0.055)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.font = `${FONT_SIZE}px "Space Mono", monospace`;
+
+        for (let i = 0; i < cols; i++) {
+            // Chỉ vẽ mỗi frame theo speed của column
+            if (frameCount % Math.round(2 / speedArr[i]) !== 0) continue;
+
+            const c = colorsArr[i];
+            const y = drops[i] * FONT_SIZE;
+
+            // Ký tự đầu (sáng nhất — trắng/rất sáng)
+            ctx.fillStyle = `rgba(255, 255, 255, 0.95)`;
+            const headChar = chars[Math.floor(Math.random() * chars.length)];
+            ctx.fillText(headChar, i * FONT_SIZE, y);
+
+            // Ký tự body — màu accent với opacity
+            const alpha = 0.55 + Math.random() * 0.25;
+            ctx.fillStyle = `rgba(${c.r}, ${c.g}, ${c.b}, ${alpha})`;
+            const bodyChar = chars[Math.floor(Math.random() * chars.length)];
+            ctx.fillText(bodyChar, i * FONT_SIZE, y - FONT_SIZE);
+
+            // Ký tự nhạt hơn ở phía trước
+            ctx.fillStyle = `rgba(${c.r}, ${c.g}, ${c.b}, 0.25)`;
+            const tailChar = chars[Math.floor(Math.random() * chars.length)];
+            ctx.fillText(tailChar, i * FONT_SIZE, y - FONT_SIZE * 2);
+
+            // Reset drop
+            if (y > canvas.height && Math.random() > 0.975) {
+                drops[i] = 0;
+                // Random lại màu và tốc độ
+                colorsArr[i] = COLORS[Math.floor(Math.random() * COLORS.length)];
+                speedArr[i]  = 0.3 + Math.random() * 0.7;
+            }
+
+            drops[i]++;
+        }
+    }
+
+    // ~45fps
+    setInterval(draw, 22);
+})();
+
+// ══════════════════════════════════════════════
+//  ORIGINAL APP CODE
+// ══════════════════════════════════════════════
 document.addEventListener("contextmenu", e => e.preventDefault());
 document.addEventListener("keydown", e => {
     if (e.key === "F12") e.preventDefault();
@@ -623,8 +752,7 @@ const UUID_API_BASE = "https://svproxy2.nguyenanlk2872.workers.dev/proxy/access_
 let API_MAP = {};
 const API_MAP_URL = "https://raw.githubusercontent.com/nguyenan177/apiv2/refs/heads/main/api_map.json";
 
-// ── FIX: Dùng Map toàn cục để lưu proxy data, tránh mất data khi re-render ──
-const proxyDataStore = new Map(); // key: apiKey → { httpLines, socksLines, proxyLines, proxyIds }
+const proxyDataStore = new Map();
 
 const apiInput     = document.getElementById("apiInput");
 const addApiBtn    = document.getElementById("addApiBtn");
@@ -653,15 +781,12 @@ async function copyAndFlash(lines, btn, label) {
     setTimeout(() => btn.innerHTML = orig, 1500);
 }
 
-// ── FIX: Đọc data từ proxyDataStore thay vì từ DOM element property ──
 document.getElementById("copyHttpBtn").onclick = async () => {
     const lines = [];
-    // Proxy thường (non-UUID): lấy từ .proxy-text có data-api-key
     document.querySelectorAll(".proxy-container:not(.uuid-type) .proxy-text").forEach(el => {
         const t = el.innerText.trim();
         if (t) lines.push(t);
     });
-    // UUID proxy: lấy từ store
     document.querySelectorAll(".proxy-container.uuid-type").forEach(box => {
         const key = box.dataset.uuid;
         const data = proxyDataStore.get(key);
@@ -682,12 +807,10 @@ document.getElementById("copySocksBtn").onclick = async () => {
 
 document.getElementById("copyBothBtn").onclick = async () => {
     const lines = [];
-    // Proxy thường
     document.querySelectorAll(".proxy-container:not(.uuid-type) .proxy-text").forEach(el => {
         const t = el.innerText.trim();
         if (t) lines.push(t);
     });
-    // UUID proxy: lấy từ store
     document.querySelectorAll(".proxy-container.uuid-type").forEach(box => {
         const key = box.dataset.uuid;
         const data = proxyDataStore.get(key);
@@ -717,7 +840,6 @@ async function createUuidProxyBox(apiKey) {
     box.className = "proxy-container uuid-type";
     box.dataset.uuid = apiKey;
 
-    // Khởi tạo store entry
     proxyDataStore.set(apiKey, { httpLines: [], socksLines: [], proxyLines: [], proxyIds: [] });
 
     const proxyArea = document.createElement("div");
@@ -737,7 +859,7 @@ async function createUuidProxyBox(apiKey) {
     delBtn.onclick = () => {
         savedApis = savedApis.filter(k => k !== apiKey);
         localStorage.setItem("proxy_api_keys", JSON.stringify(savedApis));
-        proxyDataStore.delete(apiKey); // xoá khỏi store
+        proxyDataStore.delete(apiKey);
         box.style.animation = "none";
         box.style.opacity = "0";
         box.style.transform = "translateY(-6px)";
@@ -769,7 +891,6 @@ async function createUuidProxyBox(apiKey) {
                 return;
             }
 
-            // ── FIX: Cập nhật store thay vì gán lên box ──
             const store = { httpLines: [], socksLines: [], proxyLines: [], proxyIds: entries.map(p => p.id) };
             proxyArea.innerHTML = "";
 
@@ -858,7 +979,6 @@ async function createUuidProxyBox(apiKey) {
                 proxyArea.append(rowH, rowIP, rowS);
             });
 
-            // ── FIX: Lưu vào store sau khi build xong ──
             proxyDataStore.set(apiKey, store);
 
             status.innerText = `✅ ${entries.length} proxy`;
