@@ -2,32 +2,36 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>🦅 EAGLE PROXY — FIRE EDITION</title>
+<title>PROXY XOAY EAGLE</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Barlow+Condensed:wght@400;600;700;800&family=Black+Ops+One&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Barlow+Condensed:wght@400;600;700;800&display=swap" rel="stylesheet">
 
 <style>
 :root {
-    --bg: #0a0604;
-    --surface: #1a1008;
-    --card: #130c05;
-    --border: #2a1a08;
-    --border2: #3a2510;
-    --text: #f5e6d0;
-    --muted: #7a5a3a;
-    --muted2: #a07848;
-    --fire1: #ff6a00;
-    --fire2: #ff3d00;
-    --fire3: #ffb300;
-    --fire4: #ff1744;
-    --ember: #ff8c00;
-    --green: #00e676;
-    --blue: #448aff;
-    --purple: #e040fb;
-    --cyan: #00e5ff;
+    --bg: #ffffff;
+    --surface: #f5f5f8;
+    --card: #fafafa;
+    --card2: #f0f0f5;
+    --border: #e2e2ec;
+    --border2: #d0d0de;
+    --text: #1a1a2e;
+    --muted: #9090a8;
+    --muted2: #6a6a88;
+    --accent: #5254cc;
+    --accent2: #4446b8;
+    --orange: #f97316;
+    --green: #16a34a;
+    --red: #dc2626;
+    --blue: #2563eb;
+    --purple: #7c3aed;
+    --cyan: #0891b2;
+    --glow: rgba(82,84,204,.12);
+    --glow-sm: rgba(82,84,204,.08);
 }
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
 body {
     background: var(--bg);
     color: var(--text);
@@ -36,616 +40,1173 @@ body {
     min-height: 100vh;
     overflow-x: hidden;
 }
-#fire-bg { position:fixed;inset:0;z-index:0;pointer-events:none; }
-#ember-canvas { position:fixed;inset:0;z-index:2;pointer-events:none; }
-.vignette {
-    position:fixed;inset:0;z-index:1;pointer-events:none;
-    background:
-        radial-gradient(ellipse 90% 50% at 50% 0%, rgba(255,80,0,.07) 0%, transparent 70%),
-        radial-gradient(ellipse 100% 100% at 50% 100%, rgba(0,0,0,.9) 0%, transparent 55%),
-        radial-gradient(ellipse 60% 100% at 0% 50%, rgba(0,0,0,.55) 0%, transparent 50%),
-        radial-gradient(ellipse 60% 100% at 100% 50%, rgba(0,0,0,.55) 0%, transparent 50%);
-}
-.page-wrap { position:relative;z-index:10;max-width:860px;margin:0 auto;padding:20px 16px 60px; }
 
+/* ── Matrix Canvas ── */
+#matrix-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.55;
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(82,84,204,.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(82,84,204,.04) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Overlay nhẹ để content dễ đọc hơn */
+body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 50%, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.45) 60%, rgba(255,255,255,0.25) 100%);
+    pointer-events: none;
+    z-index: 2;
+}
+
+.page-wrap {
+    position: relative;
+    z-index: 10;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 28px 16px 60px;
+}
+
+/* ── SMS Button ── */
 .sms-okvip-btn {
-    position:fixed;top:16px;right:16px;
-    background:linear-gradient(135deg,#7f0000,#b71c1c);
-    color:#ffcc80;padding:9px 16px;font-size:12px;font-weight:700;
-    font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;border-radius:5px;
-    text-decoration:none;box-shadow:0 0 20px rgba(255,30,0,.3),0 2px 8px rgba(0,0,0,.5);
-    z-index:999;transition:all .2s;text-transform:uppercase;border:1px solid rgba(255,80,0,.3);
+    position: fixed;
+    top: 18px;
+    right: 18px;
+    background: linear-gradient(135deg, #f59e0b, #f97316);
+    color: #fff;
+    padding: 9px 16px;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: 'Barlow Condensed', sans-serif;
+    letter-spacing: 0.5px;
+    border-radius: 6px;
+    text-decoration: none;
+    box-shadow: 0 0 20px rgba(249,115,22,.25), 0 2px 8px rgba(0,0,0,.12);
+    z-index: 999;
+    transition: all .2s;
+    text-transform: uppercase;
 }
-.sms-okvip-btn:hover{transform:translateY(-1px);box-shadow:0 0 30px rgba(255,60,0,.5),0 4px 16px rgba(0,0,0,.5);color:#fff;}
+.sms-okvip-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 0 28px rgba(249,115,22,.4), 0 4px 12px rgba(0,0,0,.15);
+}
 
-/* HEADER */
-.header{text-align:center;margin-bottom:28px;padding-top:8px;}
-#eagle-canvas{display:block;margin:0 auto;filter:drop-shadow(0 0 30px rgba(255,100,0,.8)) drop-shadow(0 0 70px rgba(255,40,0,.4));}
-.header-tag{display:inline-block;font-family:'Space Mono',monospace;font-size:9px;color:var(--ember);letter-spacing:3px;text-transform:uppercase;margin-bottom:8px;background:rgba(255,100,0,.08);border:1px solid rgba(255,100,0,.25);padding:3px 10px;border-radius:3px;}
-.header h1{font-family:'Black Ops One',sans-serif;font-size:48px;font-weight:400;letter-spacing:4px;line-height:1;background:linear-gradient(180deg,#fff5e0 0%,#ffb300 30%,#ff6a00 65%,#ff1744 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 20px rgba(255,100,0,.5));}
-.header-sub{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted2);letter-spacing:3px;margin-top:6px;}
-.header-line{width:120px;height:1px;background:linear-gradient(90deg,transparent,var(--fire1),var(--fire3),var(--fire1),transparent);margin:12px auto 0;animation:linePulse 2s ease-in-out infinite;}
-@keyframes linePulse{0%,100%{opacity:.6;width:120px}50%{opacity:1;width:200px}}
+/* ── Header ── */
+.header { text-align: center; margin-bottom: 32px; padding-top: 12px; }
+.header-tag {
+    display: inline-block;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    background: rgba(82,84,204,.07);
+    border: 1px solid rgba(82,84,204,.18);
+    padding: 3px 10px;
+    border-radius: 3px;
+}
+.header h1 {
+    font-size: 42px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    line-height: 1;
+    background: linear-gradient(135deg, #1a1a2e 0%, var(--accent) 50%, #7c3aed 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-transform: uppercase;
+}
+.header-sub {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    margin-top: 8px;
+}
+.header-line {
+    width: 80px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    margin: 14px auto 0;
+}
 
-/* PANEL */
-.panel{background:rgba(19,12,5,0.87);border:1px solid var(--border2);border-radius:8px;padding:18px;margin-bottom:16px;position:relative;overflow:visible;box-shadow:0 0 0 1px rgba(255,80,0,.05),0 4px 24px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,150,50,.07);backdrop-filter:blur(6px);}
-.panel::before{content:'';position:absolute;top:0;left:20%;right:20%;height:1px;background:linear-gradient(90deg,transparent,var(--fire1),var(--fire3),var(--fire1),transparent);opacity:.5;}
-.panel-label{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted2);letter-spacing:3px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
-.panel-label::before{content:'';display:inline-block;width:6px;height:6px;background:var(--fire1);border-radius:50%;box-shadow:0 0 8px var(--fire1),0 0 16px rgba(255,106,0,.4);animation:dotPulse 1.5s ease-in-out infinite;}
-@keyframes dotPulse{0%,100%{box-shadow:0 0 8px var(--fire1),0 0 16px rgba(255,106,0,.4)}50%{box-shadow:0 0 14px var(--fire3),0 0 28px rgba(255,180,0,.6)}}
+/* ── Panel ── */
+.panel {
+    background: rgba(250,250,250,0.88);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 18px;
+    position: relative;
+    overflow: visible;
+    box-shadow: 0 1px 6px rgba(0,0,0,.06);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+.panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent 5%, var(--accent) 50%, transparent 95%);
+    opacity: .4;
+    border-radius: 10px 10px 0 0;
+    pointer-events: none;
+}
+.panel-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--muted2);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.panel-label::before {
+    content: '';
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 6px rgba(82,84,204,.5);
+}
 
-textarea{width:100%;background:rgba(10,6,4,.7);border:1px solid var(--border2);border-radius:6px;padding:12px 14px;font-family:'Space Mono',monospace;font-size:12px;color:#e8c080;resize:vertical;min-height:88px;transition:border-color .2s,box-shadow .2s;line-height:1.6;}
-textarea::placeholder{color:var(--muted);}
-textarea:focus{outline:none;border-color:var(--fire1);box-shadow:0 0 0 2px rgba(255,106,0,.12);}
+/* ── Textarea ── */
+textarea {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 12px 14px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+    resize: vertical;
+    min-height: 88px;
+    transition: border-color .2s, box-shadow .2s;
+    line-height: 1.6;
+}
+textarea::placeholder { color: var(--muted); }
+textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--glow-sm);
+}
 
-.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center;}
-button{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:9px 16px;border-radius:5px;border:none;cursor:pointer;color:#fff;transition:all .15s;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;}
-button:hover:not(:disabled){transform:translateY(-1px);filter:brightness(1.15);}
-button:active:not(:disabled){transform:translateY(0);filter:brightness(.9);}
-button:disabled{opacity:.35;cursor:not-allowed;}
-.btn-add{background:rgba(255,255,255,.05);border:1px solid var(--border2);color:var(--muted2);}
-.btn-add:hover:not(:disabled){border-color:var(--fire1);color:var(--fire3);box-shadow:0 0 12px rgba(255,106,0,.2);}
-.btn-rotate{background:linear-gradient(135deg,#b71c00,#ff3d00);box-shadow:0 0 16px rgba(255,61,0,.3);}
-.btn-copy{background:linear-gradient(135deg,#1b5e00,#2e7d00);box-shadow:0 0 10px rgba(0,180,60,.15);}
-.btn-red{background:linear-gradient(135deg,#7f0000,#b71c1c);}
-.btn-orange{background:linear-gradient(135deg,#e65100,#f57c00);}
-.btn-blue{background:linear-gradient(135deg,#0d47a1,#1565c0);}
-.btn-purple{background:linear-gradient(135deg,#4a148c,#6a1b9a);}
-.btn-cyan{background:linear-gradient(135deg,#006064,#00838f);}
-.btn-primary{background:linear-gradient(135deg,#b71c00,#ff3d00);box-shadow:0 0 14px rgba(255,61,0,.25);}
+/* ── Buttons ── */
+.btn-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+    align-items: center;
+}
+button {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    padding: 9px 16px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    color: #fff;
+    transition: all .15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+}
+button:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.08); }
+button:active:not(:disabled) { transform: translateY(0); filter: brightness(.96); }
+button:disabled { opacity: .4; cursor: not-allowed; }
 
-#apiStatus{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted2);margin-top:10px;padding:6px 10px;background:rgba(255,100,0,.06);border-left:2px solid var(--fire1);border-radius:0 4px 4px 0;display:none;}
-#apiStatus.visible{display:block;}
+.btn-add {
+    background: #ffffff;
+    border: 1.5px solid var(--border2);
+    color: var(--text);
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+}
+.btn-add:hover:not(:disabled) { border-color: var(--accent); box-shadow: 0 0 12px var(--glow-sm); color: var(--accent); }
 
-.copy-all-wrapper{position:relative;display:inline-block;}
-.copy-all-dropdown{display:none;position:absolute;background:#1a0e06;border:1px solid var(--border2);border-radius:7px;box-shadow:0 8px 30px rgba(0,0,0,.7),0 0 20px rgba(255,60,0,.1);z-index:9999;min-width:210px;overflow:hidden;}
-.copy-all-dropdown.open{display:block;animation:dropIn .12s ease;}
-@keyframes dropIn{from{opacity:0;transform:translateY(-4px) scale(.98)}to{opacity:1;transform:none}}
-.copy-all-dropdown button{display:flex;align-items:center;gap:10px;width:100%;padding:11px 14px;font-size:12px;border-radius:0;background:transparent;color:var(--text);border-bottom:1px solid var(--border);transform:none;box-shadow:none;}
-.copy-all-dropdown button:last-child{border-bottom:none;}
-.copy-all-dropdown button:hover{background:rgba(255,100,0,.1);transform:none;filter:none;}
-.copy-all-dropdown button .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
-.dot-http{background:var(--blue);}.dot-socks5{background:var(--purple);}.dot-all{background:conic-gradient(var(--fire1) 0% 50%,var(--fire3) 50% 100%);}
+.btn-rotate {
+    background: linear-gradient(135deg, var(--accent), #4f46e5);
+    box-shadow: 0 2px 10px rgba(82,84,204,.25);
+}
+.btn-rotate:hover:not(:disabled) { box-shadow: 0 4px 16px rgba(82,84,204,.38); }
 
-#proxyList{display:flex;flex-direction:column;gap:12px;}
+.btn-copy {
+    background: linear-gradient(135deg, #15803d, #16a34a);
+    box-shadow: 0 2px 8px rgba(22,163,74,.18);
+}
 
-.proxy-container{background:rgba(19,12,5,0.88);border:1px solid var(--border2);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:10px;position:relative;overflow:hidden;transition:border-color .2s,box-shadow .2s;animation:cardIn .3s ease;box-shadow:0 2px 16px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,150,50,.05);backdrop-filter:blur(6px);}
-@keyframes cardIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-.proxy-container::before{content:'';position:absolute;top:0;left:25%;right:25%;height:1px;background:linear-gradient(90deg,transparent,rgba(255,106,0,.3),transparent);}
-.proxy-container:hover{border-color:rgba(255,106,0,.28);box-shadow:0 4px 24px rgba(0,0,0,.6),0 0 16px rgba(255,80,0,.07);}
-.proxy-container.uuid-type{border-left:2px solid var(--fire1);}
+.btn-delete {
+    background: linear-gradient(135deg, #b91c1c, #dc2626);
+    box-shadow: 0 2px 8px rgba(220,38,38,.18);
+}
 
-.proxy-text{font-family:'Space Mono',monospace;font-size:12px;background:rgba(10,6,4,.6);border:1px solid var(--border);border-radius:5px;padding:10px 12px;word-break:break-all;overflow-wrap:anywhere;user-select:text;color:#e8c080;line-height:1.6;flex:1;overflow-x:auto;}
-.proxy-text.uuid-proxies{display:flex;flex-direction:column;gap:8px;background:transparent;border:none;padding:0;}
+.btn-red {
+    background: linear-gradient(135deg, #b91c1c, #dc2626);
+    box-shadow: 0 2px 8px rgba(220,38,38,.18);
+}
+.btn-orange {
+    background: linear-gradient(135deg, #c2410c, #ea580c);
+    box-shadow: 0 2px 10px rgba(234,88,12,.2);
+}
+.btn-blue {
+    background: linear-gradient(135deg, #1d4ed8, #2563eb);
+    box-shadow: 0 2px 8px rgba(37,99,235,.2);
+}
+.btn-purple {
+    background: linear-gradient(135deg, #6d28d9, #7c3aed);
+    box-shadow: 0 2px 8px rgba(124,58,237,.2);
+}
+.btn-cyan {
+    background: linear-gradient(135deg, #0e7490, #0891b2);
+    box-shadow: 0 2px 8px rgba(8,145,178,.2);
+}
+.btn-primary {
+    background: linear-gradient(135deg, var(--accent), #4f46e5);
+    box-shadow: 0 2px 10px rgba(82,84,204,.25);
+}
 
-.proxy-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:rgba(10,6,4,.6);border:1px solid var(--border);border-radius:5px;padding:8px 10px;cursor:pointer;transition:all .15s;position:relative;}
-.proxy-line:hover{background:rgba(255,80,0,.07);border-color:rgba(255,106,0,.4);}
-.proxy-line:hover::after{content:'⎘ COPY';position:absolute;right:8px;top:50%;transform:translateY(-50%);font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:1px;color:var(--fire3);background:rgba(255,100,0,.12);border:1px solid rgba(255,100,0,.3);border-radius:3px;padding:2px 6px;pointer-events:none;}
-.proxy-line.copied{background:rgba(0,200,80,.06)!important;border-color:var(--green)!important;}
-.proxy-line.copied::after{content:'✅ COPIED'!important;color:var(--green)!important;background:rgba(0,200,80,.08)!important;border-color:rgba(0,200,80,.3)!important;}
+#apiStatus {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted2);
+    margin-top: 10px;
+    padding: 6px 10px;
+    background: var(--surface);
+    border-left: 2px solid var(--accent);
+    border-radius: 0 4px 4px 0;
+    display: none;
+}
+#apiStatus.visible { display: block; }
 
-.proxy-label{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;padding:2px 8px;border-radius:3px;color:#fff;white-space:nowrap;text-transform:uppercase;}
-.proxy-label.http{background:linear-gradient(135deg,#0d47a1,#1565c0);}
-.proxy-label.socks5{background:linear-gradient(135deg,#4a148c,#6a1b9a);}
-.proxy-value{font-family:'Space Mono',monospace;font-size:12px;color:#d4a060;word-break:break-all;overflow-wrap:anywhere;flex:1;min-width:0;}
+/* ── Copy All Dropdown ── */
+.copy-all-wrapper { position: relative; display: inline-block; }
+.copy-all-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    background: #ffffff;
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.12), 0 0 0 1px rgba(0,0,0,.04);
+    z-index: 200;
+    min-width: 200px;
+    overflow: hidden;
+}
+.copy-all-dropdown.open { display: block; animation: dropIn .12s ease; }
+@keyframes dropIn { from { opacity:0; transform: translateY(-4px) scale(.98); } to { opacity:1; transform:none; } }
+.copy-all-dropdown button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 11px 14px;
+    font-size: 12px;
+    border-radius: 0;
+    background: transparent;
+    color: var(--text);
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transform: none;
+    box-shadow: none;
+}
+.copy-all-dropdown button:last-child { border-bottom: none; }
+.copy-all-dropdown button:hover { background: rgba(82,84,204,.06); transform: none; filter: none; }
+.copy-all-dropdown button .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dot-http   { background: var(--blue); }
+.dot-socks5 { background: var(--purple); }
+.dot-all    { background: conic-gradient(var(--blue) 0% 50%, var(--purple) 50% 100%); }
 
-.status{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted2);padding:4px 8px;background:rgba(10,6,4,.5);border:1px solid var(--border);border-radius:4px;white-space:nowrap;width:100%;text-align:center;}
-@media(min-width:540px){.status{width:auto;text-align:left;align-self:center;}}
+/* ── Proxy List ── */
+#proxyList { display: flex; flex-direction: column; gap: 12px; }
 
-.proxy-actions{display:flex;flex-direction:column;gap:7px;width:100%;}
-.filter-row{display:flex;gap:6px;align-items:center;width:100%;}
-.filter-row input{background:rgba(10,6,4,.6);border:1px solid var(--border2);border-radius:5px;padding:7px 10px;font-family:'Space Mono',monospace;font-size:11px;color:#e8c080;flex:1;min-width:0;transition:border-color .2s;}
-.filter-row input::placeholder{color:var(--muted);}
-.filter-row input:focus{outline:none;border-color:var(--fire1);box-shadow:0 0 0 2px rgba(255,106,0,.1);}
-.action-btns{display:flex;gap:6px;flex-wrap:nowrap;width:100%;}
-.action-btns button{flex:1 1 0;min-width:0;font-size:11px;padding:8px 4px;overflow:hidden;text-overflow:ellipsis;justify-content:center;}
-@media(min-width:540px){.proxy-actions{flex-direction:row;align-items:center;}.filter-row{flex:1.6 1 0;width:auto;}.action-btns{flex:3 1 0;width:auto;}}
+/* ── Proxy Card ── */
+.proxy-container {
+    background: rgba(250,250,250,0.88);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color .2s, box-shadow .2s;
+    animation: cardIn .25s ease;
+    box-shadow: 0 1px 4px rgba(0,0,0,.05);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+@keyframes cardIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: none; } }
+.proxy-container::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(82,84,204,.2), transparent);
+}
+.proxy-container:hover { border-color: var(--border2); box-shadow: 0 4px 18px rgba(0,0,0,.08); }
+.proxy-container.uuid-type { border-left: 2px solid var(--purple); }
+.proxy-container.uuid-type::before {
+    background: linear-gradient(90deg, transparent, rgba(124,58,237,.2), transparent);
+}
 
-.ip-info-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:0 2px;flex-wrap:wrap;}
-.real-ip-label{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted2);display:flex;align-items:center;gap:4px;}
-.real-ip-label::before{content:'◉';font-size:9px;color:var(--green);}
-.btn-test-km{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.5px;background:rgba(255,100,0,.08);border:1px solid rgba(255,100,0,.25);color:var(--ember);padding:3px 10px;border-radius:4px;cursor:pointer;transition:all .15s;text-transform:uppercase;}
-.btn-test-km:hover:not(:disabled){background:rgba(255,100,0,.16);border-color:var(--fire1);transform:none;filter:none;}
-.proxy-divider{height:1px;background:var(--border);margin:2px 0;}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
-.loading-text{animation:blink 1.2s infinite;color:var(--muted);font-family:'Space Mono',monospace;font-size:12px;}
-::-webkit-scrollbar{width:4px;} ::-webkit-scrollbar-track{background:var(--bg);} ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;} ::-webkit-scrollbar-thumb:hover{background:var(--fire2);}
+/* ── Proxy Text ── */
+.proxy-text {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
+    word-break: break-all;
+    overflow-wrap: anywhere;
+    user-select: text;
+    color: var(--accent2);
+    line-height: 1.6;
+    flex: 1;
+    overflow-x: auto;
+}
+.proxy-text.uuid-proxies {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: transparent;
+    border: none;
+    padding: 0;
+}
+
+/* ── Proxy lines ── */
+.proxy-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+    position: relative;
+}
+.proxy-line:hover {
+    background: rgba(82,84,204,.06);
+    border-color: var(--accent);
+}
+.proxy-line:hover::after {
+    content: '⎘ COPY';
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--accent);
+    background: rgba(82,84,204,.1);
+    border: 1px solid rgba(82,84,204,.25);
+    border-radius: 3px;
+    padding: 2px 7px;
+    pointer-events: none;
+}
+.proxy-line.copied {
+    background: rgba(22,163,74,.08) !important;
+    border-color: var(--green) !important;
+}
+.proxy-line.copied::after {
+    content: '✅ COPIED' !important;
+    color: var(--green) !important;
+    background: rgba(22,163,74,.1) !important;
+    border-color: rgba(22,163,74,.3) !important;
+}
+.proxy-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    color: #fff;
+    white-space: nowrap;
+    text-transform: uppercase;
+}
+.proxy-label.http   { background: var(--blue); }
+.proxy-label.socks5 { background: var(--purple); }
+.proxy-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+    word-break: break-all;
+    overflow-wrap: anywhere;
+    flex: 1;
+    min-width: 0;
+}
+
+/* ── Status ── */
+.status {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted2);
+    padding: 4px 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    white-space: nowrap;
+    width: 100%;
+    text-align: center;
+}
+@media (min-width: 540px) {
+    .status { width: auto; text-align: left; align-self: center; }
+}
+
+/* ── Proxy actions wrapper ── */
+.proxy-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    width: 100%;
+}
+
+/* ── Filter row ── */
+.filter-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    width: 100%;
+}
+.filter-row input {
+    background: var(--surface);
+    border: 1.5px solid var(--border2);
+    border-radius: 6px;
+    padding: 7px 10px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--text);
+    flex: 1;
+    min-width: 0;
+    transition: border-color .2s;
+}
+.filter-row input::placeholder { color: var(--muted); }
+.filter-row input:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 2px rgba(8,145,178,.1); }
+
+/* ── Action buttons row ── */
+.action-btns {
+    display: flex;
+    gap: 6px;
+    flex-wrap: nowrap;
+    width: 100%;
+}
+.action-btns button {
+    flex: 1 1 0;
+    min-width: 0;
+    font-size: 11px;
+    padding: 8px 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    justify-content: center;
+}
+
+/* ── Desktop: 1 hàng ── */
+@media (min-width: 540px) {
+    .proxy-actions { flex-direction: row; align-items: center; }
+    .filter-row { flex: 1.6 1 0; width: auto; }
+    .action-btns { flex: 3 1 0; width: auto; }
+}
+
+/* ── IP row ── */
+.ip-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    padding: 0 2px;
+    flex-wrap: wrap;
+}
+.real-ip-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.real-ip-label::before { content: '◉'; font-size: 9px; color: var(--green); }
+
+.btn-test-km {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    background: rgba(217,119,6,.08);
+    border: 1px solid rgba(217,119,6,.3);
+    color: #b45309;
+    padding: 3px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all .15s;
+    text-transform: uppercase;
+}
+.btn-test-km:hover:not(:disabled) { background: rgba(217,119,6,.15); border-color: #d97706; transform: none; filter: none; }
+
+/* ── Proxy divider ── */
+.proxy-divider { height: 1px; background: var(--border); margin: 2px 0; }
+
+/* ── Loading ── */
+@keyframes blink { 0%,100% { opacity:1; } 50% { opacity:.35; } }
+.loading-text {
+    animation: blink 1.2s infinite;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 </style>
 </head>
 <body>
 
-<canvas id="fire-bg"></canvas>
-<canvas id="ember-canvas"></canvas>
-<div class="vignette"></div>
+<!-- Matrix Canvas -->
+<canvas id="matrix-canvas"></canvas>
 
 <a href="SMSOKVIP.html" class="sms-okvip-btn">📱 THUÊ SMS OKVIP</a>
 
 <div class="page-wrap">
-  <div class="header">
-    <div class="header-tag">// ROTATING PROXY SYSTEM v2.0 — FIRE EDITION</div>
-    <canvas id="eagle-canvas" width="300" height="190"></canvas>
+
+<div class="header">
+    <div class="header-tag">// ROTATING PROXY SYSTEM v2.0</div>
     <h1>🦅 EAGLE PROXY</h1>
     <div class="header-sub">HIGH-PERFORMANCE · ROTATING · MULTI-PROTOCOL</div>
     <div class="header-line"></div>
-  </div>
+</div>
 
-  <div class="panel">
+<div class="panel">
     <div class="panel-label">API KEY INPUT</div>
     <textarea id="apiInput" placeholder="Nhập API Key — mỗi dòng 1 key&#10;Hỗ trợ key thường và UUID key&#10;(xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)"></textarea>
-    <div class="btn-row">
-      <button class="btn-add" id="addApiBtn">＋ THÊM API</button>
-      <button class="btn-rotate" id="rotateAllBtn">⟳ XOAY TẤT CẢ</button>
-      <div class="copy-all-wrapper" id="copyAllWrapper">
-        <button class="btn-copy" id="copyAllBtn">⎘ COPY TẤT CẢ ▾</button>
-        <div class="copy-all-dropdown" id="copyAllDropdown">
-          <button id="copyHttpBtn"><span class="dot dot-http"></span> Chỉ HTTP</button>
-          <button id="copySocksBtn"><span class="dot dot-socks5"></span> Chỉ SOCKS5</button>
-          <button id="copyBothBtn"><span class="dot dot-all"></span> HTTP + SOCKS5</button>
-        </div>
-      </div>
-    </div>
-    <div id="apiStatus"></div>
-  </div>
 
-  <div id="proxyList"></div>
+    <div class="btn-row">
+        <button class="btn-add" id="addApiBtn">＋ THÊM API</button>
+        <button class="btn-rotate" id="rotateAllBtn">⟳ XOAY TẤT CẢ</button>
+
+        <div class="copy-all-wrapper" id="copyAllWrapper">
+            <button class="btn-copy" id="copyAllBtn">⎘ COPY TẤT CẢ ▾</button>
+            <div class="copy-all-dropdown" id="copyAllDropdown">
+                <button id="copyHttpBtn"><span class="dot dot-http"></span> Chỉ HTTP</button>
+                <button id="copySocksBtn"><span class="dot dot-socks5"></span> Chỉ SOCKS5</button>
+                <button id="copyBothBtn"><span class="dot dot-all"></span> HTTP + SOCKS5</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="apiStatus"></div>
+</div>
+
+<div id="proxyList"></div>
+
 </div>
 
 <script>
-// ═══════════════════════════════════════════
-//  🔥 FIRE BG — cellular automata
-// ═══════════════════════════════════════════
-(function(){
-    const cv=document.getElementById('fire-bg'), ctx=cv.getContext('2d');
-    const S=4; // cell size px
-    let W,H,cols,rows,buf;
+// ══════════════════════════════════════════════
+//  MATRIX / HACKER CODE RAIN EFFECT
+// ══════════════════════════════════════════════
+(function() {
+    const canvas = document.getElementById('matrix-canvas');
+    const ctx = canvas.getContext('2d');
 
-    function makePal(){
-        const p=[];
-        for(let i=0;i<256;i++){
-            let r=0,g=0,b=0,a=0;
-            if(i<40){a=0;}
-            else if(i<80){const t=(i-40)/40;r=Math.round(160*t);a=Math.round(160*t);}
-            else if(i<130){const t=(i-80)/50;r=160+Math.round(80*t);g=Math.round(60*t);a=180+Math.round(40*t);}
-            else if(i<190){const t=(i-130)/60;r=240;g=60+Math.round(130*t);a=210;}
-            else if(i<230){const t=(i-190)/40;r=255;g=190+Math.round(50*t);b=Math.round(50*t);a=225;}
-            else{const t=(i-230)/25;r=255;g=240;b=50+Math.round(140*t);a=240;}
-            p.push([r,g,b,a]);
-        }
-        return p;
+    // Ký tự hacker: mix IP, hex, binary, code snippets, katakana
+    const chars = (
+        '0123456789ABCDEF' +
+        'abcdefghijklmnopqrstuvwxyz' +
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZ' +
+        '{}[]()=><>/\\|;:.,!@#$%^&*' +
+        '01' +
+        '192.168.0.proxy.rotate.api.key.http.socks5.tunnel.auth.pass.' +
+        'ｦｧｨｩｪｫｬｭｮｯｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ'
+    ).split('');
+
+    // Màu sắc cho các column (mix accent, green, blue, purple)
+    const COLORS = [
+        { r: 82,  g: 84,  b: 204 }, // accent blue-purple
+        { r: 22,  g: 163, b: 74  }, // green
+        { r: 37,  g: 99,  b: 235 }, // blue
+        { r: 124, g: 58,  b: 237 }, // purple
+        { r: 8,   g: 145, b: 178 }, // cyan
+    ];
+
+    const FONT_SIZE = 13;
+    let cols = 0;
+    let drops = [];
+    let colorsArr = [];
+    let speedArr = [];
+    let frameCount = 0;
+
+    function resize() {
+        canvas.width  = window.innerWidth;
+        canvas.height = window.innerHeight;
+        cols = Math.floor(canvas.width / FONT_SIZE);
+
+        // Reset / extend arrays
+        const prev = drops.length;
+        drops     = Array.from({ length: cols }, (_, i) => drops[i] ?? Math.random() * -80);
+        colorsArr = Array.from({ length: cols }, (_, i) => colorsArr[i] ?? COLORS[Math.floor(Math.random() * COLORS.length)]);
+        speedArr  = Array.from({ length: cols }, (_, i) => speedArr[i]  ?? (0.3 + Math.random() * 0.7));
     }
-    const PAL=makePal();
 
-    function resize(){
-        cv.width=window.innerWidth; cv.height=window.innerHeight;
-        W=cv.width; H=cv.height;
-        cols=Math.ceil(W/S)+2; rows=Math.ceil(H/S)+4;
-        buf=new Uint8Array(cols*rows);
-        for(let x=0;x<cols;x++){
-            buf[(rows-1)*cols+x]=210+Math.random()*45|0;
-            buf[(rows-2)*cols+x]=195+Math.random()*60|0;
-        }
-    }
-    resize(); window.addEventListener('resize',resize);
+    resize();
+    window.addEventListener('resize', resize);
 
-    function step(){
-        for(let x=0;x<cols;x++){
-            buf[(rows-1)*cols+x]=Math.random()>.1?205+Math.random()*50|0:0;
-            buf[(rows-2)*cols+x]=Math.random()>.2?190+Math.random()*65|0:buf[(rows-2)*cols+x];
-        }
-        for(let y=0;y<rows-1;y++){
-            for(let x=0;x<cols;x++){
-                const b=buf[(y+1)*cols+x];
-                const b2=y+2<rows?buf[(y+2)*cols+x]:b;
-                const l=buf[(y+1)*cols+Math.max(0,x-1)];
-                const r2=buf[(y+1)*cols+Math.min(cols-1,x+1)];
-                let v=(b+b2+l+r2)/4.0-(Math.random()*2.6);
-                buf[y*cols+x]=Math.max(0,Math.min(255,v|0));
+    function draw() {
+        frameCount++;
+
+        // Fade background — dùng màu trắng với alpha thấp để tạo trail
+        ctx.fillStyle = 'rgba(255,255,255, 0.055)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.font = `${FONT_SIZE}px "Space Mono", monospace`;
+
+        for (let i = 0; i < cols; i++) {
+            // Chỉ vẽ mỗi frame theo speed của column
+            if (frameCount % Math.round(2 / speedArr[i]) !== 0) continue;
+
+            const c = colorsArr[i];
+            const y = drops[i] * FONT_SIZE;
+
+            // Ký tự đầu (sáng nhất — trắng/rất sáng)
+            ctx.fillStyle = `rgba(255, 255, 255, 0.95)`;
+            const headChar = chars[Math.floor(Math.random() * chars.length)];
+            ctx.fillText(headChar, i * FONT_SIZE, y);
+
+            // Ký tự body — màu accent với opacity
+            const alpha = 0.55 + Math.random() * 0.25;
+            ctx.fillStyle = `rgba(${c.r}, ${c.g}, ${c.b}, ${alpha})`;
+            const bodyChar = chars[Math.floor(Math.random() * chars.length)];
+            ctx.fillText(bodyChar, i * FONT_SIZE, y - FONT_SIZE);
+
+            // Ký tự nhạt hơn ở phía trước
+            ctx.fillStyle = `rgba(${c.r}, ${c.g}, ${c.b}, 0.25)`;
+            const tailChar = chars[Math.floor(Math.random() * chars.length)];
+            ctx.fillText(tailChar, i * FONT_SIZE, y - FONT_SIZE * 2);
+
+            // Reset drop
+            if (y > canvas.height && Math.random() > 0.975) {
+                drops[i] = 0;
+                // Random lại màu và tốc độ
+                colorsArr[i] = COLORS[Math.floor(Math.random() * COLORS.length)];
+                speedArr[i]  = 0.3 + Math.random() * 0.7;
             }
+
+            drops[i]++;
         }
     }
 
-    function render(){
-        const img=ctx.createImageData(W,H); const d=img.data;
-        for(let y=0;y<rows&&y*S<H;y++){
-            for(let x=0;x<cols&&x*S<W;x++){
-                const [r,g,b,a]=PAL[buf[y*cols+x]];
-                for(let py=0;py<S&&y*S+py<H;py++){
-                    for(let px=0;px<S&&x*S+px<W;px++){
-                        const i=((y*S+py)*W+(x*S+px))*4;
-                        d[i]=r;d[i+1]=g;d[i+2]=b;d[i+3]=a;
-                    }
-                }
-            }
-        }
-        ctx.putImageData(img,0,0);
-    }
-
-    (function loop(){step();render();requestAnimationFrame(loop);})();
+    // ~45fps
+    setInterval(draw, 22);
 })();
 
-// ═══════════════════════════════════════════
-//  🔥 EMBER PARTICLES
-// ═══════════════════════════════════════════
-(function(){
-    const cv=document.getElementById('ember-canvas'), ctx=cv.getContext('2d');
-    function resize(){cv.width=window.innerWidth;cv.height=window.innerHeight;}
-    resize(); window.addEventListener('resize',resize);
-    const COLS=['#ff6a00','#ff3d00','#ffb300','#ff8c00','#ff1744','#fff59d','#ffcc02'];
-    const embers=[];
-    class Ember{
-        constructor(){
-            this.x=Math.random()*window.innerWidth;
-            this.y=window.innerHeight+10;
-            this.vx=(Math.random()-.5)*1.4;
-            this.vy=-(1.8+Math.random()*4);
-            this.r=.8+Math.random()*2.5;
-            this.life=1; this.decay=.004+Math.random()*.012;
-            this.color=COLS[Math.floor(Math.random()*COLS.length)];
-            this.w=Math.random()*Math.PI*2; this.ws=.04+Math.random()*.09;
-        }
-        update(){this.w+=this.ws;this.vx+=Math.sin(this.w)*.07;this.vy+=(Math.random()-.5)*.04-.025;this.x+=this.vx;this.y+=this.vy;this.life-=this.decay;this.r*=.998;}
-        draw(){
-            ctx.save();ctx.globalAlpha=Math.max(0,this.life*.9);
-            ctx.shadowColor=this.color;ctx.shadowBlur=7;ctx.fillStyle=this.color;
-            ctx.beginPath();ctx.arc(this.x,this.y,this.r,0,Math.PI*2);ctx.fill();ctx.restore();
-        }
-    }
-    for(let i=0;i<100;i++){const e=new Ember();e.y=Math.random()*window.innerHeight;e.life=Math.random();embers.push(e);}
-    (function loop(){
-        ctx.clearRect(0,0,cv.width,cv.height);
-        if(Math.random()<.65) embers.push(new Ember());
-        for(let i=embers.length-1;i>=0;i--){embers[i].update();embers[i].draw();if(embers[i].life<=0||embers[i].y<-20)embers.splice(i,1);}
-        while(embers.length>220)embers.shift();
-        requestAnimationFrame(loop);
-    })();
-})();
-
-// ═══════════════════════════════════════════
-//  🦅 EAGLE — animated canvas drawing
-// ═══════════════════════════════════════════
-(function(){
-    const cv=document.getElementById('eagle-canvas'), ctx=cv.getContext('2d');
-    const W=cv.width, H=cv.height;
-    let t=0;
-    const pts=[];
-
-    class FlamePt{
-        constructor(x,y){
-            this.x=x;this.y=y;
-            this.vx=(Math.random()-.5)*1.8;
-            this.vy=-(1+Math.random()*3.5);
-            this.life=1; this.decay=.02+Math.random()*.035;
-            this.r=1.2+Math.random()*3.5;
-        }
-        update(){this.x+=this.vx;this.y+=this.vy;this.vy-=.05;this.vx+=(Math.random()-.5)*.1;this.life-=this.decay;this.r*=.975;}
-        draw(){
-            if(this.life<=0)return;
-            const a=Math.max(0,this.life);
-            const g=ctx.createRadialGradient(this.x,this.y,0,this.x,this.y,this.r*2.5);
-            g.addColorStop(0,`rgba(255,245,140,${a})`);
-            g.addColorStop(.35,`rgba(255,130,0,${a*.85})`);
-            g.addColorStop(.7,`rgba(255,30,0,${a*.5})`);
-            g.addColorStop(1,'rgba(100,0,0,0)');
-            ctx.fillStyle=g;
-            ctx.beginPath();ctx.arc(this.x,this.y,this.r*2.5,0,Math.PI*2);ctx.fill();
-        }
-    }
-
-    function drawEagle(t){
-        const cx=W/2, cy=H/2+15;
-        const flap=Math.sin(t*2.4)*14;
-        const breathe=Math.sin(t*1.2)*1.5;
-
-        ctx.save();
-
-        // ambient glow
-        const halo=ctx.createRadialGradient(cx,cy-10,5,cx,cy-10,100);
-        halo.addColorStop(0,'rgba(255,160,30,.14)');
-        halo.addColorStop(.5,'rgba(255,60,0,.07)');
-        halo.addColorStop(1,'rgba(255,0,0,0)');
-        ctx.fillStyle=halo;
-        ctx.beginPath();ctx.arc(cx,cy-10,100,0,Math.PI*2);ctx.fill();
-
-        // ── WINGS ──
-        function drawWing(dir){
-            const d=dir; // 1=right, -1=left
-            ctx.save();ctx.scale(d,1);ctx.translate(d<0?-W:0,0);
-            const wx=cx*Math.abs(d<0?1:1);
-            ctx.beginPath();
-            ctx.moveTo(wx-8,cy-8);
-            // primary feathers spread
-            ctx.bezierCurveTo(wx+30,cy-28+flap,wx+75,cy-60+flap*1.4,wx+118,cy-42+flap*1.6);
-            ctx.bezierCurveTo(wx+105,cy-50+flap*1.2,wx+90,cy-55+flap*1.5,wx+85,cy-48+flap*1.3);
-            ctx.bezierCurveTo(wx+95,cy-35+flap,wx+70,cy-18+flap*.6,wx+45,cy-5+flap*.3);
-            ctx.bezierCurveTo(wx+30,cy+5,wx+15,cy+10,wx,cy+6);
-            ctx.closePath();
-            const wg=ctx.createLinearGradient(wx+120,cy-60,wx,cy+8);
-            wg.addColorStop(0,'rgba(255,30,0,.92)');
-            wg.addColorStop(.3,'rgba(255,90,0,.95)');
-            wg.addColorStop(.7,'rgba(200,60,0,.85)');
-            wg.addColorStop(1,'rgba(30,8,0,.7)');
-            ctx.fillStyle=wg;ctx.fill();
-
-            // wing highlight
-            ctx.beginPath();
-            ctx.moveTo(wx,cy-5);
-            ctx.bezierCurveTo(wx+35,cy-35+flap,wx+80,cy-62+flap*1.4,wx+118,cy-42+flap*1.6);
-            ctx.lineWidth=1.5;
-            ctx.strokeStyle='rgba(255,180,50,.3)';ctx.stroke();
-            ctx.restore();
-        }
-        drawWing(-1); // left
-        drawWing(1);  // right (mirror via scale trick)
-        // fix: draw right wing properly
-        ctx.beginPath();
-        ctx.moveTo(cx+8,cy-8);
-        ctx.bezierCurveTo(cx+40,cy-28+flap,cx+85,cy-60+flap*1.4,cx+118,cy-42+flap*1.6);
-        ctx.bezierCurveTo(cx+100,cy-35+flap,cx+70,cy-18+flap*.6,cx+45,cy-5+flap*.3);
-        ctx.bezierCurveTo(cx+30,cy+5,cx+15,cy+10,cx,cy+6);
-        ctx.closePath();
-        const wg2=ctx.createLinearGradient(cx,cy+8,cx+120,cy-60);
-        wg2.addColorStop(0,'rgba(30,8,0,.7)');wg2.addColorStop(.3,'rgba(200,60,0,.85)');wg2.addColorStop(.7,'rgba(255,90,0,.95)');wg2.addColorStop(1,'rgba(255,30,0,.92)');
-        ctx.fillStyle=wg2;ctx.fill();
-
-        // ── BODY ──
-        ctx.beginPath();
-        ctx.ellipse(cx,cy+10+breathe,13,30,0,0,Math.PI*2);
-        const bg=ctx.createLinearGradient(cx,cy-18,cx,cy+40);
-        bg.addColorStop(0,'rgba(255,200,60,.95)');bg.addColorStop(.35,'rgba(255,90,0,.9)');bg.addColorStop(1,'rgba(15,4,0,.85)');
-        ctx.fillStyle=bg;ctx.fill();
-
-        // ── HEAD ──
-        const hy=cy-30+breathe;
-        ctx.beginPath();ctx.arc(cx+2,hy,14,0,Math.PI*2);
-        const hg=ctx.createRadialGradient(cx+2,hy,1,cx+2,hy,14);
-        hg.addColorStop(0,'rgba(255,230,130,1)');hg.addColorStop(.4,'rgba(255,130,30,.95)');hg.addColorStop(1,'rgba(170,35,0,.85)');
-        ctx.fillStyle=hg;ctx.fill();
-
-        // white head patch (eagle look)
-        ctx.beginPath();ctx.arc(cx+2,hy-2,7,-.8,Math.PI+.8);
-        ctx.fillStyle='rgba(255,240,200,.55)';ctx.fill();
-
-        // ── BEAK ──
-        ctx.beginPath();
-        ctx.moveTo(cx+14,hy+1);
-        ctx.lineTo(cx+26,hy+4+Math.sin(t*3)*.8);
-        ctx.lineTo(cx+14,hy+9);
-        ctx.lineTo(cx+16,hy+5);
-        ctx.closePath();
-        ctx.fillStyle='rgba(255,185,10,.95)';ctx.fill();
-
-        // ── EYE ──
-        const ex=cx+7,ey=hy-2;
-        const eg=ctx.createRadialGradient(ex,ey,0,ex,ey,5);
-        eg.addColorStop(0,'rgba(255,255,180,1)');eg.addColorStop(.45,'rgba(255,160,0,.9)');eg.addColorStop(1,'rgba(255,0,0,0)');
-        ctx.fillStyle=eg;ctx.beginPath();ctx.arc(ex,ey,5,0,Math.PI*2);ctx.fill();
-        // iris
-        ctx.fillStyle='rgba(220,80,0,.8)';ctx.beginPath();ctx.arc(ex,ey,3,0,Math.PI*2);ctx.fill();
-        // pupil
-        ctx.fillStyle='rgba(0,0,0,.9)';ctx.beginPath();ctx.arc(ex+.4,ey,1.4,0,Math.PI*2);ctx.fill();
-        // eye gleam
-        ctx.fillStyle='rgba(255,255,255,.8)';ctx.beginPath();ctx.arc(ex+.8,ey-1,0.7,0,Math.PI*2);ctx.fill();
-
-        // ── TAIL FEATHERS ──
-        for(let i=-2;i<=2;i++){
-            const tx=cx+i*7, ty2=cy+36+breathe;
-            ctx.beginPath();
-            ctx.moveTo(tx,ty2);
-            ctx.bezierCurveTo(tx+i*3,ty2+18+flap*.25,tx+i*4,ty2+30+flap*.2,tx+i*3,ty2+38);
-            ctx.lineWidth=3.5;
-            ctx.strokeStyle=`rgba(${200+i*10},${50+Math.abs(i)*15},0,${.7+Math.abs(i)*.05})`;
-            ctx.stroke();
-        }
-
-        // ── TALONS ──
-        ctx.lineWidth=2.5;
-        [[-8,1],[8,-1]].forEach(([dx,ds])=>{
-            ctx.strokeStyle='rgba(210,130,0,.75)';
-            ctx.beginPath();ctx.moveTo(cx+dx,cy+38+breathe);ctx.lineTo(cx+dx+dx*.8,cy+52);ctx.stroke();
-            ctx.beginPath();ctx.moveTo(cx+dx,cy+38+breathe);ctx.lineTo(cx+dx,cy+54);ctx.stroke();
-            ctx.beginPath();ctx.moveTo(cx+dx,cy+38+breathe);ctx.lineTo(cx+dx-dx*.6,cy+50);ctx.stroke();
-        });
-
-        ctx.restore();
-
-        // spawn particles
-        const wL={x:cx-105,y:cy-40+flap*1.6}, wR={x:cx+105,y:cy-40+flap*1.6};
-        if(Math.random()<.85){
-            pts.push(new FlamePt(wL.x+Math.random()*30-15,wL.y+Math.random()*18));
-            pts.push(new FlamePt(wR.x+Math.random()*30-15,wR.y+Math.random()*18));
-        }
-        if(Math.random()<.6) pts.push(new FlamePt(cx+(Math.random()-.5)*22,cy-15+Math.random()*20));
-        // head flame
-        if(Math.random()<.35) pts.push(new FlamePt(cx+Math.random()*8-4,hy-12));
-    }
-
-    (function loop(){
-        t+=0.016;
-        ctx.clearRect(0,0,W,H);
-        for(let i=pts.length-1;i>=0;i--){pts[i].update();pts[i].draw();if(pts[i].life<=0)pts.splice(i,1);}
-        while(pts.length>300)pts.shift();
-        drawEagle(t);
-        requestAnimationFrame(loop);
-    })();
-})();
-
-// ═══════════════════════════════════════════
-//  APP CODE (original, unchanged)
-// ═══════════════════════════════════════════
-document.addEventListener("contextmenu",e=>e.preventDefault());
-document.addEventListener("keydown",e=>{
-    if(e.key==="F12")e.preventDefault();
-    if(e.ctrlKey&&e.key.toLowerCase()==="u")e.preventDefault();
-    if(e.ctrlKey&&e.shiftKey&&["i","j","c"].includes(e.key.toLowerCase()))e.preventDefault();
-    if(e.ctrlKey&&["s","p"].includes(e.key.toLowerCase()))e.preventDefault();
-    if(e.ctrlKey&&e.key.toLowerCase()==="a")return;
+// ══════════════════════════════════════════════
+//  ORIGINAL APP CODE
+// ══════════════════════════════════════════════
+document.addEventListener("contextmenu", e => e.preventDefault());
+document.addEventListener("keydown", e => {
+    if (e.key === "F12") e.preventDefault();
+    if (e.ctrlKey && e.key.toLowerCase() === "u") e.preventDefault();
+    if (e.ctrlKey && e.shiftKey && ["i","j","c"].includes(e.key.toLowerCase())) e.preventDefault();
+    if (e.ctrlKey && ["s","p"].includes(e.key.toLowerCase())) e.preventDefault();
+    if (e.ctrlKey && e.key.toLowerCase() === "a") return;
 });
 
-const UUID_REGEX=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const UUID_API_BASE="https://svproxy2.nguyenanlk2872.workers.dev/proxy/access_key/";
-let API_MAP={};
-const API_MAP_URL="https://raw.githubusercontent.com/nguyenan177/apiv2/refs/heads/main/api_map.json";
-const proxyDataStore=new Map();
-const apiInput=document.getElementById("apiInput");
-const addApiBtn=document.getElementById("addApiBtn");
-const rotateAllBtn=document.getElementById("rotateAllBtn");
-const apiStatus=document.getElementById("apiStatus");
-const proxyList=document.getElementById("proxyList");
-const copyAllBtn=document.getElementById("copyAllBtn");
-const copyAllDropdown=document.getElementById("copyAllDropdown");
-const copyAllWrapper=document.getElementById("copyAllWrapper");
+const UUID_REGEX    = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_API_BASE = "https://svproxy2.nguyenanlk2872.workers.dev/proxy/access_key/";
+let API_MAP = {};
+const API_MAP_URL = "https://raw.githubusercontent.com/nguyenan177/apiv2/refs/heads/main/api_map.json";
 
-// Move dropdown to body to escape stacking contexts
-document.body.appendChild(copyAllDropdown);
-copyAllBtn.onclick=(e)=>{
+const proxyDataStore = new Map();
+
+const apiInput     = document.getElementById("apiInput");
+const addApiBtn    = document.getElementById("addApiBtn");
+const rotateAllBtn = document.getElementById("rotateAllBtn");
+const apiStatus    = document.getElementById("apiStatus");
+const proxyList    = document.getElementById("proxyList");
+
+const copyAllBtn      = document.getElementById("copyAllBtn");
+const copyAllDropdown = document.getElementById("copyAllDropdown");
+const copyAllWrapper  = document.getElementById("copyAllWrapper");
+
+copyAllBtn.onclick = (e) => {
     e.stopPropagation();
-    const isOpen=copyAllDropdown.classList.contains("open");
-    copyAllDropdown.classList.remove("open");
-    if(!isOpen){
-        const r=copyAllBtn.getBoundingClientRect();
-        copyAllDropdown.style.top=(r.bottom+window.scrollY+6)+"px";
-        copyAllDropdown.style.left=r.left+"px";
-        copyAllDropdown.classList.add("open");
-    }
+    copyAllDropdown.classList.toggle("open");
 };
-document.addEventListener("click",(e)=>{if(!copyAllWrapper.contains(e.target)&&!copyAllDropdown.contains(e.target))copyAllDropdown.classList.remove("open");});
+document.addEventListener("click", (e) => {
+    if (!copyAllWrapper.contains(e.target)) copyAllDropdown.classList.remove("open");
+});
 
-async function copyAndFlash(lines,btn){
-    if(!lines.length){alert("Không có proxy để copy");return;}
+async function copyAndFlash(lines, btn, label) {
+    if (!lines.length) { alert("Không có proxy để copy"); return; }
     await navigator.clipboard.writeText(lines.join("\n"));
     copyAllDropdown.classList.remove("open");
-    const orig=btn.innerHTML; btn.innerHTML=`✅ ĐÃ COPY ${lines.length} PROXY`; setTimeout(()=>btn.innerHTML=orig,1500);
+    const orig = btn.innerHTML;
+    btn.innerHTML = `✅ ĐÃ COPY ${lines.length} PROXY`;
+    setTimeout(() => btn.innerHTML = orig, 1500);
 }
 
-function getAllHttpLines(){
-    const l=[];
-    // proxy thường (non-UUID): lấy từ data store nếu có, fallback innerText
-    document.querySelectorAll(".proxy-container:not(.uuid-type)").forEach(box=>{
-        const pt=box.querySelector(".proxy-text");if(pt){const t=pt.innerText.trim();if(t)l.push(t);}
+document.getElementById("copyHttpBtn").onclick = async () => {
+    const lines = [];
+    document.querySelectorAll(".proxy-container:not(.uuid-type) .proxy-text").forEach(el => {
+        const t = el.innerText.trim();
+        if (t) lines.push(t);
     });
-    // UUID proxy: luôn lấy từ store
-    document.querySelectorAll(".proxy-container.uuid-type").forEach(b=>{
-        const d=proxyDataStore.get(b.dataset.uuid);if(d&&d.httpLines&&d.httpLines.length)l.push(...d.httpLines);
+    document.querySelectorAll(".proxy-container.uuid-type").forEach(box => {
+        const key = box.dataset.uuid;
+        const data = proxyDataStore.get(key);
+        if (data && data.httpLines) lines.push(...data.httpLines);
     });
-    return l;
-}
-function getAllSocksLines(){
-    const l=[];
-    document.querySelectorAll(".proxy-container.uuid-type").forEach(b=>{
-        const d=proxyDataStore.get(b.dataset.uuid);if(d&&d.socksLines&&d.socksLines.length)l.push(...d.socksLines);
-    });
-    return l;
-}
-function getAllProxyLines(){
-    const l=[];
-    document.querySelectorAll(".proxy-container:not(.uuid-type)").forEach(box=>{
-        const pt=box.querySelector(".proxy-text");if(pt){const t=pt.innerText.trim();if(t)l.push(t);}
-    });
-    document.querySelectorAll(".proxy-container.uuid-type").forEach(b=>{
-        const d=proxyDataStore.get(b.dataset.uuid);if(d&&d.proxyLines&&d.proxyLines.length)l.push(...d.proxyLines);
-    });
-    return l;
-}
-
-document.getElementById("copyHttpBtn").onclick=async(e)=>{e.stopPropagation();await copyAndFlash(getAllHttpLines(),document.getElementById("copyHttpBtn"));};
-document.getElementById("copySocksBtn").onclick=async(e)=>{e.stopPropagation();await copyAndFlash(getAllSocksLines(),document.getElementById("copySocksBtn"));};
-document.getElementById("copyBothBtn").onclick=async(e)=>{e.stopPropagation();await copyAndFlash(getAllProxyLines(),document.getElementById("copyBothBtn"));};
-
-let savedApis=JSON.parse(localStorage.getItem("proxy_api_keys")||"[]");
-async function loadApiMap(){try{const res=await fetch(API_MAP_URL,{cache:"no-store"});API_MAP=await res.json();proxyList.innerHTML="";savedApis.forEach(k=>UUID_REGEX.test(k)?createUuidProxyBox(k):createProxyBox(k));}catch(err){alert("❌ Không tải được API MAP");}}
-function buildHttpProxy(p){return `${p.host}:${p.port}:${p.username}:${p.password}`;}
-function buildSocks5Proxy(p){return `${p.host}:${p.socks5_port}:${p.username}:${p.password}`;}
-
-async function createUuidProxyBox(apiKey){
-    const box=document.createElement("div");box.className="proxy-container uuid-type";box.dataset.uuid=apiKey;
-    proxyDataStore.set(apiKey,{httpLines:[],socksLines:[],proxyLines:[],proxyIds:[]});
-    const proxyArea=document.createElement("div");proxyArea.className="proxy-text uuid-proxies";proxyArea.innerHTML=`<span class="loading-text">⏳ Đang tải proxy...</span>`;
-    const status=document.createElement("span");status.className="status";
-    const changeIpBtn=document.createElement("button");changeIpBtn.className="btn-orange";changeIpBtn.innerHTML="🌐 ĐỔI IP";
-    const delBtn=document.createElement("button");delBtn.className="btn-red";delBtn.innerHTML="✕ XÓA";
-    delBtn.onclick=()=>{savedApis=savedApis.filter(k=>k!==apiKey);localStorage.setItem("proxy_api_keys",JSON.stringify(savedApis));proxyDataStore.delete(apiKey);box.style.cssText="opacity:0;transform:translateY(-6px);transition:all .2s";setTimeout(()=>{if(box.parentNode)proxyList.removeChild(box);},200);};
-    async function fetchAndRender(){
-        changeIpBtn.disabled=true;status.innerText="Đang tải...";proxyArea.innerHTML=`<span class="loading-text">⏳ Đang tải proxy...</span>`;
-        try{
-            const res=await fetch(UUID_API_BASE+apiKey,{cache:"no-store"});const data=await res.json();
-            if(data.status!=="success"||!data.proxies){proxyArea.innerText="⚠️ Không lấy được proxy";status.innerText="❌ Lỗi";changeIpBtn.disabled=false;return;}
-            const entries=Object.values(data.proxies);
-            if(!entries.length){proxyArea.innerText="⚠️ Không có proxy nào";status.innerText="";changeIpBtn.disabled=false;return;}
-            const store={httpLines:[],socksLines:[],proxyLines:[],proxyIds:entries.map(p=>p.id)};
-            proxyArea.innerHTML="";
-            entries.forEach((p,idx)=>{
-                const http=buildHttpProxy(p),socks5=buildSocks5Proxy(p);
-                store.proxyLines.push(http,socks5);store.httpLines.push(http);store.socksLines.push(socks5);
-                if(idx>0){const dv=document.createElement("div");dv.className="proxy-divider";proxyArea.appendChild(dv);}
-                const rowH=document.createElement("div");rowH.className="proxy-line";
-                const lH=document.createElement("span");lH.className="proxy-label http";lH.innerText="HTTP";
-                const vH=document.createElement("span");vH.className="proxy-value";vH.innerText=http;
-                rowH.append(lH,vH);rowH.onclick=async()=>{await navigator.clipboard.writeText(http);rowH.classList.add("copied");setTimeout(()=>rowH.classList.remove("copied"),1200);};
-                const rowIP=document.createElement("div");rowIP.className="ip-info-row";
-                const realIpText=document.createElement("span");realIpText.className="real-ip-label";realIpText.innerText=p.real_ip||"";
-                const testKmBtn=document.createElement("button");testKmBtn.className="btn-test-km";testKmBtn.innerText="TEST KM";
-                testKmBtn.onclick=async()=>{const ip=p.real_ip;if(!ip)return;testKmBtn.disabled=true;testKmBtn.innerText="⏳...";try{const r2=await fetch("https://testdodam.nguyenanlk2872.workers.dev/?ip="+ip,{cache:"no-store"});const txt=await r2.text();if(txt.includes("Duplicate entry")){testKmBtn.innerText="📉 Tỉ Lệ KM Thấp";testKmBtn.style.cssText="background:rgba(220,38,38,.12);border-color:rgba(220,38,38,.4);color:#ff5252";}else{try{const j=JSON.parse(txt);if(j.status==="success"){testKmBtn.innerText="📈 Tỉ Lệ KM Cao";testKmBtn.style.cssText="background:rgba(0,230,76,.1);border-color:rgba(0,230,76,.4);color:#00e676";}else{testKmBtn.innerText="❓ "+(j.message||"?");}}catch{testKmBtn.innerText="❓ Unknown";}}}catch{testKmBtn.innerText="❌ Lỗi";}testKmBtn.disabled=false;};
-                rowIP.append(realIpText,testKmBtn);
-                const rowS=document.createElement("div");rowS.className="proxy-line";
-                const lS=document.createElement("span");lS.className="proxy-label socks5";lS.innerText="SOCKS5";
-                const vS=document.createElement("span");vS.className="proxy-value";vS.innerText=socks5;
-                rowS.append(lS,vS);rowS.onclick=async()=>{await navigator.clipboard.writeText(socks5);rowS.classList.add("copied");setTimeout(()=>rowS.classList.remove("copied"),1200);};
-                proxyArea.append(rowH,rowIP,rowS);
-            });
-            proxyDataStore.set(apiKey,store);status.innerText=`✅ ${entries.length} proxy`;
-        }catch(err){proxyArea.innerText="❌ Lỗi kết nối";status.innerText="❌";}
-        changeIpBtn.disabled=false;
-    }
-    async function changeAllIPs(){
-        const sd=proxyDataStore.get(apiKey);const ids=(sd&&sd.proxyIds)||[];
-        if(!ids.length){status.innerText="⚠️ Chưa có proxy";return;}
-        changeIpBtn.disabled=true;status.innerText="⏳ Đổi IP...";
-        try{let ok=0;for(const id of ids){const url=`${UUID_API_BASE}${apiKey}/update?filter_ip=&minute_change_ip=&id=${id}&change_ip=yes`;const res=await fetch(url,{cache:"no-store"});const data=await res.json();let pe=false,pm="";if(data.data&&typeof data.data==="object"){const po=Object.values(data.data).find(v=>v&&typeof v==="object"&&v.status);if(po){pe=po.status==="error";pm=po.msg||"";}}if(data.status==="success"&&!pe)ok++;else status.innerText="⏳ "+(pm||data.msg||data.message||"Lỗi đổi IP");}if(ok>0){status.innerText="✅ Xoay xong";setTimeout(fetchAndRender,1500);}else changeIpBtn.disabled=false;}catch(err){status.innerText="❌ Lỗi đổi IP";changeIpBtn.disabled=false;}
-    }
-    const cH=document.createElement("button");cH.className="btn-blue";cH.innerHTML="HTTP";
-    cH.onclick=async()=>{const d=proxyDataStore.get(apiKey);const l=(d&&d.httpLines)||[];if(!l.length){alert("Chưa có proxy HTTP");return;}await navigator.clipboard.writeText(l.join("\n"));cH.innerHTML="✅";setTimeout(()=>cH.innerHTML="HTTP",800);};
-    const cS=document.createElement("button");cS.className="btn-purple";cS.innerHTML="SOCKS5";
-    cS.onclick=async()=>{const d=proxyDataStore.get(apiKey);const l=(d&&d.socksLines)||[];if(!l.length){alert("Chưa có proxy SOCKS5");return;}await navigator.clipboard.writeText(l.join("\n"));cS.innerHTML="✅";setTimeout(()=>cS.innerHTML="SOCKS5",800);};
-    const fi=document.createElement("input");fi.type="text";fi.placeholder="Lọc đầu IP (vd: 27)";
-    const fb=document.createElement("button");fb.className="btn-cyan";fb.innerHTML="🔍 Lọc IP";
-    async function filterIp(){const ip=fi.value.trim();if(!ip){alert("Nhập đầu IP muốn lọc");return;}const sd=proxyDataStore.get(apiKey);const ids=(sd&&sd.proxyIds)||[];if(!ids.length){status.innerText="⚠️ Chưa có proxy";return;}fb.disabled=true;status.innerText="⏳ Lọc IP...";try{let ok=0;for(const id of ids){const url=`${UUID_API_BASE}${apiKey}/update?filter_ip=${encodeURIComponent(ip)}&minute_change_ip=0&id=${id}&change_ip=`;const res=await fetch(url,{cache:"no-store"});const data=await res.json();let pe=false,pm="";if(data.data&&typeof data.data==="object"){const po=Object.values(data.data).find(v=>v&&typeof v==="object"&&v.status);if(po){pe=po.status==="error";pm=po.msg||"";}}if(data.status==="success"&&!pe)ok++;else status.innerText="⏳ "+(pm||data.msg||data.message||"Lỗi lọc IP");}if(ok>0){status.innerText="✅ Lọc IP xong";setTimeout(fetchAndRender,1500);}}catch(err){status.innerText="❌ Lỗi lọc IP";}fb.disabled=false;}
-    fi.addEventListener("keydown",e=>{if(e.key==="Enter")filterIp();});fb.onclick=filterIp;changeIpBtn.onclick=changeAllIPs;
-    const fr=document.createElement("div");fr.className="filter-row";fr.append(fi,fb);
-    const ab=document.createElement("div");ab.className="action-btns";ab.append(cH,cS,changeIpBtn,delBtn);
-    const ac=document.createElement("div");ac.className="proxy-actions";ac.append(fr,ab);
-    const pb=document.createElement("div");pb.className="proxy-body";pb.append(proxyArea);
-    const pf=document.createElement("div");pf.className="proxy-footer";pf.append(ac,status);
-    box.append(pb,pf);proxyList.appendChild(box);await fetchAndRender();
-}
-
-function createProxyBox(apiKey){
-    const info=API_MAP[apiKey];if(!info)return;
-    const box=document.createElement("div");box.className="proxy-container";
-    const proxyText=document.createElement("div");proxyText.className="proxy-text";proxyText.innerText=info.proxy;
-    const copyBtn=document.createElement("button");copyBtn.className="btn-copy";copyBtn.innerHTML="⎘ COPY";
-    copyBtn.onclick=async()=>{await navigator.clipboard.writeText(proxyText.innerText);copyBtn.innerHTML="✅ Copied";setTimeout(()=>copyBtn.innerHTML="⎘ COPY",800);};
-    const rotateBtn=document.createElement("button");rotateBtn.className="btn-primary";rotateBtn.innerHTML="⟳ Xoay";
-    const status=document.createElement("span");status.className="status";
-    rotateBtn.onclick=async()=>{rotateBtn.disabled=true;status.innerText="⏳ Xoay...";try{let url=info.rotate;if(url.includes("reset?proxy="))url+=encodeURIComponent(info.proxy);else url+=apiKey;const res=await fetch(url);const data=await res.json();if(data.success===false)status.innerText="⚠️ "+(data.message||"Không xoay được");else{if(data.data?.proxy){info.proxy=data.data.proxy;proxyText.innerText=data.data.proxy;}status.innerText="✅ Xoay xong";}}catch(err){status.innerText="❌ Bình tẽn xoay tutu";}rotateBtn.disabled=false;};
-    const delBtn=document.createElement("button");delBtn.className="btn-red";delBtn.innerHTML="✕ XÓA";
-    delBtn.onclick=()=>{savedApis=savedApis.filter(k=>k!==apiKey);localStorage.setItem("proxy_api_keys",JSON.stringify(savedApis));box.style.cssText="opacity:0;transform:translateY(-6px);transition:all .2s";setTimeout(()=>{if(box.parentNode)proxyList.removeChild(box);},200);};
-    const ac=document.createElement("div");ac.className="proxy-actions";ac.append(copyBtn,rotateBtn,delBtn);
-    const pb=document.createElement("div");pb.className="proxy-body";pb.append(proxyText);
-    const pf=document.createElement("div");pf.className="proxy-footer";pf.style.cssText="display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px;";pf.append(ac,status);
-    box.append(pb,pf);proxyList.appendChild(box);
-}
-
-addApiBtn.onclick=async()=>{
-    const keys=apiInput.value.trim().split(/\r?\n/).map(k=>k.trim()).filter(Boolean);
-    let a=0,s=0,inv=0;
-    for(const k of keys){if(savedApis.includes(k)){s++;continue;}if(UUID_REGEX.test(k)){savedApis.push(k);await createUuidProxyBox(k);a++;}else{if(!API_MAP[k]){inv++;continue;}savedApis.push(k);createProxyBox(k);a++;}}
-    localStorage.setItem("proxy_api_keys",JSON.stringify(savedApis));
-    apiStatus.innerText=`+ Thêm ${a}  ·  ~ Trùng ${s}  ·  ✕ Sai ${inv}`;apiStatus.classList.add("visible");apiInput.value="";
+    await copyAndFlash(lines, document.getElementById("copyHttpBtn"), "HTTP");
 };
 
-rotateAllBtn.onclick=async()=>{
-    const buttons=document.querySelectorAll(".btn-orange, .btn-primary");
-    for(const btn of buttons){if(!btn.disabled){btn.click();await new Promise(r=>setTimeout(r,800));}}
+document.getElementById("copySocksBtn").onclick = async () => {
+    const lines = [];
+    document.querySelectorAll(".proxy-container.uuid-type").forEach(box => {
+        const key = box.dataset.uuid;
+        const data = proxyDataStore.get(key);
+        if (data && data.socksLines) lines.push(...data.socksLines);
+    });
+    await copyAndFlash(lines, document.getElementById("copySocksBtn"), "SOCKS5");
+};
+
+document.getElementById("copyBothBtn").onclick = async () => {
+    const lines = [];
+    document.querySelectorAll(".proxy-container:not(.uuid-type) .proxy-text").forEach(el => {
+        const t = el.innerText.trim();
+        if (t) lines.push(t);
+    });
+    document.querySelectorAll(".proxy-container.uuid-type").forEach(box => {
+        const key = box.dataset.uuid;
+        const data = proxyDataStore.get(key);
+        if (data && data.proxyLines) lines.push(...data.proxyLines);
+    });
+    await copyAndFlash(lines, document.getElementById("copyBothBtn"), "HTTP + SOCKS5");
+};
+
+let savedApis = JSON.parse(localStorage.getItem("proxy_api_keys") || "[]");
+
+async function loadApiMap() {
+    try {
+        const res = await fetch(API_MAP_URL, { cache: "no-store" });
+        API_MAP = await res.json();
+        proxyList.innerHTML = "";
+        savedApis.forEach(k => UUID_REGEX.test(k) ? createUuidProxyBox(k) : createProxyBox(k));
+    } catch(err) {
+        alert("❌ Không tải được API MAP");
+    }
+}
+
+function buildHttpProxy(p)   { return `${p.host}:${p.port}:${p.username}:${p.password}`; }
+function buildSocks5Proxy(p) { return `${p.host}:${p.socks5_port}:${p.username}:${p.password}`; }
+
+async function createUuidProxyBox(apiKey) {
+    const box = document.createElement("div");
+    box.className = "proxy-container uuid-type";
+    box.dataset.uuid = apiKey;
+
+    proxyDataStore.set(apiKey, { httpLines: [], socksLines: [], proxyLines: [], proxyIds: [] });
+
+    const proxyArea = document.createElement("div");
+    proxyArea.className = "proxy-text uuid-proxies";
+    proxyArea.innerHTML = `<span class="loading-text">⏳ Đang tải proxy...</span>`;
+
+    const status = document.createElement("span");
+    status.className = "status";
+
+    const changeIpBtn = document.createElement("button");
+    changeIpBtn.className = "btn-orange";
+    changeIpBtn.innerHTML = "🌐 ĐỔI IP";
+
+    const delBtn = document.createElement("button");
+    delBtn.className = "btn-red";
+    delBtn.innerHTML = "✕ XÓA";
+    delBtn.onclick = () => {
+        savedApis = savedApis.filter(k => k !== apiKey);
+        localStorage.setItem("proxy_api_keys", JSON.stringify(savedApis));
+        proxyDataStore.delete(apiKey);
+        box.style.animation = "none";
+        box.style.opacity = "0";
+        box.style.transform = "translateY(-6px)";
+        box.style.transition = "all .2s";
+        setTimeout(() => { if (box.parentNode) proxyList.removeChild(box); }, 200);
+    };
+
+    async function fetchAndRender() {
+        changeIpBtn.disabled = true;
+        status.innerText = "Đang tải...";
+        proxyArea.innerHTML = `<span class="loading-text">⏳ Đang tải proxy...</span>`;
+        const url = UUID_API_BASE + apiKey;
+        try {
+            const res  = await fetch(url, { cache: "no-store" });
+            const data = await res.json();
+
+            if (data.status !== "success" || !data.proxies) {
+                proxyArea.innerText = "⚠️ Không lấy được proxy";
+                status.innerText = "❌ Lỗi";
+                changeIpBtn.disabled = false;
+                return;
+            }
+
+            const entries = Object.values(data.proxies);
+            if (!entries.length) {
+                proxyArea.innerText = "⚠️ Không có proxy nào";
+                status.innerText = "";
+                changeIpBtn.disabled = false;
+                return;
+            }
+
+            const store = { httpLines: [], socksLines: [], proxyLines: [], proxyIds: entries.map(p => p.id) };
+            proxyArea.innerHTML = "";
+
+            entries.forEach((p, idx) => {
+                const http   = buildHttpProxy(p);
+                const socks5 = buildSocks5Proxy(p);
+                store.proxyLines.push(http, socks5);
+                store.httpLines.push(http);
+                store.socksLines.push(socks5);
+
+                if (idx > 0) {
+                    const div2 = document.createElement("div");
+                    div2.className = "proxy-divider";
+                    proxyArea.appendChild(div2);
+                }
+
+                const rowH = document.createElement("div"); rowH.className = "proxy-line";
+                const lH = document.createElement("span"); lH.className = "proxy-label http"; lH.innerText = "HTTP";
+                const vH = document.createElement("span"); vH.className = "proxy-value"; vH.innerText = http;
+                rowH.append(lH, vH);
+                rowH.onclick = async () => {
+                    await navigator.clipboard.writeText(http);
+                    rowH.classList.add("copied");
+                    setTimeout(() => rowH.classList.remove("copied"), 1200);
+                };
+
+                const rowIP = document.createElement("div");
+                rowIP.className = "ip-info-row";
+
+                const realIpText = document.createElement("span");
+                realIpText.className = "real-ip-label";
+                realIpText.innerText = p.real_ip || "";
+
+                const testKmBtn = document.createElement("button");
+                testKmBtn.className = "btn-test-km";
+                testKmBtn.innerText = "TEST KM";
+                testKmBtn.onclick = async () => {
+                    const ip = p.real_ip;
+                    if (!ip) return;
+                    testKmBtn.disabled = true;
+                    testKmBtn.innerText = "⏳...";
+                    try {
+                        const res = await fetch("https://testdodam.nguyenanlk2872.workers.dev/?ip=" + ip, { cache: "no-store" });
+                        const text = await res.text();
+                        if (text.includes("Duplicate entry")) {
+                            testKmBtn.innerText = "📉 Tỉ Lệ KM Thấp";
+                            testKmBtn.style.background = "rgba(220,38,38,.1)";
+                            testKmBtn.style.borderColor = "rgba(220,38,38,.4)";
+                            testKmBtn.style.color = "#dc2626";
+                        } else {
+                            try {
+                                const json = JSON.parse(text);
+                                if (json.status === "success") {
+                                    testKmBtn.innerText = "📈 Tỉ Lệ KM Cao";
+                                    testKmBtn.style.background = "rgba(22,163,74,.1)";
+                                    testKmBtn.style.borderColor = "rgba(22,163,74,.4)";
+                                    testKmBtn.style.color = "#16a34a";
+                                } else {
+                                    testKmBtn.innerText = "❓ " + (json.message || "?");
+                                    testKmBtn.style.background = "rgba(107,114,128,.1)";
+                                    testKmBtn.style.color = "#6b7280";
+                                }
+                            } catch {
+                                testKmBtn.innerText = "❓ Unknown";
+                                testKmBtn.style.background = "rgba(107,114,128,.1)";
+                            }
+                        }
+                    } catch {
+                        testKmBtn.innerText = "❌ Lỗi";
+                    }
+                    testKmBtn.disabled = false;
+                };
+
+                rowIP.append(realIpText, testKmBtn);
+
+                const rowS = document.createElement("div"); rowS.className = "proxy-line";
+                const lS = document.createElement("span"); lS.className = "proxy-label socks5"; lS.innerText = "SOCKS5";
+                const vS = document.createElement("span"); vS.className = "proxy-value"; vS.innerText = socks5;
+                rowS.append(lS, vS);
+                rowS.onclick = async () => {
+                    await navigator.clipboard.writeText(socks5);
+                    rowS.classList.add("copied");
+                    setTimeout(() => rowS.classList.remove("copied"), 1200);
+                };
+
+                proxyArea.append(rowH, rowIP, rowS);
+            });
+
+            proxyDataStore.set(apiKey, store);
+
+            status.innerText = `✅ ${entries.length} proxy`;
+        } catch(err) {
+            proxyArea.innerText = "❌ Lỗi kết nối";
+            status.innerText = "❌";
+        }
+        changeIpBtn.disabled = false;
+    }
+
+    async function changeAllIPs() {
+        const storeData = proxyDataStore.get(apiKey);
+        const ids = (storeData && storeData.proxyIds) || [];
+        if (!ids.length) { status.innerText = "⚠️ Chưa có proxy"; return; }
+        changeIpBtn.disabled = true;
+        status.innerText = "⏳ Đổi IP...";
+        try {
+            let ok = 0, fail = 0;
+            for (const id of ids) {
+                const url = `${UUID_API_BASE}${apiKey}/update?filter_ip=&minute_change_ip=&id=${id}&change_ip=yes`;
+                const res  = await fetch(url, { cache: "no-store" });
+                const data = await res.json();
+
+                let portMsg = "";
+                let portError = false;
+                if (data.data && typeof data.data === "object") {
+                    const portObj = Object.values(data.data).find(v => v && typeof v === "object" && v.status);
+                    if (portObj) {
+                        portError = portObj.status === "error";
+                        portMsg   = portObj.msg || "";
+                    }
+                }
+
+                if (data.status === "success" && !portError) {
+                    ok++;
+                } else {
+                    fail++;
+                    const showMsg = portMsg || data.msg || data.message || "Lỗi đổi IP";
+                    status.innerText = "⏳ " + showMsg;
+                }
+            }
+            if (ok > 0) {
+                status.innerText = "✅ Xoay xong";
+                setTimeout(fetchAndRender, 1500);
+            } else {
+                changeIpBtn.disabled = false;
+            }
+        } catch(err) {
+            status.innerText = "❌ Lỗi đổi IP";
+            changeIpBtn.disabled = false;
+        }
+    }
+
+    const copyHttpBtn2 = document.createElement("button");
+    copyHttpBtn2.className = "btn-blue";
+    copyHttpBtn2.innerHTML = "HTTP";
+    copyHttpBtn2.onclick = async () => {
+        const storeData = proxyDataStore.get(apiKey);
+        const lines = (storeData && storeData.httpLines) || [];
+        if (!lines.length) { alert("Chưa có proxy HTTP"); return; }
+        await navigator.clipboard.writeText(lines.join("\n"));
+        copyHttpBtn2.innerHTML = "✅"; setTimeout(() => copyHttpBtn2.innerHTML = "HTTP", 800);
+    };
+
+    const copySocksBtn2 = document.createElement("button");
+    copySocksBtn2.className = "btn-purple";
+    copySocksBtn2.innerHTML = "SOCKS5";
+    copySocksBtn2.onclick = async () => {
+        const storeData = proxyDataStore.get(apiKey);
+        const lines = (storeData && storeData.socksLines) || [];
+        if (!lines.length) { alert("Chưa có proxy SOCKS5"); return; }
+        await navigator.clipboard.writeText(lines.join("\n"));
+        copySocksBtn2.innerHTML = "✅"; setTimeout(() => copySocksBtn2.innerHTML = "SOCKS5", 800);
+    };
+
+    async function filterIp() {
+        const ipPrefix = filterInput.value.trim();
+        if (!ipPrefix) { alert("Nhập đầu IP muốn lọc"); return; }
+        const storeData = proxyDataStore.get(apiKey);
+        const ids = (storeData && storeData.proxyIds) || [];
+        if (!ids.length) { status.innerText = "⚠️ Chưa có proxy"; return; }
+        filterBtn.disabled = true;
+        status.innerText = "⏳ Lọc IP...";
+        try {
+            let ok = 0, fail = 0;
+            for (const id of ids) {
+                const url = `${UUID_API_BASE}${apiKey}/update?filter_ip=${encodeURIComponent(ipPrefix)}&minute_change_ip=0&id=${id}&change_ip=`;
+                const res  = await fetch(url, { cache: "no-store" });
+                const data = await res.json();
+                let portMsg = "";
+                let portError = false;
+                if (data.data && typeof data.data === "object") {
+                    const portObj = Object.values(data.data).find(v => v && typeof v === "object" && v.status);
+                    if (portObj) { portError = portObj.status === "error"; portMsg = portObj.msg || ""; }
+                }
+                if (data.status === "success" && !portError) { ok++; }
+                else { fail++; status.innerText = "⏳ " + (portMsg || data.msg || data.message || "Lỗi lọc IP"); }
+            }
+            if (ok > 0) { status.innerText = "✅ Lọc IP xong"; setTimeout(fetchAndRender, 1500); }
+        } catch(err) { status.innerText = "❌ Lỗi lọc IP"; }
+        filterBtn.disabled = false;
+    }
+
+    changeIpBtn.onclick = changeAllIPs;
+
+    const filterInput = document.createElement("input");
+    filterInput.type = "text";
+    filterInput.placeholder = "Lọc đầu IP (vd: 27)";
+    filterInput.addEventListener("keydown", e => { if (e.key === "Enter") filterIp(); });
+
+    const filterBtn = document.createElement("button");
+    filterBtn.className = "btn-cyan";
+    filterBtn.innerHTML = "🔍 Lọc IP";
+    filterBtn.onclick = filterIp;
+
+    const filterRow = document.createElement("div");
+    filterRow.className = "filter-row";
+    filterRow.append(filterInput, filterBtn);
+
+    const actionBtns = document.createElement("div");
+    actionBtns.className = "action-btns";
+    actionBtns.append(copyHttpBtn2, copySocksBtn2, changeIpBtn, delBtn);
+
+    const actions = document.createElement("div");
+    actions.className = "proxy-actions";
+    actions.append(filterRow, actionBtns);
+
+    const proxyBody = document.createElement("div");
+    proxyBody.className = "proxy-body";
+    proxyBody.append(proxyArea);
+
+    const proxyFooter = document.createElement("div");
+    proxyFooter.className = "proxy-footer";
+    proxyFooter.append(actions, status);
+
+    box.append(proxyBody, proxyFooter);
+    proxyList.appendChild(box);
+    await fetchAndRender();
+}
+
+function createProxyBox(apiKey) {
+    const info = API_MAP[apiKey];
+    if (!info) return;
+    const box = document.createElement("div"); box.className = "proxy-container";
+
+    const proxyText = document.createElement("div"); proxyText.className = "proxy-text"; proxyText.innerText = info.proxy;
+
+    const copyBtn = document.createElement("button"); copyBtn.className = "btn-copy"; copyBtn.innerHTML = "⎘ COPY";
+    copyBtn.onclick = async () => {
+        await navigator.clipboard.writeText(proxyText.innerText);
+        copyBtn.innerHTML = "✅ Copied"; setTimeout(() => copyBtn.innerHTML = "⎘ COPY", 800);
+    };
+
+    const rotateBtn = document.createElement("button"); rotateBtn.className = "btn-primary"; rotateBtn.innerHTML = "⟳ Xoay";
+    const status = document.createElement("span"); status.className = "status";
+
+    rotateBtn.onclick = async () => {
+        rotateBtn.disabled = true; status.innerText = "⏳ Xoay...";
+        try {
+            let url = info.rotate;
+            if (url.includes("reset?proxy=")) url += encodeURIComponent(info.proxy);
+            else url += apiKey;
+            const res  = await fetch(url);
+            const data = await res.json();
+            if (data.success === false) {
+                status.innerText = "⚠️ " + (data.message || "Không xoay được");
+            } else {
+                if (data.data?.proxy) { info.proxy = data.data.proxy; proxyText.innerText = data.data.proxy; }
+                status.innerText = "✅ Xoay xong";
+            }
+        } catch(err) {
+            status.innerText = "❌ Bình tẽn xoay tutu";
+        }
+        rotateBtn.disabled = false;
+    };
+
+    const delBtn = document.createElement("button"); delBtn.className = "btn-red"; delBtn.innerHTML = "✕ XÓA";
+    delBtn.onclick = () => {
+        savedApis = savedApis.filter(k => k !== apiKey);
+        localStorage.setItem("proxy_api_keys", JSON.stringify(savedApis));
+        box.style.opacity = "0";
+        box.style.transform = "translateY(-6px)";
+        box.style.transition = "all .2s";
+        setTimeout(() => { if (box.parentNode) proxyList.removeChild(box); }, 200);
+    };
+
+    const actions = document.createElement("div"); actions.className = "proxy-actions";
+    actions.append(copyBtn, rotateBtn, delBtn);
+
+    const proxyBody2 = document.createElement("div");
+    proxyBody2.className = "proxy-body";
+    proxyBody2.append(proxyText);
+
+    const proxyFooter2 = document.createElement("div");
+    proxyFooter2.className = "proxy-footer";
+    proxyFooter2.style.flexDirection = "row";
+    proxyFooter2.style.flexWrap = "wrap";
+    proxyFooter2.style.alignItems = "center";
+    proxyFooter2.append(actions, status);
+
+    box.append(proxyBody2, proxyFooter2);
+    proxyList.appendChild(box);
+}
+
+addApiBtn.onclick = async () => {
+    const keys = apiInput.value.trim().split(/\r?\n/).map(k => k.trim()).filter(Boolean);
+    let a = 0, s = 0, i = 0;
+    for (const k of keys) {
+        if (savedApis.includes(k)) { s++; continue; }
+        if (UUID_REGEX.test(k)) {
+            savedApis.push(k);
+            await createUuidProxyBox(k); a++;
+        } else {
+            if (!API_MAP[k]) { i++; continue; }
+            savedApis.push(k); createProxyBox(k); a++;
+        }
+    }
+    localStorage.setItem("proxy_api_keys", JSON.stringify(savedApis));
+    apiStatus.innerText = `+ Thêm ${a}  ·  ~ Trùng ${s}  ·  ✕ Sai ${i}`;
+    apiStatus.classList.add("visible");
+    apiInput.value = "";
+};
+
+rotateAllBtn.onclick = async () => {
+    const buttons = document.querySelectorAll(".btn-orange, .btn-primary");
+    for (const btn of buttons) {
+        if (!btn.disabled) { btn.click(); await new Promise(r => setTimeout(r, 800)); }
+    }
 };
 
 loadApiMap();
