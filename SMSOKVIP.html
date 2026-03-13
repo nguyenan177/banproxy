@@ -4,87 +4,27 @@
 <meta charset="UTF-8">
 <title>Thuê SMS OKVIP</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
 <style>
-body {
-  font-family: Arial, sans-serif;
-  background: #f2f2f2;
-  padding: 20px;
-}
-.box {
-  background: #fff;
-  padding: 20px;
-  border-radius: 8px;
-  max-width: 820px;
-  margin: auto;
-  position: relative;
-}
-input, select, button {
-  width: 100%;
-  padding: 10px;
-  margin: 6px 0;
-}
+body { font-family: Arial, sans-serif; background: #f2f2f2; padding: 20px; }
+.box { background: #fff; padding: 20px; border-radius: 8px; max-width: 820px; margin: auto; position: relative; }
+input, select, button { width: 100%; padding: 10px; margin: 6px 0; box-sizing: border-box; }
 button { cursor: pointer; }
-.sim {
-  border: 1px solid #ddd;
-  padding: 10px;
-  margin-top: 10px;
-  border-radius: 6px;
-}
+.sim { border: 1px solid #ddd; padding: 10px; margin-top: 10px; border-radius: 6px; }
 .sim b { font-size: 16px; }
-pre {
-  background: #111;
-  color: #0f0;
-  padding: 12px;
-  height: 180px;
-  overflow: auto;
-}
-.lock {
-  background: #eee;
-  padding: 10px;
-  border-radius: 6px;
-  margin-bottom: 10px;
-}
-.proxy-btn {
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  width: auto;
-  padding: 8px 14px;
-  background: #007bff;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-}
-.sv2-btn {
-  position: absolute;
-  top: 15px;
-  right: 120px;
-  width: auto;
-  padding: 8px 14px;
-  background: #28a745;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-.copy-btn {
-  width: auto;
-  padding: 4px 8px;
-  margin-left: 6px;
-  font-size: 12px;
-}
-audio {
-  width: 100%;
-  margin-top: 6px;
-}
-.done {
-  color: green;
-  font-weight: bold;
-}
+pre { background: #111; color: #0f0; padding: 12px; height: 180px; overflow: auto; font-size: 13px; }
+.lock { background: #eee; padding: 10px; border-radius: 6px; margin-bottom: 10px; }
+.proxy-btn { position: absolute; top: 15px; right: 15px; width: auto; padding: 8px 14px; background: #007bff; color: #fff; border: none; border-radius: 6px; }
+.sv2-btn { position: absolute; top: 15px; right: 120px; width: auto; padding: 8px 14px; background: #28a745; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+.copy-btn { width: auto; padding: 4px 8px; margin-left: 6px; font-size: 12px; }
+audio { width: 100%; margin-top: 6px; }
+.done { color: green; font-weight: bold; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: bold; margin-left: 8px; }
+.badge-okvip { background: #ff6b00; color: #fff; }
+.badge-sv2 { background: #007bff; color: #fff; }
+.badge-unknown { background: #aaa; color: #fff; }
+#apiTypeLabel { font-size: 13px; color: #888; margin: 2px 0 6px 2px; min-height: 18px; }
 </style>
 </head>
-
 <body>
 <div class="box">
 
@@ -93,10 +33,11 @@ audio {
 
 <h2>📲 Thuê SMS OKVIP</h2>
 
-<input id="apiKey" placeholder="Nhập API key">
+<input id="apiKey" placeholder="Nhập API key (OKVIP hoặc Sv2)" oninput="onApiKeyInput()">
+<div id="apiTypeLabel">🔍 Chưa nhập key</div>
 <button onclick="loadAccount()">🔑 Lấy thông tin tài khoản</button>
 
-<div class="lock">
+<div class="lock" id="priceLock">
   🔒 <b>Thuê sms:</b> Okvip – <b>5K</b>
 </div>
 
@@ -114,76 +55,143 @@ audio {
 </div>
 
 <script>
-/* ================= CHỐNG INSPECT (KHÔNG CHẶN CTRL+A) ================= */
+/* ===== CHỐNG INSPECT ===== */
 document.addEventListener("contextmenu", e => e.preventDefault());
-
 document.addEventListener("keydown", e => {
   if (e.key === "F12") e.preventDefault();
   if (e.ctrlKey && e.key.toLowerCase() === "u") e.preventDefault();
   if (e.ctrlKey && e.shiftKey && ["i","j","c"].includes(e.key.toLowerCase())) e.preventDefault();
   if (e.ctrlKey && ["s","p"].includes(e.key.toLowerCase())) e.preventDefault();
-  if (e.ctrlKey && e.key.toLowerCase() === "a") return;
 });
 
-/* ================= CONFIG ================= */
-const WORKER = "https://api.dblgamingg.workers.dev";
-const FIXED_SERVICE_ID = 49;
+/* ===== CONFIG ===== */
+const WORKER        = "https://api.dblgamingg.workers.dev"; // proxy cho OKVIP
+const SV2_BASE  = "https://noisy-darkness-b3aa.dblgamingg.workers.dev/api";
+const FIXED_SERVICE_ID = 49; // OKVIP service id
 
-/* ================= STORAGE ================= */
-const SIM_KEY = "okvip_sims";
+/* ===== DETECT API TYPE ===== */
+function detectApiType(key) {
+  if (!key) return null;
+  if (key.startsWith("eyJ") && key.split(".").length === 3) return "okvip";
+  if (/^[a-f0-9]{32}$/i.test(key)) return "sv2";
+  return "unknown";
+}
+
+function onApiKeyInput() {
+  const key = document.getElementById("apiKey").value.trim();
+  const t = detectApiType(key);
+  const label = document.getElementById("apiTypeLabel");
+  const lock  = document.getElementById("priceLock");
+
+  if (t === "okvip") {
+    label.innerHTML = '🟠 Đã nhận diện: <span class="badge badge-okvip">OKVIP</span>';
+    lock.innerHTML  = '🔒 <b>Thuê sms:</b> Okvip – <b>5K</b>';
+  } else if (t === "sv2") {
+    label.innerHTML = '🔵 Đã nhận diện: <span class="badge badge-sv2">Sv2</span>';
+    lock.innerHTML  = '🔒 <b>Thuê sms:</b> Sv2 (Okvip) – <b>3.0K</b>';
+  } else if (t === "unknown") {
+    label.innerHTML = '⚠️ <span class="badge badge-unknown">Không nhận diện được key</span>';
+  } else {
+    label.innerHTML = '🔍 Chưa nhập key';
+  }
+}
+
+/* ===== STORAGE ===== */
+const SIM_KEY      = "okvip_sims";
 const API_KEY_STORE = "okvip_api_key";
 
 let sims = [];
 let otpTimer = null;
 
-/* ================= UTILS ================= */
-const log = (t) => document.getElementById("log").textContent = t;
-const apiKeyInput = () => document.getElementById("apiKey");
-const getApiKey = () => apiKeyInput().value.trim();
+const log = (t) => document.getElementById("log").textContent =
+  typeof t === "object" ? JSON.stringify(t, null, 2) : t;
 
-async function call(path) {
+const getApiKey  = () => document.getElementById("apiKey").value.trim();
+const getApiType = () => detectApiType(getApiKey());
+
+/* ===== HTTP HELPERS ===== */
+async function callOkvip(path) {
   const res = await fetch(WORKER + path);
   return res.json();
 }
 
-function copyText(btn, text, isPhone = false) {
-  let v = text;
-  if (isPhone && v.startsWith("0")) v = v.slice(1);
-  navigator.clipboard.writeText(v).then(() => {
-    const old = btn.textContent;
-    btn.textContent = "✅";
-    setTimeout(() => btn.textContent = old, 1200);
-  });
+async function callSv2(params) {
+  const url = SV2_BASE + "?" + new URLSearchParams({ apik: getApiKey(), ...params });
+  const res = await fetch(url);
+  return res.json();
 }
 
-/* ================= STORAGE ================= */
-function saveSims() {
-  localStorage.setItem(SIM_KEY, JSON.stringify(sims));
+/* ===== COPY ===== */
+function copyText(btn, text, stripLeadingZero = false) {
+  if (!text) return;
+  let v = (stripLeadingZero && text.startsWith("0")) ? text.slice(1) : text;
+
+  const finish = (ok) => {
+    const old = btn.textContent;
+    btn.textContent = ok ? "✅" : "❌";
+    setTimeout(() => btn.textContent = old, 1400);
+  };
+
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(v).then(() => finish(true)).catch(() => fallbackCopy(v, finish));
+  } else {
+    fallbackCopy(v, finish);
+  }
 }
+
+function fallbackCopy(text, finish) {
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.cssText = "position:fixed;top:-9999px;left:-9999px;opacity:0";
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    finish(ok);
+  } catch(e) {
+    finish(false);
+  }
+}
+
+/* ===== PERSIST ===== */
+function saveSims() { localStorage.setItem(SIM_KEY, JSON.stringify(sims)); }
 function loadSims() {
   const raw = localStorage.getItem(SIM_KEY);
   if (!raw) return;
   sims = JSON.parse(raw);
-  if (sims.length) {
-    renderSims();
-    startOtp();
+  if (sims.length) { renderSims(); startOtp(); }
+}
+
+/* ===== ACCOUNT ===== */
+async function loadAccount() {
+  const key = getApiKey();
+  if (!key) return alert("Nhập API key");
+  localStorage.setItem(API_KEY_STORE, key);
+
+  const t = getApiType();
+  let d;
+
+  if (t === "okvip") {
+    d = await callOkvip(`/account?api_key=${key}`);
+    if (d?.data?.balance) d.data.balance /= 0.4; // hiển thị giá thật
+    log(d);
+    loadNetworksOkvip();
+
+  } else if (t === "sv2") {
+    d = await callSv2({ act: "account" });
+    if (d?.Result?.Balance) d.Result.Balance /= 0.4; // hiển thị giá thật
+    log(d);
+    loadNetworksSv2();
+
+  } else {
+    return alert("❌ Không nhận diện được loại API key!");
   }
 }
 
-/* ================= ACCOUNT ================= */
-async function loadAccount() {
-  if (!getApiKey()) return alert("Nhập API key");
-  localStorage.setItem(API_KEY_STORE, getApiKey());
-
-  const d = await call(`/account?api_key=${getApiKey()}`);
-  if (d?.data?.balance) d.data.balance /= 0.4;
-  log(JSON.stringify(d, null, 2));
-  loadNetworks();
-}
-
-/* ================= NETWORK ================= */
-async function loadNetworks() {
-  const d = await call(`/networks?api_key=${getApiKey()}`);
+/* ===== NETWORKS ===== */
+async function loadNetworksOkvip() {
+  const d = await callOkvip(`/networks?api_key=${getApiKey()}`);
   const n = document.getElementById("network");
   n.innerHTML = '<option value="">-- Tất cả nhà mạng --</option>';
   d?.data?.forEach(x => {
@@ -191,112 +199,175 @@ async function loadNetworks() {
   });
 }
 
-/* ================= GET SIM ================= */
-async function getSim() {
-  if (!getApiKey()) return alert("Thiếu API key");
-
-  const network = document.getElementById("network").value;
-  const prefix = document.getElementById("prefix").value;
-
-  let q = `/get-sim?api_key=${getApiKey()}&service_id=${FIXED_SERVICE_ID}`;
-  if (network) q += `&network_id=${network}`;
-  if (prefix) q += `&phone=${prefix}`;
-
-  const d = await call(q);
-  if (d?.status !== 200) return log("❌ Không lấy được số");
-
-  sims.push({
-    otpId: d.data.otpId,
-    simId: d.data.simId,
-    phone: d.data.phone,
-    code: null,
-    audio: null,
-    done: false
-  });
-
-  saveSims();
-  renderSims();
-  startOtp();
+function loadNetworksSv2() {
+  const n = document.getElementById("network");
+  n.innerHTML = `
+    <option value="">-- Tất cả nhà mạng --</option>
+    <option value="Viettel">Viettel</option>
+    <option value="Mobi">Mobifone</option>
+    <option value="Vina">Vinaphone</option>
+    <option value="VNMB">Vietnamobile</option>
+    <option value="ITelecom">ITelecom</option>
+  `;
 }
 
-/* ================= RENDER ================= */
+/* ===== GET SIM ===== */
+async function getSim() {
+  const key = getApiKey();
+  if (!key) return alert("Thiếu API key");
+
+  const t       = getApiType();
+  const network = document.getElementById("network").value;
+  const prefix  = document.getElementById("prefix").value.trim();
+
+  if (t === "okvip") {
+    await getSimOkvip(key, network, prefix);
+  } else if (t === "sv2") {
+    await getSimSv2(key, network, prefix);
+  } else {
+    alert("❌ Không nhận diện được loại API key!");
+  }
+}
+
+async function getSimOkvip(key, network, prefix) {
+  let q = `/get-sim?api_key=${key}&service_id=${FIXED_SERVICE_ID}`;
+  if (network) q += `&network_id=${network}`;
+  if (prefix)  q += `&phone=${prefix}`;
+
+  const d = await callOkvip(q);
+  if (d?.status !== 200) return log("❌ OKVIP: Không lấy được số\n" + JSON.stringify(d));
+
+  sims.push({
+    source: "okvip",
+    otpId:  d.data.otpId,
+    simId:  d.data.simId,
+    phone:  d.data.phone,
+    code: null, audio: null, done: false
+  });
+  saveSims(); renderSims(); startOtp();
+}
+
+async function getSimSv2(key, network, prefix) {
+  const appId = 1008; // for88 – cố định
+  const params = { act: "number", appId };
+  if (network) params.carrier = network;
+  if (prefix)  params.prefix  = prefix;
+
+  const d = await callSv2(params);
+  if (d?.ResponseCode !== 0) {
+    if (d?.ResponseCode === 3) {
+      d.Msg = "Kho số cho ứng dụng đang tạm hết, vui lòng liên hệ Telegram @nguyenanlk để được hỗ trợ";
+    }
+    return log("❌ Sv2: Không lấy được số\n" + JSON.stringify(d));
+  }
+
+  sims.push({
+    source: "sv2",
+    otpId:  d.Result.Id,
+    simId:  d.Result.Id,
+    phone:  "0" + d.Result.Number,
+    code: null, audio: null, done: false
+  });
+  saveSims(); renderSims(); startOtp();
+}
+
+/* ===== RENDER ===== */
 function renderSims() {
   const box = document.getElementById("simList");
   box.innerHTML = "";
 
   sims.forEach((s, i) => {
-    box.innerHTML += `
-      <div class="sim">
-        <b>📞 ${s.phone}</b>
-        <button class="copy-btn" onclick="copyText(this,'${s.phone}',true)">📋</button><br>
+    const badgeHtml = s.source === "okvip"
+      ? '<span class="badge badge-okvip">OKVIP</span>'
+      : '<span class="badge badge-sv2">Sv2</span>';
 
-        🆔 OTP ID: ${s.otpId}<br>
+    const div = document.createElement("div");
+    div.className = "sim";
 
-        🔐 OTP:
-        ${s.code ? `<span class="done">${s.code}</span>` : "Đang chờ..."}
-        ${s.code ? `<button class="copy-btn" onclick="copyText(this,'${s.code}')">📋</button>` : ""}
+    const otpHtml = s.code
+      ? `<span class="done">${s.code}</span> <button class="copy-btn" data-copy="${s.code}">📋</button>`
+      : "Đang chờ...";
 
-        ${s.audio ? `
-        <div>
-          🎧 OTP GỌI:
-          <audio controls preload="none">
-            <source src="${s.audio}" type="audio/mpeg">
-          </audio>
-        </div>` : ""}
+    const smsHtml  = s.sms   ? `<br>📩 <small>${s.sms}</small>` : "";
+    const audioHtml = s.audio ? `<div>🎧 OTP GỌI:<audio controls preload="none"><source src="${s.audio}" type="audio/mpeg"></audio></div>` : "";
 
-        <button onclick="cancelSim(${i})">❌ Hủy SIM</button>
-      </div>
+    div.innerHTML = `
+      <b>📞 ${s.phone}</b>
+      <button class="copy-btn" data-copy="${s.phone}" data-strip="1">📋</button>
+      ${badgeHtml}<br>
+      🆔 ID: ${s.otpId}<br>
+      🔐 OTP: ${otpHtml}
+      ${smsHtml}
+      ${audioHtml}
+      <button data-cancel="${i}">❌ Hủy SIM</button>
     `;
+    box.appendChild(div);
   });
+
+  // Event delegation – tránh lỗi inline onclick với ký tự đặc biệt
+  box.onclick = (e) => {
+    const btn = e.target.closest("button[data-copy], button[data-cancel]");
+    if (!btn) return;
+    if (btn.dataset.cancel !== undefined) {
+      cancelSim(Number(btn.dataset.cancel));
+    } else if (btn.dataset.copy !== undefined) {
+      copyText(btn, btn.dataset.copy, btn.dataset.strip === "1");
+    }
+  };
 }
 
-/* ================= OTP POLLING ================= */
+/* ===== OTP POLLING ===== */
 function startOtp() {
   if (otpTimer) return;
-
-  otpTimer = setInterval(async () => {
-    let changed = false;
-
-    for (const s of sims) {
-      if (s.done) continue;
-
-      const d = await call(`/get-otp?api_key=${getApiKey()}&otp_id=${s.otpId}`);
-      if (!d?.data) continue;
-
-      const content = d.data.content || "";
-      const audio = d.data.audio || "";
-
-      const match = content.match(/\b\d{4,8}\b/);
-      if (match) {
-        s.code = match[0];
-        s.done = true;
-        changed = true;
-        continue;
-      }
-
-      if (audio) {
-        s.audio = audio;
-        s.done = true;
-        changed = true;
-      }
-    }
-
-    if (changed) {
-      saveSims();
-      renderSims();
-    }
-
-  }, 4000);
+  otpTimer = setInterval(pollOtp, 4000);
 }
 
-/* ================= CANCEL ================= */
+async function pollOtp() {
+  let changed = false;
+  const key = getApiKey();
+
+  for (const s of sims) {
+    if (s.done) continue;
+
+    if (s.source === "okvip") {
+      const d = await callOkvip(`/get-otp?api_key=${key}&otp_id=${s.otpId}`);
+      if (!d?.data) continue;
+      const content = d.data.content || "";
+      const audio   = d.data.audio   || "";
+      const match   = content.match(/\b\d{4,8}\b/);
+      if (match)  { s.code = match[0]; s.sms = content; s.done = true; changed = true; }
+      else if (audio) { s.audio = audio; s.done = true; changed = true; }
+
+    } else if (s.source === "sv2") {
+      const d = await callSv2({ act: "code", id: s.otpId });
+      if (!d) continue;
+      if (d.ResponseCode === 0 && d.Result) {
+        s.sms  = d.Result.SMS  || "";
+        s.code = d.Result.Code || "";
+        if (d.Result.IsCall && d.Result.CallFile) s.audio = d.Result.CallFile;
+        s.done = true; changed = true;
+      } else if (d.ResponseCode === 2) {
+        s.done = true; s.code = "⏰ Hết giờ"; changed = true;
+      }
+    }
+  }
+
+  if (changed) { saveSims(); renderSims(); }
+}
+
+/* ===== CANCEL ===== */
 async function cancelSim(index) {
-  const s = sims[index];
-  await call(`/cancel?api_key=${getApiKey()}&sim_id=${s.simId}`);
+  const s   = sims[index];
+  const key = getApiKey();
+
+  if (s.source === "okvip") {
+    await callOkvip(`/cancel?api_key=${key}&sim_id=${s.simId}`);
+  } else if (s.source === "sv2") {
+    await callSv2({ act: "expired", id: s.otpId });
+  }
 
   sims.splice(index, 1);
-  saveSims();
-  renderSims();
+  saveSims(); renderSims();
 
   if (!sims.length) {
     clearInterval(otpTimer);
@@ -305,13 +376,15 @@ async function cancelSim(index) {
   }
 }
 
-/* ================= INIT ================= */
+/* ===== INIT ===== */
 window.onload = () => {
   const savedKey = localStorage.getItem(API_KEY_STORE);
-  if (savedKey) apiKeyInput().value = savedKey;
+  if (savedKey) {
+    document.getElementById("apiKey").value = savedKey;
+    onApiKeyInput();
+  }
   loadSims();
 };
 </script>
-
 </body>
 </html>
