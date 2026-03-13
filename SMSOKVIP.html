@@ -248,7 +248,7 @@ async function getSimOkvip(key, network, prefix) {
 }
 
 async function getSimSv2(key, network, prefix) {
-  const appId = 1008; // for88 – cố định
+  const appId = 1200; // for88 – cố định
   const params = { act: "number", appId };
   if (network) params.carrier = network;
   if (prefix)  params.prefix  = prefix;
