@@ -7,12 +7,78 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Barlow+Condensed:wght@400;600;700;800&display=swap" rel="stylesheet">
 
+<!-- Firebase SDK (compat — load đồng bộ, ổn định) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+  window.BANK_CONFIG = {
+    bankId:      "TPB",
+    accountNo:   "10001979021",
+    accountName: "NGUYEN QUOC AN",
+    template:    "compact"
+  };
+
+  const _app  = firebase.initializeApp({
+    apiKey:            "AIzaSyDq5ew_s9QpgDPBF_ZA0Ksr2ge3m6TtRjA",
+    authDomain:        "autobank-dba16.firebaseapp.com",
+    databaseURL:       "https://autobank-dba16-default-rtdb.firebaseio.com",
+    projectId:         "autobank-dba16",
+    storageBucket:     "autobank-dba16.firebasestorage.app",
+    messagingSenderId: "1072197275549",
+    appId:             "1:1072197275549:web:617068339935d992106974",
+    measurementId:     "G-C774LNGZ1G"
+  });
+
+  const _auth = firebase.auth();
+  const _db   = firebase.database();
+
+  // Expose — dùng compat API (không cần import)
+  window._fb = {
+    auth: _auth,
+    db:   _db,
+    // Auth methods
+    signInWithEmailAndPassword:  (auth, e, p) => auth.signInWithEmailAndPassword(e, p),
+    createUserWithEmailAndPassword: (auth, e, p) => auth.createUserWithEmailAndPassword(e, p),
+    signOut:          (auth) => auth.signOut(),
+    onAuthStateChanged: (auth, cb) => auth.onAuthStateChanged(cb),
+    updateProfile:    (user, data) => user.updateProfile(data),
+    // DB methods
+    ref:    (db, path) => db.ref(path),
+    set:    (ref, val) => ref.set(val),
+    get:    (ref)      => ref.get(),
+    push:   (ref, val) => ref.push(val),
+    update: (ref, val) => ref.update(val),
+    onValue:(ref, cb)  => { ref.on("value", cb); return () => ref.off("value", cb); }
+  };
+
+  // Auth state listener
+  _auth.onAuthStateChanged(async (user) => {
+    if (user) {
+      window._currentUser = user;
+      const snap = await _db.ref(`users/${user.uid}`).get();
+      if (!snap.exists()) {
+        await _db.ref(`users/${user.uid}`).set({
+          displayName: user.displayName || user.email.split("@")[0],
+          email: user.email,
+          balance: 0,
+          createdAt: Date.now()
+        });
+      }
+      if(window._listenBalance) window._listenBalance(user.uid);
+      if(window._onLogin) window._onLogin(user);
+    } else {
+      window._currentUser = null;
+      if(window._onLogout) window._onLogout();
+    }
+  });
+</script>
+
 <style>
 :root {
     --bg: #ffffff;
     --surface: #f5f5f8;
     --card: #fafafa;
-    --card2: #f0f0f5;
     --border: #e2e2ec;
     --border2: #d0d0de;
     --text: #1a1a2e;
@@ -29,9 +95,7 @@
     --glow: rgba(82,84,204,.12);
     --glow-sm: rgba(82,84,204,.08);
 }
-
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
 body {
     background: var(--bg);
     color: var(--text);
@@ -40,568 +104,393 @@ body {
     min-height: 100vh;
     overflow-x: hidden;
 }
-
-/* ── Matrix Canvas ── */
-#matrix-canvas {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 0;
-    pointer-events: none;
-    opacity: 0.55;
-}
-
+#matrix-canvas { position:fixed; top:0; left:0; width:100%; height:100%; z-index:0; pointer-events:none; opacity:.55; }
 body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image:
-        linear-gradient(rgba(82,84,204,.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(82,84,204,.04) 1px, transparent 1px);
-    background-size: 48px 48px;
-    pointer-events: none;
-    z-index: 1;
+    content:''; position:fixed; inset:0;
+    background-image: linear-gradient(rgba(82,84,204,.04) 1px,transparent 1px), linear-gradient(90deg,rgba(82,84,204,.04) 1px,transparent 1px);
+    background-size:48px 48px; pointer-events:none; z-index:1;
 }
-
-/* Overlay nhẹ để content dễ đọc hơn */
 body::after {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background: radial-gradient(ellipse at 50% 50%, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.45) 60%, rgba(255,255,255,0.25) 100%);
-    pointer-events: none;
-    z-index: 2;
+    content:''; position:fixed; inset:0;
+    background: radial-gradient(ellipse at 50% 50%, rgba(255,255,255,.7) 0%, rgba(255,255,255,.45) 60%, rgba(255,255,255,.25) 100%);
+    pointer-events:none; z-index:2;
 }
+.page-wrap { position:relative; z-index:10; max-width:860px; margin:0 auto; padding:28px 16px 60px; }
 
-.page-wrap {
-    position: relative;
-    z-index: 10;
-    max-width: 860px;
-    margin: 0 auto;
-    padding: 28px 16px 60px;
+/* ── Topbar ── */
+.topbar {
+    position: fixed; top:0; left:0; right:0; z-index:500;
+    display: flex; align-items: center; justify-content: flex-end;
+    gap: 10px; padding: 10px 16px;
+    background: rgba(255,255,255,.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 2px 16px rgba(0,0,0,.06);
 }
+.sms-btn {
+    background: linear-gradient(135deg,#f59e0b,#f97316);
+    color:#fff; padding:7px 14px; font-size:12px; font-weight:700;
+    font-family:'Barlow Condensed',sans-serif; letter-spacing:.5px;
+    border-radius:6px; text-decoration:none;
+    box-shadow:0 0 20px rgba(249,115,22,.2); transition:all .2s; text-transform:uppercase;
+}
+.sms-btn:hover { transform:translateY(-1px); box-shadow:0 0 28px rgba(249,115,22,.4); }
 
-/* ── SMS Button ── */
-.sms-okvip-btn {
-    position: fixed;
-    top: 18px;
-    right: 18px;
-    background: linear-gradient(135deg, #f59e0b, #f97316);
-    color: #fff;
-    padding: 9px 16px;
-    font-size: 12px;
-    font-weight: 700;
-    font-family: 'Barlow Condensed', sans-serif;
-    letter-spacing: 0.5px;
-    border-radius: 6px;
-    text-decoration: none;
-    box-shadow: 0 0 20px rgba(249,115,22,.25), 0 2px 8px rgba(0,0,0,.12);
-    z-index: 999;
-    transition: all .2s;
-    text-transform: uppercase;
+/* ── User widget ── */
+.user-widget {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 6px 12px; cursor: pointer;
+    transition: all .15s; position: relative;
 }
-.sms-okvip-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 0 28px rgba(249,115,22,.4), 0 4px 12px rgba(0,0,0,.15);
+.user-widget:hover { border-color: var(--accent); box-shadow: 0 0 0 2px var(--glow-sm); }
+.user-avatar {
+    width:28px; height:28px; border-radius:50%;
+    background: linear-gradient(135deg, var(--accent), var(--purple));
+    display:flex; align-items:center; justify-content:center;
+    font-size:12px; font-weight:700; color:#fff;
 }
+.user-info { display:flex; flex-direction:column; gap:1px; }
+.user-name { font-size:12px; font-weight:700; color:var(--text); line-height:1; letter-spacing:.3px; }
+.user-balance {
+    font-family:'Space Mono',monospace; font-size:10px;
+    color:var(--green); line-height:1;
+}
+.user-menu {
+    display:none; position:absolute; top:calc(100% + 6px); right:0;
+    background:#fff; border:1px solid var(--border2); border-radius:8px;
+    box-shadow:0 8px 30px rgba(0,0,0,.12); z-index:600; min-width:160px; overflow:hidden;
+}
+.user-menu.open { display:block; animation:dropIn .12s ease; }
+.user-menu button {
+    display:flex; align-items:center; gap:8px; width:100%;
+    padding:10px 14px; font-family:'Barlow Condensed',sans-serif;
+    font-size:12px; font-weight:700; letter-spacing:.5px; text-transform:uppercase;
+    background:transparent; border:none; border-bottom:1px solid var(--border);
+    color:var(--text); cursor:pointer; transition:background .15s;
+}
+.user-menu button:last-child { border-bottom:none; }
+.user-menu button:hover { background:rgba(82,84,204,.06); }
+.user-menu button.danger { color:var(--red); }
+
+.login-btn {
+    background: linear-gradient(135deg, var(--accent), #4f46e5);
+    color:#fff; padding:7px 16px; font-size:12px; font-weight:700;
+    font-family:'Barlow Condensed',sans-serif; letter-spacing:.5px;
+    border-radius:6px; border:none; cursor:pointer; text-transform:uppercase;
+    box-shadow:0 2px 10px rgba(82,84,204,.25); transition:all .2s;
+}
+.login-btn:hover { transform:translateY(-1px); box-shadow:0 4px 16px rgba(82,84,204,.38); }
 
 /* ── Header ── */
-.header { text-align: center; margin-bottom: 32px; padding-top: 12px; }
+.header { text-align:center; margin-bottom:32px; padding-top:60px; }
 .header-tag {
-    display: inline-block;
-    font-family: 'Space Mono', monospace;
-    font-size: 10px;
-    color: var(--accent);
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    margin-bottom: 10px;
-    background: rgba(82,84,204,.07);
-    border: 1px solid rgba(82,84,204,.18);
-    padding: 3px 10px;
-    border-radius: 3px;
+    display:inline-block; font-family:'Space Mono',monospace; font-size:10px;
+    color:var(--accent); letter-spacing:3px; text-transform:uppercase; margin-bottom:10px;
+    background:rgba(82,84,204,.07); border:1px solid rgba(82,84,204,.18);
+    padding:3px 10px; border-radius:3px;
 }
 .header h1 {
-    font-size: 42px;
-    font-weight: 800;
-    letter-spacing: -1px;
-    line-height: 1;
-    background: linear-gradient(135deg, #1a1a2e 0%, var(--accent) 50%, #7c3aed 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    text-transform: uppercase;
+    font-size:42px; font-weight:800; letter-spacing:-1px; line-height:1;
+    background:linear-gradient(135deg,#1a1a2e 0%,var(--accent) 50%,#7c3aed 100%);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; text-transform:uppercase;
 }
-.header-sub {
-    font-family: 'Space Mono', monospace;
-    font-size: 11px;
-    color: var(--muted);
-    letter-spacing: 2px;
-    margin-top: 8px;
-}
-.header-line {
-    width: 80px;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, var(--accent), transparent);
-    margin: 14px auto 0;
-}
+.header-sub { font-family:'Space Mono',monospace; font-size:11px; color:var(--muted); letter-spacing:2px; margin-top:8px; }
+.header-line { width:80px; height:2px; background:linear-gradient(90deg,transparent,var(--accent),transparent); margin:14px auto 0; }
 
 /* ── Panel ── */
 .panel {
-    background: rgba(250,250,250,0.88);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 20px;
-    margin-bottom: 18px;
-    position: relative;
-    overflow: visible;
-    box-shadow: 0 1px 6px rgba(0,0,0,.06);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    background:rgba(250,250,250,.88); border:1px solid var(--border); border-radius:10px;
+    padding:20px; margin-bottom:18px; position:relative;
+    box-shadow:0 1px 6px rgba(0,0,0,.06); backdrop-filter:blur(8px);
 }
 .panel::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, transparent 5%, var(--accent) 50%, transparent 95%);
-    opacity: .4;
-    border-radius: 10px 10px 0 0;
-    pointer-events: none;
+    content:''; position:absolute; top:0; left:0; right:0; height:2px;
+    background:linear-gradient(90deg,transparent 5%,var(--accent) 50%,transparent 95%);
+    opacity:.4; border-radius:10px 10px 0 0;
 }
 .panel-label {
-    font-family: 'Space Mono', monospace;
-    font-size: 10px;
-    color: var(--muted2);
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    margin-bottom: 12px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    font-family:'Space Mono',monospace; font-size:10px; color:var(--muted2);
+    letter-spacing:2px; text-transform:uppercase; margin-bottom:12px;
+    display:flex; align-items:center; gap:8px;
 }
 .panel-label::before {
-    content: '';
-    display: inline-block;
-    width: 6px; height: 6px;
-    background: var(--accent);
-    border-radius: 50%;
-    box-shadow: 0 0 6px rgba(82,84,204,.5);
+    content:''; display:inline-block; width:6px; height:6px;
+    background:var(--accent); border-radius:50%; box-shadow:0 0 6px rgba(82,84,204,.5);
 }
 
 /* ── Textarea ── */
 textarea {
-    width: 100%;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 7px;
-    padding: 12px 14px;
-    font-family: 'Space Mono', monospace;
-    font-size: 12px;
-    color: var(--text);
-    resize: vertical;
-    min-height: 88px;
-    transition: border-color .2s, box-shadow .2s;
-    line-height: 1.6;
+    width:100%; background:var(--surface); border:1px solid var(--border); border-radius:7px;
+    padding:12px 14px; font-family:'Space Mono',monospace; font-size:12px; color:var(--text);
+    resize:vertical; min-height:88px; transition:border-color .2s,box-shadow .2s; line-height:1.6;
 }
-textarea::placeholder { color: var(--muted); }
-textarea:focus {
-    outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--glow-sm);
-}
+textarea::placeholder { color:var(--muted); }
+textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--glow-sm); }
 
 /* ── Buttons ── */
-.btn-row {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-top: 12px;
-    align-items: center;
-}
+.btn-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; align-items:center; }
 button {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    padding: 9px 16px;
-    border-radius: 6px;
-    border: none;
-    cursor: pointer;
-    color: #fff;
-    transition: all .15s;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    white-space: nowrap;
+    font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700;
+    letter-spacing:.5px; text-transform:uppercase; padding:9px 16px; border-radius:6px;
+    border:none; cursor:pointer; color:#fff; transition:all .15s;
+    display:inline-flex; align-items:center; gap:5px; white-space:nowrap;
 }
-button:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.08); }
-button:active:not(:disabled) { transform: translateY(0); filter: brightness(.96); }
-button:disabled { opacity: .4; cursor: not-allowed; }
+button:hover:not(:disabled) { transform:translateY(-1px); filter:brightness(1.08); }
+button:active:not(:disabled) { transform:translateY(0); filter:brightness(.96); }
+button:disabled { opacity:.4; cursor:not-allowed; }
 
-.btn-add {
-    background: #ffffff;
-    border: 1.5px solid var(--border2);
-    color: var(--text);
-    box-shadow: 0 1px 4px rgba(0,0,0,.08);
-}
-.btn-add:hover:not(:disabled) { border-color: var(--accent); box-shadow: 0 0 12px var(--glow-sm); color: var(--accent); }
-
-.btn-rotate {
-    background: linear-gradient(135deg, var(--accent), #4f46e5);
-    box-shadow: 0 2px 10px rgba(82,84,204,.25);
-}
-.btn-rotate:hover:not(:disabled) { box-shadow: 0 4px 16px rgba(82,84,204,.38); }
-
-.btn-copy {
-    background: linear-gradient(135deg, #15803d, #16a34a);
-    box-shadow: 0 2px 8px rgba(22,163,74,.18);
-}
-
-.btn-delete {
-    background: linear-gradient(135deg, #b91c1c, #dc2626);
-    box-shadow: 0 2px 8px rgba(220,38,38,.18);
-}
-
-.btn-red {
-    background: linear-gradient(135deg, #b91c1c, #dc2626);
-    box-shadow: 0 2px 8px rgba(220,38,38,.18);
-}
-.btn-orange {
-    background: linear-gradient(135deg, #c2410c, #ea580c);
-    box-shadow: 0 2px 10px rgba(234,88,12,.2);
-}
-.btn-blue {
-    background: linear-gradient(135deg, #1d4ed8, #2563eb);
-    box-shadow: 0 2px 8px rgba(37,99,235,.2);
-}
-.btn-purple {
-    background: linear-gradient(135deg, #6d28d9, #7c3aed);
-    box-shadow: 0 2px 8px rgba(124,58,237,.2);
-}
-.btn-cyan {
-    background: linear-gradient(135deg, #0e7490, #0891b2);
-    box-shadow: 0 2px 8px rgba(8,145,178,.2);
-}
-.btn-primary {
-    background: linear-gradient(135deg, var(--accent), #4f46e5);
-    box-shadow: 0 2px 10px rgba(82,84,204,.25);
-}
+.btn-add { background:#fff; border:1.5px solid var(--border2); color:var(--text); box-shadow:0 1px 4px rgba(0,0,0,.08); }
+.btn-add:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); }
+.btn-rotate { background:linear-gradient(135deg,var(--accent),#4f46e5); box-shadow:0 2px 10px rgba(82,84,204,.25); }
+.btn-copy   { background:linear-gradient(135deg,#15803d,#16a34a); box-shadow:0 2px 8px rgba(22,163,74,.18); }
+.btn-red    { background:linear-gradient(135deg,#b91c1c,#dc2626); }
+.btn-orange { background:linear-gradient(135deg,#c2410c,#ea580c); }
+.btn-blue   { background:linear-gradient(135deg,#1d4ed8,#2563eb); }
+.btn-purple { background:linear-gradient(135deg,#6d28d9,#7c3aed); }
+.btn-cyan   { background:linear-gradient(135deg,#0e7490,#0891b2); }
+.btn-primary{ background:linear-gradient(135deg,var(--accent),#4f46e5); }
+.btn-green  { background:linear-gradient(135deg,#15803d,#16a34a); box-shadow:0 2px 8px rgba(22,163,74,.2); }
 
 #apiStatus {
-    font-family: 'Space Mono', monospace;
-    font-size: 11px;
-    color: var(--muted2);
-    margin-top: 10px;
-    padding: 6px 10px;
-    background: var(--surface);
-    border-left: 2px solid var(--accent);
-    border-radius: 0 4px 4px 0;
-    display: none;
+    font-family:'Space Mono',monospace; font-size:11px; color:var(--muted2);
+    margin-top:10px; padding:6px 10px; background:var(--surface);
+    border-left:2px solid var(--accent); border-radius:0 4px 4px 0; display:none;
 }
-#apiStatus.visible { display: block; }
+#apiStatus.visible { display:block; }
 
 /* ── Copy All Dropdown ── */
-.copy-all-wrapper { position: relative; display: inline-block; }
+.copy-all-wrapper { position:relative; display:inline-block; }
 .copy-all-dropdown {
-    display: none;
-    position: absolute;
-    top: calc(100% + 8px);
-    left: 0;
-    background: #ffffff;
-    border: 1px solid var(--border2);
-    border-radius: 8px;
-    box-shadow: 0 8px 30px rgba(0,0,0,.12), 0 0 0 1px rgba(0,0,0,.04);
-    z-index: 200;
-    min-width: 200px;
-    overflow: hidden;
+    display:none; position:absolute; top:calc(100% + 8px); left:0;
+    background:#fff; border:1px solid var(--border2); border-radius:8px;
+    box-shadow:0 8px 30px rgba(0,0,0,.12); z-index:200; min-width:200px; overflow:hidden;
 }
-.copy-all-dropdown.open { display: block; animation: dropIn .12s ease; }
-@keyframes dropIn { from { opacity:0; transform: translateY(-4px) scale(.98); } to { opacity:1; transform:none; } }
+.copy-all-dropdown.open { display:block; animation:dropIn .12s ease; }
+@keyframes dropIn { from{opacity:0;transform:translateY(-4px) scale(.98)} to{opacity:1;transform:none} }
 .copy-all-dropdown button {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    padding: 11px 14px;
-    font-size: 12px;
-    border-radius: 0;
-    background: transparent;
-    color: var(--text);
-    text-align: left;
-    border-bottom: 1px solid var(--border);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    transform: none;
-    box-shadow: none;
+    display:flex; align-items:center; gap:10px; width:100%; padding:11px 14px;
+    font-size:12px; border-radius:0; background:transparent; color:var(--text);
+    border-bottom:1px solid var(--border); transform:none; box-shadow:none;
 }
-.copy-all-dropdown button:last-child { border-bottom: none; }
-.copy-all-dropdown button:hover { background: rgba(82,84,204,.06); transform: none; filter: none; }
-.copy-all-dropdown button .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.dot-http   { background: var(--blue); }
-.dot-socks5 { background: var(--purple); }
-.dot-all    { background: conic-gradient(var(--blue) 0% 50%, var(--purple) 50% 100%); }
+.copy-all-dropdown button:last-child { border-bottom:none; }
+.copy-all-dropdown button:hover { background:rgba(82,84,204,.06); transform:none; filter:none; }
+.copy-all-dropdown button .dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.dot-http   { background:var(--blue); }
+.dot-socks5 { background:var(--purple); }
+.dot-all    { background:conic-gradient(var(--blue) 0% 50%,var(--purple) 50% 100%); }
 
-/* ── Proxy List ── */
-#proxyList { display: flex; flex-direction: column; gap: 12px; }
-
-/* ── Proxy Card ── */
+/* ── Proxy cards ── */
+#proxyList { display:flex; flex-direction:column; gap:12px; }
 .proxy-container {
-    background: rgba(250,250,250,0.88);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    position: relative;
-    overflow: hidden;
-    transition: border-color .2s, box-shadow .2s;
-    animation: cardIn .25s ease;
-    box-shadow: 0 1px 4px rgba(0,0,0,.05);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    background:rgba(250,250,250,.88); border:1px solid var(--border); border-radius:10px;
+    padding:16px; display:flex; flex-direction:column; gap:10px; position:relative;
+    transition:border-color .2s,box-shadow .2s; animation:cardIn .25s ease;
+    box-shadow:0 1px 4px rgba(0,0,0,.05); backdrop-filter:blur(8px);
 }
-@keyframes cardIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: none; } }
+@keyframes cardIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
 .proxy-container::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(82,84,204,.2), transparent);
+    content:''; position:absolute; top:0; left:0; right:0; height:1px;
+    background:linear-gradient(90deg,transparent,rgba(82,84,204,.2),transparent);
 }
-.proxy-container:hover { border-color: var(--border2); box-shadow: 0 4px 18px rgba(0,0,0,.08); }
-.proxy-container.uuid-type { border-left: 2px solid var(--purple); }
-.proxy-container.uuid-type::before {
-    background: linear-gradient(90deg, transparent, rgba(124,58,237,.2), transparent);
-}
+.proxy-container:hover { border-color:var(--border2); box-shadow:0 4px 18px rgba(0,0,0,.08); }
+.proxy-container.uuid-type { border-left:2px solid var(--purple); }
 
-/* ── Proxy Text ── */
 .proxy-text {
-    font-family: 'Space Mono', monospace;
-    font-size: 12px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 12px 14px;
-    word-break: break-all;
-    overflow-wrap: anywhere;
-    user-select: text;
-    color: var(--accent2);
-    line-height: 1.6;
-    flex: 1;
-    overflow-x: auto;
+    font-family:'Space Mono',monospace; font-size:12px; background:var(--surface);
+    border:1px solid var(--border); border-radius:6px; padding:12px 14px;
+    word-break:break-all; color:var(--accent2); line-height:1.6; flex:1; overflow-x:auto;
 }
-.proxy-text.uuid-proxies {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    background: transparent;
-    border: none;
-    padding: 0;
-}
+.proxy-text.uuid-proxies { display:flex; flex-direction:column; gap:8px; background:transparent; border:none; padding:0; }
 
-/* ── Proxy lines ── */
 .proxy-line {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 8px 10px;
-    cursor: pointer;
-    transition: background .15s, border-color .15s;
-    position: relative;
+    display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+    background:var(--surface); border:1px solid var(--border); border-radius:6px;
+    padding:8px 10px; cursor:pointer; transition:background .15s,border-color .15s; position:relative;
 }
-.proxy-line:hover {
-    background: rgba(82,84,204,.06);
-    border-color: var(--accent);
-}
+.proxy-line:hover { background:rgba(82,84,204,.06); border-color:var(--accent); }
 .proxy-line:hover::after {
-    content: '⎘ COPY';
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    color: var(--accent);
-    background: rgba(82,84,204,.1);
-    border: 1px solid rgba(82,84,204,.25);
-    border-radius: 3px;
-    padding: 2px 7px;
-    pointer-events: none;
+    content:'⎘ COPY'; position:absolute; right:10px; top:50%; transform:translateY(-50%);
+    font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700;
+    letter-spacing:1px; color:var(--accent); background:rgba(82,84,204,.1);
+    border:1px solid rgba(82,84,204,.25); border-radius:3px; padding:2px 7px;
 }
-.proxy-line.copied {
-    background: rgba(22,163,74,.08) !important;
-    border-color: var(--green) !important;
-}
-.proxy-line.copied::after {
-    content: '✅ COPIED' !important;
-    color: var(--green) !important;
-    background: rgba(22,163,74,.1) !important;
-    border-color: rgba(22,163,74,.3) !important;
-}
-.proxy-label {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 1.5px;
-    padding: 2px 8px;
-    border-radius: 3px;
-    color: #fff;
-    white-space: nowrap;
-    text-transform: uppercase;
-}
-.proxy-label.http   { background: var(--blue); }
-.proxy-label.socks5 { background: var(--purple); }
-.proxy-value {
-    font-family: 'Space Mono', monospace;
-    font-size: 12px;
-    color: var(--text);
-    word-break: break-all;
-    overflow-wrap: anywhere;
-    flex: 1;
-    min-width: 0;
-}
+.proxy-line.copied { background:rgba(22,163,74,.08)!important; border-color:var(--green)!important; }
+.proxy-line.copied::after { content:'✅ COPIED'!important; color:var(--green)!important; background:rgba(22,163,74,.1)!important; border-color:rgba(22,163,74,.3)!important; }
+.proxy-label { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; letter-spacing:1.5px; padding:2px 8px; border-radius:3px; color:#fff; white-space:nowrap; text-transform:uppercase; }
+.proxy-label.http   { background:var(--blue); }
+.proxy-label.socks5 { background:var(--purple); }
+.proxy-value { font-family:'Space Mono',monospace; font-size:12px; color:var(--text); word-break:break-all; flex:1; min-width:0; }
 
-/* ── Status ── */
-.status {
-    font-family: 'Space Mono', monospace;
-    font-size: 11px;
-    color: var(--muted2);
-    padding: 4px 8px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    white-space: nowrap;
-    width: 100%;
-    text-align: center;
-}
-@media (min-width: 540px) {
-    .status { width: auto; text-align: left; align-self: center; }
-}
+.status { font-family:'Space Mono',monospace; font-size:11px; color:var(--muted2); padding:4px 8px; background:var(--surface); border:1px solid var(--border); border-radius:4px; white-space:nowrap; }
 
-/* ── Proxy actions wrapper ── */
-.proxy-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
-    width: 100%;
+.proxy-actions { display:flex; flex-direction:column; gap:7px; width:100%; }
+.filter-row { display:flex; gap:6px; align-items:center; width:100%; }
+.filter-row input { background:var(--surface); border:1.5px solid var(--border2); border-radius:6px; padding:7px 10px; font-family:'Space Mono',monospace; font-size:11px; color:var(--text); flex:1; transition:border-color .2s; }
+.filter-row input::placeholder { color:var(--muted); }
+.filter-row input:focus { outline:none; border-color:var(--cyan); }
+.action-btns { display:flex; gap:6px; flex-wrap:nowrap; width:100%; }
+.action-btns button { flex:1 1 0; min-width:0; font-size:11px; padding:8px 4px; justify-content:center; }
+@media(min-width:540px) {
+    .proxy-actions { flex-direction:row; align-items:center; }
+    .filter-row { flex:1.6 1 0; width:auto; }
+    .action-btns { flex:3 1 0; width:auto; }
 }
+.ip-info-row { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:0 2px; flex-wrap:wrap; }
+.real-ip-label { font-family:'Space Mono',monospace; font-size:10px; color:var(--muted); display:flex; align-items:center; gap:4px; }
+.real-ip-label::before { content:'◉'; font-size:9px; color:var(--green); }
+.btn-test-km { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; background:rgba(217,119,6,.08); border:1px solid rgba(217,119,6,.3); color:#b45309; padding:3px 10px; border-radius:4px; cursor:pointer; transition:all .15s; text-transform:uppercase; }
+.btn-test-km:hover:not(:disabled) { background:rgba(217,119,6,.15); border-color:#d97706; transform:none; }
+.proxy-divider { height:1px; background:var(--border); margin:2px 0; }
 
-/* ── Filter row ── */
-.filter-row {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    width: 100%;
-}
-.filter-row input {
-    background: var(--surface);
-    border: 1.5px solid var(--border2);
-    border-radius: 6px;
-    padding: 7px 10px;
-    font-family: 'Space Mono', monospace;
-    font-size: 11px;
-    color: var(--text);
-    flex: 1;
-    min-width: 0;
-    transition: border-color .2s;
-}
-.filter-row input::placeholder { color: var(--muted); }
-.filter-row input:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 2px rgba(8,145,178,.1); }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.35} }
+.loading-text { animation:blink 1.2s infinite; color:var(--muted); font-family:'Space Mono',monospace; font-size:12px; }
 
-/* ── Action buttons row ── */
-.action-btns {
-    display: flex;
-    gap: 6px;
-    flex-wrap: nowrap;
-    width: 100%;
+/* ══════════════════════════════════════
+   MODAL SYSTEM
+══════════════════════════════════════ */
+.modal-overlay {
+    display:none; position:fixed; inset:0; z-index:900;
+    background:rgba(10,10,30,.55); backdrop-filter:blur(6px);
+    align-items:center; justify-content:center;
 }
-.action-btns button {
-    flex: 1 1 0;
-    min-width: 0;
-    font-size: 11px;
-    padding: 8px 4px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    justify-content: center;
-}
+.modal-overlay.open { display:flex; animation:fadeIn .2s ease; }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
 
-/* ── Desktop: 1 hàng ── */
-@media (min-width: 540px) {
-    .proxy-actions { flex-direction: row; align-items: center; }
-    .filter-row { flex: 1.6 1 0; width: auto; }
-    .action-btns { flex: 3 1 0; width: auto; }
+.modal {
+    background:#fff; border:1px solid var(--border2); border-radius:14px;
+    box-shadow:0 24px 80px rgba(0,0,0,.18); width:94%; max-width:420px;
+    max-height:90vh; overflow-y:auto; position:relative;
+    animation:slideUp .22s cubic-bezier(.34,1.56,.64,1);
 }
+@keyframes slideUp { from{opacity:0;transform:translateY(24px) scale(.97)} to{opacity:1;transform:none} }
 
-/* ── IP row ── */
-.ip-info-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 8px;
-    padding: 0 2px;
-    flex-wrap: wrap;
+.modal-header {
+    padding:20px 22px 16px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between;
 }
-.real-ip-label {
-    font-family: 'Space Mono', monospace;
-    font-size: 10px;
-    color: var(--muted);
-    display: flex;
-    align-items: center;
-    gap: 4px;
+.modal-title { font-size:18px; font-weight:800; letter-spacing:-.3px; color:var(--text); display:flex; align-items:center; gap:8px; }
+.modal-close {
+    width:30px; height:30px; border-radius:50%; background:var(--surface); border:1px solid var(--border);
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    font-size:14px; color:var(--muted2); transition:all .15s; flex-shrink:0;
 }
-.real-ip-label::before { content: '◉'; font-size: 9px; color: var(--green); }
+.modal-close:hover { background:rgba(220,38,38,.08); border-color:rgba(220,38,38,.3); color:var(--red); transform:none; filter:none; }
 
-.btn-test-km {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    background: rgba(217,119,6,.08);
-    border: 1px solid rgba(217,119,6,.3);
-    color: #b45309;
-    padding: 3px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all .15s;
-    text-transform: uppercase;
+.modal-body { padding:20px 22px; }
+
+/* ── Auth tabs ── */
+.auth-tabs { display:flex; gap:0; margin-bottom:20px; border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+.auth-tab {
+    flex:1; padding:9px; font-family:'Barlow Condensed',sans-serif; font-size:13px;
+    font-weight:700; letter-spacing:.5px; text-transform:uppercase; background:transparent;
+    border:none; color:var(--muted2); cursor:pointer; transition:all .15s; transform:none; filter:none;
 }
-.btn-test-km:hover:not(:disabled) { background: rgba(217,119,6,.15); border-color: #d97706; transform: none; filter: none; }
+.auth-tab:hover { background:var(--surface); color:var(--text); transform:none; filter:none; }
+.auth-tab.active { background:var(--accent); color:#fff; }
 
-/* ── Proxy divider ── */
-.proxy-divider { height: 1px; background: var(--border); margin: 2px 0; }
-
-/* ── Loading ── */
-@keyframes blink { 0%,100% { opacity:1; } 50% { opacity:.35; } }
-.loading-text {
-    animation: blink 1.2s infinite;
-    color: var(--muted);
-    font-family: 'Space Mono', monospace;
-    font-size: 12px;
+/* ── Form fields ── */
+.form-group { margin-bottom:14px; }
+.form-label { display:block; font-family:'Space Mono',monospace; font-size:10px; color:var(--muted2); letter-spacing:1.5px; text-transform:uppercase; margin-bottom:6px; }
+.form-input {
+    width:100%; background:var(--surface); border:1.5px solid var(--border); border-radius:7px;
+    padding:10px 12px; font-family:'Space Mono',monospace; font-size:12px; color:var(--text);
+    transition:border-color .2s,box-shadow .2s;
 }
+.form-input::placeholder { color:var(--muted); }
+.form-input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--glow-sm); }
+.form-input.error { border-color:var(--red); }
 
-/* ── Scrollbar ── */
-::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-track { background: var(--surface); }
-::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+.form-error { font-family:'Space Mono',monospace; font-size:10px; color:var(--red); margin-top:5px; display:none; }
+.form-error.visible { display:block; }
+
+.btn-full { width:100%; justify-content:center; padding:12px; font-size:14px; border-radius:8px; margin-top:4px; }
+
+.auth-divider { display:flex; align-items:center; gap:10px; margin:14px 0; }
+.auth-divider::before,.auth-divider::after { content:''; flex:1; height:1px; background:var(--border); }
+.auth-divider span { font-family:'Space Mono',monospace; font-size:10px; color:var(--muted); }
+
+.auth-switch { text-align:center; margin-top:14px; font-size:12px; color:var(--muted2); }
+.auth-switch a { color:var(--accent); cursor:pointer; font-weight:700; text-decoration:underline; }
+
+/* ── Nạp tiền modal ── */
+.balance-display {
+    background:linear-gradient(135deg,rgba(82,84,204,.08),rgba(124,58,237,.08));
+    border:1px solid rgba(82,84,204,.2); border-radius:10px;
+    padding:14px 16px; text-align:center; margin-bottom:18px;
+}
+.balance-label { font-family:'Space Mono',monospace; font-size:10px; color:var(--muted2); letter-spacing:2px; text-transform:uppercase; margin-bottom:4px; }
+.balance-amount { font-family:'Space Mono',monospace; font-size:24px; font-weight:700; color:var(--accent); }
+
+.topup-presets { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:16px; }
+.preset-btn {
+    background:var(--surface); border:1.5px solid var(--border2); border-radius:8px;
+    padding:10px 6px; font-size:13px; font-weight:700; color:var(--text);
+    cursor:pointer; transition:all .15s; text-align:center; transform:none; filter:none;
+}
+.preset-btn:hover { border-color:var(--accent); background:rgba(82,84,204,.06); color:var(--accent); transform:none; filter:none; }
+.preset-btn.selected { border-color:var(--accent); background:rgba(82,84,204,.1); color:var(--accent); }
+
+.qr-section { text-align:center; margin-top:16px; }
+.qr-image { width:200px; height:200px; border-radius:10px; border:2px solid var(--border2); margin:0 auto 10px; display:block; background:var(--surface); }
+.qr-bank-info { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px; text-align:left; margin-bottom:12px; }
+.qr-bank-row { display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid var(--border); font-size:12px; }
+.qr-bank-row:last-child { border-bottom:none; }
+.qr-bank-row .lbl { font-family:'Space Mono',monospace; font-size:10px; color:var(--muted2); }
+.qr-bank-row .val { font-family:'Space Mono',monospace; font-size:12px; font-weight:700; color:var(--text); }
+.qr-note { font-family:'Space Mono',monospace; font-size:10px; color:var(--muted2); background:rgba(82,84,204,.06); border:1px dashed rgba(82,84,204,.2); border-radius:6px; padding:8px 10px; margin-bottom:12px; }
+.qr-note strong { color:var(--accent); }
+
+/* ── Transaction confirm ── */
+.txn-group { margin-top:12px; }
+.txn-status { font-family:'Space Mono',monospace; font-size:11px; margin-top:8px; padding:7px 10px; border-radius:6px; display:none; }
+.txn-status.success { display:block; background:rgba(22,163,74,.08); border:1px solid rgba(22,163,74,.3); color:var(--green); }
+.txn-status.error   { display:block; background:rgba(220,38,38,.08); border:1px solid rgba(220,38,38,.3); color:var(--red); }
+
+/* ── History ── */
+.history-list { display:flex; flex-direction:column; gap:6px; max-height:260px; overflow-y:auto; margin-top:10px; }
+.history-item {
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:8px 10px;
+}
+.history-item .hi-left { display:flex; flex-direction:column; gap:2px; }
+.history-item .hi-type { font-size:11px; font-weight:700; letter-spacing:.5px; color:var(--text); text-transform:uppercase; }
+.history-item .hi-date { font-family:'Space Mono',monospace; font-size:9px; color:var(--muted); }
+.history-item .hi-amount { font-family:'Space Mono',monospace; font-size:13px; font-weight:700; }
+.history-item .hi-amount.plus  { color:var(--green); }
+.history-item .hi-amount.minus { color:var(--red); }
+
+::-webkit-scrollbar { width:5px; }
+::-webkit-scrollbar-track { background:var(--surface); }
+::-webkit-scrollbar-thumb { background:var(--border2); border-radius:3px; }
 </style>
 </head>
 <body>
 
-<!-- Matrix Canvas -->
 <canvas id="matrix-canvas"></canvas>
 
-<a href="SMSOKVIP.html" class="sms-okvip-btn">📱 THUÊ SMS OKVIP</a>
+<!-- TOPBAR -->
+<div class="topbar">
+  <a href="SMSOKVIP.html" class="sms-btn">📱 THUÊ SMS OKVIP</a>
+
+  <!-- Not logged in -->
+  <button class="login-btn" id="openAuthBtn" style="display:none">🔐 ĐĂNG NHẬP / TẠO TK</button>
+
+  <!-- Logged in -->
+  <div class="user-widget" id="userWidget" style="display:none">
+    <div class="user-avatar" id="userAvatar">U</div>
+    <div class="user-info">
+      <span class="user-name" id="userName">Loading...</span>
+      <span class="user-balance" id="userBalance">0 ₫</span>
+    </div>
+    <span style="font-size:10px;color:var(--muted);margin-left:2px">▾</span>
+    <div class="user-menu" id="userMenu">
+      <button id="openTopupBtn">💳 NẠP TIỀN</button>
+      <button id="openHistoryBtn">📋 LỊCH SỬ</button>
+      <button class="danger" id="logoutBtn">⏻ ĐĂNG XUẤT</button>
+    </div>
+  </div>
+</div>
 
 <div class="page-wrap">
 
@@ -615,11 +504,9 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 <div class="panel">
     <div class="panel-label">API KEY INPUT</div>
     <textarea id="apiInput" placeholder="Nhập API Key — mỗi dòng 1 key&#10;Hỗ trợ key thường và UUID key&#10;(xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)"></textarea>
-
     <div class="btn-row">
         <button class="btn-add" id="addApiBtn">＋ THÊM API</button>
         <button class="btn-rotate" id="rotateAllBtn">⟳ XOAY TẤT CẢ</button>
-
         <div class="copy-all-wrapper" id="copyAllWrapper">
             <button class="btn-copy" id="copyAllBtn">⎘ COPY TẤT CẢ ▾</button>
             <div class="copy-all-dropdown" id="copyAllDropdown">
@@ -629,584 +516,691 @@ button:disabled { opacity: .4; cursor: not-allowed; }
             </div>
         </div>
     </div>
-
     <div id="apiStatus"></div>
 </div>
 
 <div id="proxyList"></div>
+</div>
 
+<!-- ══ MODAL: AUTH ══ -->
+<div class="modal-overlay" id="authModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">🔐 <span id="authModalTitle">Đăng nhập</span></span>
+      <button class="modal-close" id="closeAuthModal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tabLogin" onclick="switchTab('login')">Đăng nhập</button>
+        <button class="auth-tab" id="tabRegister" onclick="switchTab('register')">Tạo tài khoản</button>
+      </div>
+
+      <!-- Login form -->
+      <div id="loginForm">
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" class="form-input" id="loginEmail" placeholder="email@example.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mật khẩu</label>
+          <input type="password" class="form-input" id="loginPassword" placeholder="••••••••">
+        </div>
+        <div class="form-error" id="loginError"></div>
+        <button class="btn-primary btn-full" id="loginBtn">🔐 ĐĂNG NHẬP</button>
+      </div>
+
+      <!-- Register form -->
+      <div id="registerForm" style="display:none">
+        <div class="form-group">
+          <label class="form-label">Tên hiển thị</label>
+          <input type="text" class="form-input" id="regName" placeholder="Tên của bạn">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" class="form-input" id="regEmail" placeholder="email@example.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mật khẩu</label>
+          <input type="password" class="form-input" id="regPassword" placeholder="Tối thiểu 6 ký tự">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Xác nhận mật khẩu</label>
+          <input type="password" class="form-input" id="regConfirm" placeholder="Nhập lại mật khẩu">
+        </div>
+        <div class="form-error" id="regError"></div>
+        <button class="btn-green btn-full" id="registerBtn">✅ TẠO TÀI KHOẢN</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: NẠP TIỀN ══ -->
+<div class="modal-overlay" id="topupModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">💳 Nạp tiền</span>
+      <button class="modal-close" id="closeTopupModal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="balance-display">
+        <div class="balance-label">Số dư hiện tại</div>
+        <div class="balance-amount" id="topupBalance">0 ₫</div>
+      </div>
+
+      <div class="form-label" style="margin-bottom:10px">Chọn mệnh giá</div>
+      <div class="topup-presets" id="presetBtns">
+        <button class="preset-btn" data-amount="50000">50K</button>
+        <button class="preset-btn" data-amount="100000">100K</button>
+        <button class="preset-btn" data-amount="200000">200K</button>
+        <button class="preset-btn" data-amount="500000">500K</button>
+        <button class="preset-btn" data-amount="1000000">1M</button>
+        <button class="preset-btn" data-amount="2000000">2M</button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Hoặc nhập số tiền tùy chỉnh (₫)</label>
+        <input type="number" class="form-input" id="customAmount" placeholder="VD: 150000" min="10000" step="10000">
+      </div>
+
+      <div id="qrSection" class="qr-section" style="display:none">
+        <div class="qr-bank-info" id="qrBankInfo"></div>
+        <div class="qr-note" id="qrNote"></div>
+        <img class="qr-image" id="qrImg" src="" alt="QR Code">
+
+        <!-- Trạng thái tự động — Sepay webhook cộng tiền realtime -->
+        <div id="waitingBox" style="margin-top:14px;background:rgba(82,84,204,.06);border:1px dashed rgba(82,84,204,.25);border-radius:10px;padding:14px 16px;text-align:center">
+          <div id="waitingAnim" style="font-size:22px;margin-bottom:6px">⏳</div>
+          <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted2);line-height:1.7">
+            Chuyển khoản xong → tiền sẽ vào<br>
+            <strong style="color:var(--accent)">tự động trong vài giây</strong><br>
+            <span style="font-size:10px;color:var(--muted)">Không cần nhập mã, không cần làm gì thêm</span>
+          </div>
+        </div>
+
+        <div id="topupSuccessBox" style="display:none;margin-top:14px;background:rgba(22,163,74,.08);border:1px solid rgba(22,163,74,.3);border-radius:10px;padding:14px 16px;text-align:center">
+          <div style="font-size:28px;margin-bottom:6px">🎉</div>
+          <div style="font-family:'Space Mono',monospace;font-size:12px;color:var(--green);font-weight:700" id="topupSuccessMsg">Nạp tiền thành công!</div>
+          <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted2);margin-top:4px" id="topupSuccessNew"></div>
+        </div>
+      </div>
+
+      <button class="btn-primary btn-full" id="generateQrBtn" style="margin-top:8px">📲 TẠO MÃ QR THANH TOÁN</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: LỊCH SỬ ══ -->
+<div class="modal-overlay" id="historyModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">📋 Lịch sử giao dịch</span>
+      <button class="modal-close" id="closeHistoryModal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="balance-display">
+        <div class="balance-label">Số dư hiện tại</div>
+        <div class="balance-amount" id="histBalance">0 ₫</div>
+      </div>
+      <div class="history-list" id="historyList">
+        <div style="text-align:center;padding:20px;font-family:'Space Mono',monospace;font-size:11px;color:var(--muted)">Chưa có giao dịch nào</div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
-// ══════════════════════════════════════════════
-//  MATRIX / HACKER CODE RAIN EFFECT
-// ══════════════════════════════════════════════
+// ══════════════════════════════════════
+//  MATRIX RAIN
+// ══════════════════════════════════════
 (function() {
     const canvas = document.getElementById('matrix-canvas');
     const ctx = canvas.getContext('2d');
-
-    // Ký tự hacker: mix IP, hex, binary, code snippets, katakana
-    const chars = (
-        '0123456789ABCDEF' +
-        'abcdefghijklmnopqrstuvwxyz' +
-        'ABCDEFGHIJKLMNOPQRSTUVWXYZ' +
-        '{}[]()=><>/\\|;:.,!@#$%^&*' +
-        '01' +
-        '192.168.0.proxy.rotate.api.key.http.socks5.tunnel.auth.pass.' +
-        'ｦｧｨｩｪｫｬｭｮｯｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ'
-    ).split('');
-
-    // Màu sắc cho các column (mix accent, green, blue, purple)
-    const COLORS = [
-        { r: 82,  g: 84,  b: 204 }, // accent blue-purple
-        { r: 22,  g: 163, b: 74  }, // green
-        { r: 37,  g: 99,  b: 235 }, // blue
-        { r: 124, g: 58,  b: 237 }, // purple
-        { r: 8,   g: 145, b: 178 }, // cyan
-    ];
-
+    const chars = ('0123456789ABCDEFabcdefghijklmnopqrstuvwxyz{}[]()=><>/\\|01192.168.0.proxy.rotate.api.key.http.socks5.ｦｧｨｩｪｫｬｭｮｯｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉ').split('');
+    const COLORS = [{r:82,g:84,b:204},{r:22,g:163,b:74},{r:37,g:99,b:235},{r:124,g:58,b:237},{r:8,g:145,b:178}];
     const FONT_SIZE = 13;
-    let cols = 0;
-    let drops = [];
-    let colorsArr = [];
-    let speedArr = [];
-    let frameCount = 0;
-
+    let cols=0, drops=[], colorsArr=[], speedArr=[], frame=0;
     function resize() {
-        canvas.width  = window.innerWidth;
-        canvas.height = window.innerHeight;
-        cols = Math.floor(canvas.width / FONT_SIZE);
-
-        // Reset / extend arrays
-        const prev = drops.length;
-        drops     = Array.from({ length: cols }, (_, i) => drops[i] ?? Math.random() * -80);
-        colorsArr = Array.from({ length: cols }, (_, i) => colorsArr[i] ?? COLORS[Math.floor(Math.random() * COLORS.length)]);
-        speedArr  = Array.from({ length: cols }, (_, i) => speedArr[i]  ?? (0.3 + Math.random() * 0.7));
+        canvas.width=innerWidth; canvas.height=innerHeight;
+        cols=Math.floor(canvas.width/FONT_SIZE);
+        drops=Array.from({length:cols},(_,i)=>drops[i]??Math.random()*-80);
+        colorsArr=Array.from({length:cols},(_,i)=>colorsArr[i]??COLORS[Math.floor(Math.random()*COLORS.length)]);
+        speedArr=Array.from({length:cols},(_,i)=>speedArr[i]??(0.3+Math.random()*0.7));
     }
-
-    resize();
-    window.addEventListener('resize', resize);
-
+    resize(); addEventListener('resize',resize);
     function draw() {
-        frameCount++;
-
-        // Fade background — dùng màu trắng với alpha thấp để tạo trail
-        ctx.fillStyle = 'rgba(255,255,255, 0.055)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        ctx.font = `${FONT_SIZE}px "Space Mono", monospace`;
-
-        for (let i = 0; i < cols; i++) {
-            // Chỉ vẽ mỗi frame theo speed của column
-            if (frameCount % Math.round(2 / speedArr[i]) !== 0) continue;
-
-            const c = colorsArr[i];
-            const y = drops[i] * FONT_SIZE;
-
-            // Ký tự đầu (sáng nhất — trắng/rất sáng)
-            ctx.fillStyle = `rgba(255, 255, 255, 0.95)`;
-            const headChar = chars[Math.floor(Math.random() * chars.length)];
-            ctx.fillText(headChar, i * FONT_SIZE, y);
-
-            // Ký tự body — màu accent với opacity
-            const alpha = 0.55 + Math.random() * 0.25;
-            ctx.fillStyle = `rgba(${c.r}, ${c.g}, ${c.b}, ${alpha})`;
-            const bodyChar = chars[Math.floor(Math.random() * chars.length)];
-            ctx.fillText(bodyChar, i * FONT_SIZE, y - FONT_SIZE);
-
-            // Ký tự nhạt hơn ở phía trước
-            ctx.fillStyle = `rgba(${c.r}, ${c.g}, ${c.b}, 0.25)`;
-            const tailChar = chars[Math.floor(Math.random() * chars.length)];
-            ctx.fillText(tailChar, i * FONT_SIZE, y - FONT_SIZE * 2);
-
-            // Reset drop
-            if (y > canvas.height && Math.random() > 0.975) {
-                drops[i] = 0;
-                // Random lại màu và tốc độ
-                colorsArr[i] = COLORS[Math.floor(Math.random() * COLORS.length)];
-                speedArr[i]  = 0.3 + Math.random() * 0.7;
+        frame++;
+        ctx.fillStyle='rgba(255,255,255,0.055)';
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.font=`${FONT_SIZE}px "Space Mono",monospace`;
+        for(let i=0;i<cols;i++) {
+            if(frame%Math.round(2/speedArr[i])!==0) continue;
+            const c=colorsArr[i], y=drops[i]*FONT_SIZE;
+            ctx.fillStyle='rgba(255,255,255,0.95)';
+            ctx.fillText(chars[Math.floor(Math.random()*chars.length)],i*FONT_SIZE,y);
+            ctx.fillStyle=`rgba(${c.r},${c.g},${c.b},${0.55+Math.random()*.25})`;
+            ctx.fillText(chars[Math.floor(Math.random()*chars.length)],i*FONT_SIZE,y-FONT_SIZE);
+            ctx.fillStyle=`rgba(${c.r},${c.g},${c.b},0.25)`;
+            ctx.fillText(chars[Math.floor(Math.random()*chars.length)],i*FONT_SIZE,y-FONT_SIZE*2);
+            if(y>canvas.height&&Math.random()>.975) {
+                drops[i]=0;
+                colorsArr[i]=COLORS[Math.floor(Math.random()*COLORS.length)];
+                speedArr[i]=0.3+Math.random()*.7;
             }
-
             drops[i]++;
         }
     }
-
-    // ~45fps
-    setInterval(draw, 22);
+    setInterval(draw,22);
 })();
 
-// ══════════════════════════════════════════════
-//  ORIGINAL APP CODE
-// ══════════════════════════════════════════════
-document.addEventListener("contextmenu", e => e.preventDefault());
-document.addEventListener("keydown", e => {
-    if (e.key === "F12") e.preventDefault();
-    if (e.ctrlKey && e.key.toLowerCase() === "u") e.preventDefault();
-    if (e.ctrlKey && e.shiftKey && ["i","j","c"].includes(e.key.toLowerCase())) e.preventDefault();
-    if (e.ctrlKey && ["s","p"].includes(e.key.toLowerCase())) e.preventDefault();
-    if (e.ctrlKey && e.key.toLowerCase() === "a") return;
-});
+// ══════════════════════════════════════
+//  SECURITY
+// ══════════════════════════════════════
+// DEBUG MODE — bỏ chặn F12 tạm
 
+// ══════════════════════════════════════
+//  GLOBALS
+// ══════════════════════════════════════
 const UUID_REGEX    = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const UUID_API_BASE = "https://svproxy2.nguyenanlk2872.workers.dev/proxy/access_key/";
 let API_MAP = {};
-const API_MAP_URL = "https://raw.githubusercontent.com/nguyenan177/apiv2/refs/heads/main/api_map.json";
-
+const API_MAP_URL   = "https://raw.githubusercontent.com/nguyenan177/apiv2/refs/heads/main/api_map.json";
 const proxyDataStore = new Map();
+let savedApis = JSON.parse(localStorage.getItem("proxy_api_keys")||"[]");
 
-const apiInput     = document.getElementById("apiInput");
-const addApiBtn    = document.getElementById("addApiBtn");
-const rotateAllBtn = document.getElementById("rotateAllBtn");
-const apiStatus    = document.getElementById("apiStatus");
-const proxyList    = document.getElementById("proxyList");
+let _currentBalance = 0;
+let _balanceUnsubscribe = null;
+let _selectedAmount = 0;
 
-const copyAllBtn      = document.getElementById("copyAllBtn");
-const copyAllDropdown = document.getElementById("copyAllDropdown");
-const copyAllWrapper  = document.getElementById("copyAllWrapper");
-
-copyAllBtn.onclick = (e) => {
-    e.stopPropagation();
-    copyAllDropdown.classList.toggle("open");
+// ══════════════════════════════════════
+//  FIREBASE AUTH CALLBACKS
+// ══════════════════════════════════════
+window._onLogin = function(user) {
+    document.getElementById("openAuthBtn").style.display = "none";
+    document.getElementById("userWidget").style.display  = "flex";
+    const name = user.displayName || user.email.split("@")[0];
+    document.getElementById("userName").textContent   = name;
+    document.getElementById("userAvatar").textContent = name[0].toUpperCase();
 };
-document.addEventListener("click", (e) => {
-    if (!copyAllWrapper.contains(e.target)) copyAllDropdown.classList.remove("open");
-});
 
-async function copyAndFlash(lines, btn, label) {
-    if (!lines.length) { alert("Không có proxy để copy"); return; }
-    await navigator.clipboard.writeText(lines.join("\n"));
-    copyAllDropdown.classList.remove("open");
-    const orig = btn.innerHTML;
-    btn.innerHTML = `✅ ĐÃ COPY ${lines.length} PROXY`;
-    setTimeout(() => btn.innerHTML = orig, 1500);
+window._onLogout = function() {
+    document.getElementById("openAuthBtn").style.display = "flex";
+    document.getElementById("userWidget").style.display  = "none";
+    if(_balanceUnsubscribe) { _balanceUnsubscribe(); _balanceUnsubscribe=null; }
+    _currentBalance = 0;
+};
+
+window._listenBalance = function(uid) {
+    const balRef = _db.ref(`users/${uid}/balance`);
+    balRef.on("value", snap => {
+        _currentBalance = snap.val() || 0;
+        const fmt = formatVND(_currentBalance);
+        document.getElementById("userBalance").textContent   = fmt;
+        document.getElementById("topupBalance").textContent  = fmt;
+        document.getElementById("histBalance").textContent   = fmt;
+    });
+    _balanceUnsubscribe = () => balRef.off("value");
+};
+
+function formatVND(n) {
+    return n.toLocaleString("vi-VN") + " ₫";
 }
 
-document.getElementById("copyHttpBtn").onclick = async () => {
-    const lines = [];
-    document.querySelectorAll(".proxy-container:not(.uuid-type) .proxy-text").forEach(el => {
-        const t = el.innerText.trim();
-        if (t) lines.push(t);
-    });
-    document.querySelectorAll(".proxy-container.uuid-type").forEach(box => {
-        const key = box.dataset.uuid;
-        const data = proxyDataStore.get(key);
-        if (data && data.httpLines) lines.push(...data.httpLines);
-    });
-    await copyAndFlash(lines, document.getElementById("copyHttpBtn"), "HTTP");
+// ══════════════════════════════════════
+//  MODALS
+// ══════════════════════════════════════
+function openModal(id)  { document.getElementById(id).classList.add("open"); }
+function closeModal(id) { document.getElementById(id).classList.remove("open"); }
+
+// Close on overlay click
+document.querySelectorAll(".modal-overlay").forEach(overlay => {
+    overlay.addEventListener("click", e => { if(e.target===overlay) overlay.classList.remove("open"); });
+});
+
+document.getElementById("openAuthBtn").onclick   = () => openModal("authModal");
+document.getElementById("closeAuthModal").onclick = () => closeModal("authModal");
+document.getElementById("closeTopupModal").onclick= () => closeModal("topupModal");
+document.getElementById("closeHistoryModal").onclick=()=> closeModal("historyModal");
+
+document.getElementById("openTopupBtn").onclick = () => {
+    document.getElementById("userMenu").classList.remove("open");
+    resetTopupModal();
+    openModal("topupModal");
+};
+document.getElementById("openHistoryBtn").onclick = () => {
+    document.getElementById("userMenu").classList.remove("open");
+    loadHistory();
+    openModal("historyModal");
+};
+document.getElementById("logoutBtn").onclick = async () => {
+    document.getElementById("userMenu").classList.remove("open");
+    await _auth.signOut();
 };
 
-document.getElementById("copySocksBtn").onclick = async () => {
-    const lines = [];
-    document.querySelectorAll(".proxy-container.uuid-type").forEach(box => {
-        const key = box.dataset.uuid;
-        const data = proxyDataStore.get(key);
-        if (data && data.socksLines) lines.push(...data.socksLines);
-    });
-    await copyAndFlash(lines, document.getElementById("copySocksBtn"), "SOCKS5");
+// User widget dropdown
+document.getElementById("userWidget").onclick = (e) => {
+    const menu = document.getElementById("userMenu");
+    menu.classList.toggle("open");
+    e.stopPropagation();
+};
+document.addEventListener("click", () => document.getElementById("userMenu").classList.remove("open"));
+
+// Initially show login button (auth state will update)
+document.getElementById("openAuthBtn").style.display = "flex";
+
+// ══════════════════════════════════════
+//  AUTH TABS
+// ══════════════════════════════════════
+window.switchTab = function(tab) {
+    document.getElementById("loginForm").style.display    = tab==="login"    ? "block" : "none";
+    document.getElementById("registerForm").style.display = tab==="register" ? "block" : "none";
+    document.getElementById("tabLogin").classList.toggle("active",    tab==="login");
+    document.getElementById("tabRegister").classList.toggle("active", tab==="register");
+    document.getElementById("authModalTitle").textContent = tab==="login" ? "Đăng nhập" : "Tạo tài khoản";
+    document.getElementById("loginError").classList.remove("visible");
+    document.getElementById("regError").classList.remove("visible");
 };
 
-document.getElementById("copyBothBtn").onclick = async () => {
-    const lines = [];
-    document.querySelectorAll(".proxy-container:not(.uuid-type) .proxy-text").forEach(el => {
-        const t = el.innerText.trim();
-        if (t) lines.push(t);
-    });
-    document.querySelectorAll(".proxy-container.uuid-type").forEach(box => {
-        const key = box.dataset.uuid;
-        const data = proxyDataStore.get(key);
-        if (data && data.proxyLines) lines.push(...data.proxyLines);
-    });
-    await copyAndFlash(lines, document.getElementById("copyBothBtn"), "HTTP + SOCKS5");
-};
-
-let savedApis = JSON.parse(localStorage.getItem("proxy_api_keys") || "[]");
-
-async function loadApiMap() {
+// ── Login ──
+document.getElementById("loginBtn").onclick = async () => {
+    const btn   = document.getElementById("loginBtn");
+    const email = document.getElementById("loginEmail").value.trim();
+    const pass  = document.getElementById("loginPassword").value;
+    const errEl = document.getElementById("loginError");
+    errEl.classList.remove("visible");
+    if(!email||!pass) { errEl.textContent="Vui lòng điền đầy đủ"; errEl.classList.add("visible"); return; }
+    btn.disabled=true; btn.textContent="⏳ Đang xử lý...";
     try {
-        const res = await fetch(API_MAP_URL, { cache: "no-store" });
-        API_MAP = await res.json();
-        proxyList.innerHTML = "";
-        savedApis.forEach(k => UUID_REGEX.test(k) ? createUuidProxyBox(k) : createProxyBox(k));
+        await _auth.signInWithEmailAndPassword(email, pass);
+        closeModal("authModal");
     } catch(err) {
-        alert("❌ Không tải được API MAP");
+        errEl.textContent = friendlyError(err.code);
+        errEl.classList.add("visible");
+    }
+    btn.disabled=false; btn.textContent="🔐 ĐĂNG NHẬP";
+};
+
+// ── Register ──
+document.getElementById("registerBtn").onclick = async () => {
+    const btn     = document.getElementById("registerBtn");
+    const name    = document.getElementById("regName").value.trim();
+    const email   = document.getElementById("regEmail").value.trim();
+    const pass    = document.getElementById("regPassword").value;
+    const confirm = document.getElementById("regConfirm").value;
+    const errEl   = document.getElementById("regError");
+    errEl.classList.remove("visible");
+    if(!name||!email||!pass||!confirm) { errEl.textContent="Vui lòng điền đầy đủ"; errEl.classList.add("visible"); return; }
+    if(pass!==confirm) { errEl.textContent="Mật khẩu xác nhận không khớp"; errEl.classList.add("visible"); return; }
+    if(pass.length<6)  { errEl.textContent="Mật khẩu tối thiểu 6 ký tự"; errEl.classList.add("visible"); return; }
+    btn.disabled=true; btn.textContent="⏳ Đang tạo...";
+    try {
+        const cred = await _auth.createUserWithEmailAndPassword(email, pass);
+        await cred.user.updateProfile({ displayName: name });
+        await _db.ref(`users/${cred.user.uid}`).set({ displayName:name, email, balance:0, createdAt:Date.now() });
+        closeModal("authModal");
+    } catch(err) {
+        errEl.textContent = friendlyError(err.code);
+        errEl.classList.add("visible");
+    }
+    btn.disabled=false; btn.textContent="✅ TẠO TÀI KHOẢN";
+};
+
+function friendlyError(code) {
+    const map = {
+        "auth/user-not-found":      "Email không tồn tại",
+        "auth/wrong-password":      "Sai mật khẩu",
+        "auth/email-already-in-use":"Email đã được sử dụng",
+        "auth/invalid-email":       "Email không hợp lệ",
+        "auth/weak-password":       "Mật khẩu quá yếu",
+        "auth/too-many-requests":   "Quá nhiều lần thử, thử lại sau",
+        "auth/invalid-credential":  "Email hoặc mật khẩu không đúng",
+    };
+    return map[code] || ("Lỗi: " + code);
+}
+
+// ══════════════════════════════════════
+//  NẠP TIỀN — VietQR + Sepay Auto
+// ══════════════════════════════════════
+
+// Lưu balance lúc mở QR để detect khi tăng
+let _balanceSnapshot = 0;
+let _topupListenerActive = false;
+let _topupUnsubscribe = null;
+
+function resetTopupModal() {
+    _selectedAmount = 0;
+    document.getElementById("customAmount").value = "";
+    document.getElementById("qrSection").style.display = "none";
+    document.getElementById("waitingBox").style.display = "block";
+    document.getElementById("topupSuccessBox").style.display = "none";
+    document.querySelectorAll(".preset-btn").forEach(b=>b.classList.remove("selected"));
+    // Hủy listener cũ nếu có
+    if(_topupUnsubscribe) { _topupUnsubscribe(); _topupUnsubscribe=null; }
+    _topupListenerActive = false;
+}
+
+// Preset buttons
+document.getElementById("presetBtns").addEventListener("click", e => {
+    const btn = e.target.closest(".preset-btn");
+    if(!btn) return;
+    _selectedAmount = parseInt(btn.dataset.amount);
+    document.querySelectorAll(".preset-btn").forEach(b=>b.classList.remove("selected"));
+    btn.classList.add("selected");
+    document.getElementById("customAmount").value = "";
+    document.getElementById("qrSection").style.display = "none";
+});
+
+document.getElementById("customAmount").addEventListener("input", () => {
+    _selectedAmount = 0;
+    document.querySelectorAll(".preset-btn").forEach(b=>b.classList.remove("selected"));
+    document.getElementById("qrSection").style.display = "none";
+});
+
+document.getElementById("generateQrBtn").onclick = () => {
+    const custom = parseInt(document.getElementById("customAmount").value)||0;
+    const amount = _selectedAmount || custom;
+    if(amount < 10000) { alert("Số tiền tối thiểu 10,000 ₫"); return; }
+
+    const user = window._currentUser;
+    if(!user) { alert("Vui lòng đăng nhập trước"); openModal("authModal"); return; }
+
+    const bc   = window.BANK_CONFIG;
+    const ref  = `EAGLE ${user.uid.slice(0,8)}`;
+    const qrUrl = `https://img.vietqr.io/image/${bc.bankId}-${bc.accountNo}-${bc.template}.png?amount=${amount}&addInfo=${encodeURIComponent(ref)}&accountName=${encodeURIComponent(bc.accountName)}`;
+
+    document.getElementById("qrImg").src = qrUrl;
+    document.getElementById("qrBankInfo").innerHTML = `
+      <div class="qr-bank-row"><span class="lbl">Ngân hàng</span><span class="val">${bc.bankId}</span></div>
+      <div class="qr-bank-row"><span class="lbl">Số TK</span><span class="val">${bc.accountNo}</span></div>
+      <div class="qr-bank-row"><span class="lbl">Tên TK</span><span class="val">${bc.accountName}</span></div>
+      <div class="qr-bank-row"><span class="lbl">Số tiền</span><span class="val" style="color:var(--green)">${formatVND(amount)}</span></div>
+    `;
+    document.getElementById("qrNote").innerHTML = `
+      📌 Nội dung chuyển khoản (bắt buộc đúng):<br>
+      <strong style="font-size:13px;letter-spacing:1px">${ref}</strong>
+    `;
+
+    // Reset success box
+    document.getElementById("waitingBox").style.display = "block";
+    document.getElementById("topupSuccessBox").style.display = "none";
+    document.getElementById("qrSection").style.display = "block";
+
+    // ── Bắt đầu lắng nghe balance thay đổi realtime ──
+    _balanceSnapshot = _currentBalance;
+    startTopupListener(user.uid, _balanceSnapshot);
+};
+
+/** Lắng nghe Firebase balance — khi Sepay webhook cộng tiền, UI tự cập nhật */
+function startTopupListener(uid, snapshotBalance) {
+    if(_topupListenerActive) return;
+    _topupListenerActive = true;
+
+    const balRef = _db.ref(`users/${uid}/balance`);
+    balRef.on("value", (snap) => {
+        const newBal = snap.val() || 0;
+        if(newBal > snapshotBalance && _topupListenerActive) {
+            const added = newBal - snapshotBalance;
+            _topupListenerActive = false;
+            balRef.off("value");
+
+            document.getElementById("waitingBox").style.display = "none";
+            document.getElementById("topupSuccessBox").style.display = "block";
+            document.getElementById("topupSuccessMsg").textContent = `✅ Nhận được +${formatVND(added)}`;
+            document.getElementById("topupSuccessNew").textContent = `Số dư mới: ${formatVND(newBal)}`;
+
+            let count = 0;
+            const interval = setInterval(() => {
+                document.getElementById("topupSuccessBox").querySelector("div").textContent =
+                    count%2===0 ? "🎉" : "💰";
+                if(++count > 6) clearInterval(interval);
+            }, 300);
+        }
+    });
+    _topupUnsubscribe = () => balRef.off("value");
+}
+
+// ══════════════════════════════════════
+//  LỊCH SỬ
+// ══════════════════════════════════════
+async function loadHistory() {
+    const user = window._currentUser;
+    const el = document.getElementById("historyList");
+    if(!user) { el.innerHTML='<div style="text-align:center;padding:20px;font-family:Space Mono,monospace;font-size:11px;color:var(--muted)">Chưa đăng nhập</div>'; return; }
+    el.innerHTML='<div style="text-align:center;padding:20px;font-family:Space Mono,monospace;font-size:11px;color:var(--muted)">⏳ Đang tải...</div>';
+    try {
+        const snap = await _db.ref(`transactions/${user.uid}`).get();
+        if(!snap.exists()) { el.innerHTML='<div style="text-align:center;padding:20px;font-family:Space Mono,monospace;font-size:11px;color:var(--muted)">Chưa có giao dịch nào</div>'; return; }
+        const txns = Object.values(snap.val()).sort((a,b)=>b.createdAt-a.createdAt);
+        el.innerHTML = "";
+        txns.forEach(t => {
+            const item = document.createElement("div"); item.className="history-item";
+            const d = new Date(t.createdAt);
+            const dateStr = `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+            item.innerHTML = `
+              <div class="hi-left">
+                <span class="hi-type">${t.type||"Giao dịch"}</span>
+                <span class="hi-date">${dateStr}</span>
+              </div>
+              <span class="hi-amount ${t.amount>0?'plus':'minus'}">${t.amount>0?'+':''}${formatVND(t.amount)}</span>
+            `;
+            el.appendChild(item);
+        });
+    } catch(e) {
+        el.innerHTML='<div style="text-align:center;padding:20px;font-family:Space Mono,monospace;font-size:11px;color:var(--red)">❌ Lỗi tải lịch sử</div>';
     }
 }
 
+// ══════════════════════════════════════
+//  PROXY — original code
+// ══════════════════════════════════════
 function buildHttpProxy(p)   { return `${p.host}:${p.port}:${p.username}:${p.password}`; }
 function buildSocks5Proxy(p) { return `${p.host}:${p.socks5_port}:${p.username}:${p.password}`; }
 
+async function copyAndFlash(lines, btn, label) {
+    if(!lines.length) { alert("Không có proxy để copy"); return; }
+    await navigator.clipboard.writeText(lines.join("\n"));
+    document.getElementById("copyAllDropdown").classList.remove("open");
+    const orig=btn.innerHTML; btn.innerHTML=`✅ ĐÃ COPY ${lines.length} PROXY`;
+    setTimeout(()=>btn.innerHTML=orig,1500);
+}
+
+document.getElementById("copyAllBtn").onclick = (e) => {
+    e.stopPropagation();
+    document.getElementById("copyAllDropdown").classList.toggle("open");
+};
+document.addEventListener("click",()=>document.getElementById("copyAllDropdown").classList.remove("open"));
+document.getElementById("copyAllWrapper").addEventListener("click",e=>e.stopPropagation());
+
+document.getElementById("copyHttpBtn").onclick = async () => {
+    const lines=[];
+    document.querySelectorAll(".proxy-container:not(.uuid-type) .proxy-text").forEach(el=>{const t=el.innerText.trim();if(t)lines.push(t);});
+    document.querySelectorAll(".proxy-container.uuid-type").forEach(box=>{const d=proxyDataStore.get(box.dataset.uuid);if(d&&d.httpLines)lines.push(...d.httpLines);});
+    await copyAndFlash(lines,document.getElementById("copyHttpBtn"),"HTTP");
+};
+document.getElementById("copySocksBtn").onclick = async () => {
+    const lines=[];
+    document.querySelectorAll(".proxy-container.uuid-type").forEach(box=>{const d=proxyDataStore.get(box.dataset.uuid);if(d&&d.socksLines)lines.push(...d.socksLines);});
+    await copyAndFlash(lines,document.getElementById("copySocksBtn"),"SOCKS5");
+};
+document.getElementById("copyBothBtn").onclick = async () => {
+    const lines=[];
+    document.querySelectorAll(".proxy-container:not(.uuid-type) .proxy-text").forEach(el=>{const t=el.innerText.trim();if(t)lines.push(t);});
+    document.querySelectorAll(".proxy-container.uuid-type").forEach(box=>{const d=proxyDataStore.get(box.dataset.uuid);if(d&&d.proxyLines)lines.push(...d.proxyLines);});
+    await copyAndFlash(lines,document.getElementById("copyBothBtn"),"HTTP+SOCKS5");
+};
+
+async function loadApiMap() {
+    try {
+        const res=await fetch(API_MAP_URL,{cache:"no-store"});
+        API_MAP=await res.json();
+        document.getElementById("proxyList").innerHTML="";
+        savedApis.forEach(k=>UUID_REGEX.test(k)?createUuidProxyBox(k):createProxyBox(k));
+    } catch(err) { alert("❌ Không tải được API MAP"); }
+}
+
 async function createUuidProxyBox(apiKey) {
-    const box = document.createElement("div");
-    box.className = "proxy-container uuid-type";
-    box.dataset.uuid = apiKey;
-
-    proxyDataStore.set(apiKey, { httpLines: [], socksLines: [], proxyLines: [], proxyIds: [] });
-
-    const proxyArea = document.createElement("div");
-    proxyArea.className = "proxy-text uuid-proxies";
-    proxyArea.innerHTML = `<span class="loading-text">⏳ Đang tải proxy...</span>`;
-
-    const status = document.createElement("span");
-    status.className = "status";
-
-    const changeIpBtn = document.createElement("button");
-    changeIpBtn.className = "btn-orange";
-    changeIpBtn.innerHTML = "🌐 ĐỔI IP";
-
-    const delBtn = document.createElement("button");
-    delBtn.className = "btn-red";
-    delBtn.innerHTML = "✕ XÓA";
-    delBtn.onclick = () => {
-        savedApis = savedApis.filter(k => k !== apiKey);
-        localStorage.setItem("proxy_api_keys", JSON.stringify(savedApis));
+    const box=document.createElement("div"); box.className="proxy-container uuid-type"; box.dataset.uuid=apiKey;
+    proxyDataStore.set(apiKey,{httpLines:[],socksLines:[],proxyLines:[],proxyIds:[]});
+    const proxyArea=document.createElement("div"); proxyArea.className="proxy-text uuid-proxies"; proxyArea.innerHTML=`<span class="loading-text">⏳ Đang tải proxy...</span>`;
+    const status=document.createElement("span"); status.className="status";
+    const changeIpBtn=document.createElement("button"); changeIpBtn.className="btn-orange"; changeIpBtn.innerHTML="🌐 ĐỔI IP";
+    const delBtn=document.createElement("button"); delBtn.className="btn-red"; delBtn.innerHTML="✕ XÓA";
+    delBtn.onclick=()=>{
+        savedApis=savedApis.filter(k=>k!==apiKey);
+        localStorage.setItem("proxy_api_keys",JSON.stringify(savedApis));
         proxyDataStore.delete(apiKey);
-        box.style.animation = "none";
-        box.style.opacity = "0";
-        box.style.transform = "translateY(-6px)";
-        box.style.transition = "all .2s";
-        setTimeout(() => { if (box.parentNode) proxyList.removeChild(box); }, 200);
+        box.style.opacity="0"; box.style.transform="translateY(-6px)"; box.style.transition="all .2s";
+        setTimeout(()=>{if(box.parentNode)document.getElementById("proxyList").removeChild(box);},200);
     };
-
     async function fetchAndRender() {
-        changeIpBtn.disabled = true;
-        status.innerText = "Đang tải...";
-        proxyArea.innerHTML = `<span class="loading-text">⏳ Đang tải proxy...</span>`;
-        const url = UUID_API_BASE + apiKey;
+        changeIpBtn.disabled=true; status.innerText="Đang tải..."; proxyArea.innerHTML=`<span class="loading-text">⏳ Đang tải proxy...</span>`;
+        const url=UUID_API_BASE+apiKey;
         try {
-            const res  = await fetch(url, { cache: "no-store" });
-            const data = await res.json();
-
-            if (data.status !== "success" || !data.proxies) {
-                proxyArea.innerText = "⚠️ Không lấy được proxy";
-                status.innerText = "❌ Lỗi";
-                changeIpBtn.disabled = false;
-                return;
-            }
-
-            const entries = Object.values(data.proxies);
-            if (!entries.length) {
-                proxyArea.innerText = "⚠️ Không có proxy nào";
-                status.innerText = "";
-                changeIpBtn.disabled = false;
-                return;
-            }
-
-            const store = { httpLines: [], socksLines: [], proxyLines: [], proxyIds: entries.map(p => p.id) };
-            proxyArea.innerHTML = "";
-
-            entries.forEach((p, idx) => {
-                const http   = buildHttpProxy(p);
-                const socks5 = buildSocks5Proxy(p);
-                store.proxyLines.push(http, socks5);
-                store.httpLines.push(http);
-                store.socksLines.push(socks5);
-
-                if (idx > 0) {
-                    const div2 = document.createElement("div");
-                    div2.className = "proxy-divider";
-                    proxyArea.appendChild(div2);
-                }
-
-                const rowH = document.createElement("div"); rowH.className = "proxy-line";
-                const lH = document.createElement("span"); lH.className = "proxy-label http"; lH.innerText = "HTTP";
-                const vH = document.createElement("span"); vH.className = "proxy-value"; vH.innerText = http;
-                rowH.append(lH, vH);
-                rowH.onclick = async () => {
-                    await navigator.clipboard.writeText(http);
-                    rowH.classList.add("copied");
-                    setTimeout(() => rowH.classList.remove("copied"), 1200);
+            const res=await fetch(url,{cache:"no-store"}); const data=await res.json();
+            if(data.status!=="success"||!data.proxies){proxyArea.innerText="⚠️ Không lấy được proxy";status.innerText="❌ Lỗi";changeIpBtn.disabled=false;return;}
+            const entries=Object.values(data.proxies);
+            if(!entries.length){proxyArea.innerText="⚠️ Không có proxy nào";status.innerText="";changeIpBtn.disabled=false;return;}
+            const store={httpLines:[],socksLines:[],proxyLines:[],proxyIds:entries.map(p=>p.id)};
+            proxyArea.innerHTML="";
+            entries.forEach((p,idx)=>{
+                const http=buildHttpProxy(p), socks5=buildSocks5Proxy(p);
+                store.proxyLines.push(http,socks5); store.httpLines.push(http); store.socksLines.push(socks5);
+                if(idx>0){const d=document.createElement("div");d.className="proxy-divider";proxyArea.appendChild(d);}
+                const rowH=document.createElement("div");rowH.className="proxy-line";
+                const lH=document.createElement("span");lH.className="proxy-label http";lH.innerText="HTTP";
+                const vH=document.createElement("span");vH.className="proxy-value";vH.innerText=http;
+                rowH.append(lH,vH); rowH.onclick=async()=>{await navigator.clipboard.writeText(http);rowH.classList.add("copied");setTimeout(()=>rowH.classList.remove("copied"),1200);};
+                const rowIP=document.createElement("div");rowIP.className="ip-info-row";
+                const realIpText=document.createElement("span");realIpText.className="real-ip-label";realIpText.innerText=p.real_ip||"";
+                const testKmBtn=document.createElement("button");testKmBtn.className="btn-test-km";testKmBtn.innerText="TEST KM";
+                testKmBtn.onclick=async()=>{
+                    const ip=p.real_ip; if(!ip)return;
+                    testKmBtn.disabled=true; testKmBtn.innerText="⏳...";
+                    try{
+                        const res=await fetch("https://testdodam.nguyenanlk2872.workers.dev/?ip="+ip,{cache:"no-store"});
+                        const text=await res.text();
+                        if(text.includes("Duplicate entry")){testKmBtn.innerText="📉 Tỉ Lệ KM Thấp";testKmBtn.style.cssText="background:rgba(220,38,38,.1);border-color:rgba(220,38,38,.4);color:#dc2626";}
+                        else{try{const json=JSON.parse(text);if(json.status==="success"){testKmBtn.innerText="📈 Tỉ Lệ KM Cao";testKmBtn.style.cssText="background:rgba(22,163,74,.1);border-color:rgba(22,163,74,.4);color:#16a34a";}else{testKmBtn.innerText="❓ "+(json.message||"?");testKmBtn.style.cssText="background:rgba(107,114,128,.1);color:#6b7280";}}catch{testKmBtn.innerText="❓ Unknown";testKmBtn.style.cssText="background:rgba(107,114,128,.1)";}}
+                    }catch{testKmBtn.innerText="❌ Lỗi";}
+                    testKmBtn.disabled=false;
                 };
-
-                const rowIP = document.createElement("div");
-                rowIP.className = "ip-info-row";
-
-                const realIpText = document.createElement("span");
-                realIpText.className = "real-ip-label";
-                realIpText.innerText = p.real_ip || "";
-
-                const testKmBtn = document.createElement("button");
-                testKmBtn.className = "btn-test-km";
-                testKmBtn.innerText = "TEST KM";
-                testKmBtn.onclick = async () => {
-                    const ip = p.real_ip;
-                    if (!ip) return;
-                    testKmBtn.disabled = true;
-                    testKmBtn.innerText = "⏳...";
-                    try {
-                        const res = await fetch("https://testdodam.nguyenanlk2872.workers.dev/?ip=" + ip, { cache: "no-store" });
-                        const text = await res.text();
-                        if (text.includes("Duplicate entry")) {
-                            testKmBtn.innerText = "📉 Tỉ Lệ KM Thấp";
-                            testKmBtn.style.background = "rgba(220,38,38,.1)";
-                            testKmBtn.style.borderColor = "rgba(220,38,38,.4)";
-                            testKmBtn.style.color = "#dc2626";
-                        } else {
-                            try {
-                                const json = JSON.parse(text);
-                                if (json.status === "success") {
-                                    testKmBtn.innerText = "📈 Tỉ Lệ KM Cao";
-                                    testKmBtn.style.background = "rgba(22,163,74,.1)";
-                                    testKmBtn.style.borderColor = "rgba(22,163,74,.4)";
-                                    testKmBtn.style.color = "#16a34a";
-                                } else {
-                                    testKmBtn.innerText = "❓ " + (json.message || "?");
-                                    testKmBtn.style.background = "rgba(107,114,128,.1)";
-                                    testKmBtn.style.color = "#6b7280";
-                                }
-                            } catch {
-                                testKmBtn.innerText = "❓ Unknown";
-                                testKmBtn.style.background = "rgba(107,114,128,.1)";
-                            }
-                        }
-                    } catch {
-                        testKmBtn.innerText = "❌ Lỗi";
-                    }
-                    testKmBtn.disabled = false;
-                };
-
-                rowIP.append(realIpText, testKmBtn);
-
-                const rowS = document.createElement("div"); rowS.className = "proxy-line";
-                const lS = document.createElement("span"); lS.className = "proxy-label socks5"; lS.innerText = "SOCKS5";
-                const vS = document.createElement("span"); vS.className = "proxy-value"; vS.innerText = socks5;
-                rowS.append(lS, vS);
-                rowS.onclick = async () => {
-                    await navigator.clipboard.writeText(socks5);
-                    rowS.classList.add("copied");
-                    setTimeout(() => rowS.classList.remove("copied"), 1200);
-                };
-
-                proxyArea.append(rowH, rowIP, rowS);
+                rowIP.append(realIpText,testKmBtn);
+                const rowS=document.createElement("div");rowS.className="proxy-line";
+                const lS=document.createElement("span");lS.className="proxy-label socks5";lS.innerText="SOCKS5";
+                const vS=document.createElement("span");vS.className="proxy-value";vS.innerText=socks5;
+                rowS.append(lS,vS); rowS.onclick=async()=>{await navigator.clipboard.writeText(socks5);rowS.classList.add("copied");setTimeout(()=>rowS.classList.remove("copied"),1200);};
+                proxyArea.append(rowH,rowIP,rowS);
             });
-
-            proxyDataStore.set(apiKey, store);
-
-            status.innerText = `✅ ${entries.length} proxy`;
-        } catch(err) {
-            proxyArea.innerText = "❌ Lỗi kết nối";
-            status.innerText = "❌";
-        }
-        changeIpBtn.disabled = false;
+            proxyDataStore.set(apiKey,store); status.innerText=`✅ ${entries.length} proxy`;
+        } catch(err){proxyArea.innerText="❌ Lỗi kết nối";status.innerText="❌";}
+        changeIpBtn.disabled=false;
     }
-
     async function changeAllIPs() {
-        const storeData = proxyDataStore.get(apiKey);
-        const ids = (storeData && storeData.proxyIds) || [];
-        if (!ids.length) { status.innerText = "⚠️ Chưa có proxy"; return; }
-        changeIpBtn.disabled = true;
-        status.innerText = "⏳ Đổi IP...";
-        try {
-            let ok = 0, fail = 0;
-            for (const id of ids) {
-                const url = `${UUID_API_BASE}${apiKey}/update?filter_ip=&minute_change_ip=&id=${id}&change_ip=yes`;
-                const res  = await fetch(url, { cache: "no-store" });
-                const data = await res.json();
-
-                let portMsg = "";
-                let portError = false;
-                if (data.data && typeof data.data === "object") {
-                    const portObj = Object.values(data.data).find(v => v && typeof v === "object" && v.status);
-                    if (portObj) {
-                        portError = portObj.status === "error";
-                        portMsg   = portObj.msg || "";
-                    }
-                }
-
-                if (data.status === "success" && !portError) {
-                    ok++;
-                } else {
-                    fail++;
-                    const showMsg = portMsg || data.msg || data.message || "Lỗi đổi IP";
-                    status.innerText = "⏳ " + showMsg;
-                }
+        const storeData=proxyDataStore.get(apiKey); const ids=(storeData&&storeData.proxyIds)||[];
+        if(!ids.length){status.innerText="⚠️ Chưa có proxy";return;}
+        changeIpBtn.disabled=true; status.innerText="⏳ Đổi IP...";
+        try{
+            let ok=0;
+            for(const id of ids){
+                const url=`${UUID_API_BASE}${apiKey}/update?filter_ip=&minute_change_ip=&id=${id}&change_ip=yes`;
+                const res=await fetch(url,{cache:"no-store"}); const data=await res.json();
+                let portError=false,portMsg="";
+                if(data.data&&typeof data.data==="object"){const portObj=Object.values(data.data).find(v=>v&&typeof v==="object"&&v.status);if(portObj){portError=portObj.status==="error";portMsg=portObj.msg||"";}}
+                if(data.status==="success"&&!portError)ok++;
+                else status.innerText="⏳ "+(portMsg||data.msg||data.message||"Lỗi đổi IP");
             }
-            if (ok > 0) {
-                status.innerText = "✅ Xoay xong";
-                setTimeout(fetchAndRender, 1500);
-            } else {
-                changeIpBtn.disabled = false;
-            }
-        } catch(err) {
-            status.innerText = "❌ Lỗi đổi IP";
-            changeIpBtn.disabled = false;
-        }
+            if(ok>0){status.innerText="✅ Xoay xong";setTimeout(fetchAndRender,1500);}
+            else changeIpBtn.disabled=false;
+        }catch(err){status.innerText="❌ Lỗi đổi IP";changeIpBtn.disabled=false;}
     }
-
-    const copyHttpBtn2 = document.createElement("button");
-    copyHttpBtn2.className = "btn-blue";
-    copyHttpBtn2.innerHTML = "HTTP";
-    copyHttpBtn2.onclick = async () => {
-        const storeData = proxyDataStore.get(apiKey);
-        const lines = (storeData && storeData.httpLines) || [];
-        if (!lines.length) { alert("Chưa có proxy HTTP"); return; }
-        await navigator.clipboard.writeText(lines.join("\n"));
-        copyHttpBtn2.innerHTML = "✅"; setTimeout(() => copyHttpBtn2.innerHTML = "HTTP", 800);
-    };
-
-    const copySocksBtn2 = document.createElement("button");
-    copySocksBtn2.className = "btn-purple";
-    copySocksBtn2.innerHTML = "SOCKS5";
-    copySocksBtn2.onclick = async () => {
-        const storeData = proxyDataStore.get(apiKey);
-        const lines = (storeData && storeData.socksLines) || [];
-        if (!lines.length) { alert("Chưa có proxy SOCKS5"); return; }
-        await navigator.clipboard.writeText(lines.join("\n"));
-        copySocksBtn2.innerHTML = "✅"; setTimeout(() => copySocksBtn2.innerHTML = "SOCKS5", 800);
-    };
-
-    async function filterIp() {
-        const ipPrefix = filterInput.value.trim();
-        if (!ipPrefix) { alert("Nhập đầu IP muốn lọc"); return; }
-        const storeData = proxyDataStore.get(apiKey);
-        const ids = (storeData && storeData.proxyIds) || [];
-        if (!ids.length) { status.innerText = "⚠️ Chưa có proxy"; return; }
-        filterBtn.disabled = true;
-        status.innerText = "⏳ Lọc IP...";
-        try {
-            let ok = 0, fail = 0;
-            for (const id of ids) {
-                const url = `${UUID_API_BASE}${apiKey}/update?filter_ip=${encodeURIComponent(ipPrefix)}&minute_change_ip=0&id=${id}&change_ip=`;
-                const res  = await fetch(url, { cache: "no-store" });
-                const data = await res.json();
-                let portMsg = "";
-                let portError = false;
-                if (data.data && typeof data.data === "object") {
-                    const portObj = Object.values(data.data).find(v => v && typeof v === "object" && v.status);
-                    if (portObj) { portError = portObj.status === "error"; portMsg = portObj.msg || ""; }
-                }
-                if (data.status === "success" && !portError) { ok++; }
-                else { fail++; status.innerText = "⏳ " + (portMsg || data.msg || data.message || "Lỗi lọc IP"); }
+    const copyHttpBtn2=document.createElement("button"); copyHttpBtn2.className="btn-blue"; copyHttpBtn2.innerHTML="HTTP";
+    copyHttpBtn2.onclick=async()=>{const d=proxyDataStore.get(apiKey);const lines=(d&&d.httpLines)||[];if(!lines.length){alert("Chưa có proxy HTTP");return;}await navigator.clipboard.writeText(lines.join("\n"));copyHttpBtn2.innerHTML="✅";setTimeout(()=>copyHttpBtn2.innerHTML="HTTP",800);};
+    const copySocksBtn2=document.createElement("button"); copySocksBtn2.className="btn-purple"; copySocksBtn2.innerHTML="SOCKS5";
+    copySocksBtn2.onclick=async()=>{const d=proxyDataStore.get(apiKey);const lines=(d&&d.socksLines)||[];if(!lines.length){alert("Chưa có proxy SOCKS5");return;}await navigator.clipboard.writeText(lines.join("\n"));copySocksBtn2.innerHTML="✅";setTimeout(()=>copySocksBtn2.innerHTML="SOCKS5",800);};
+    async function filterIp(){
+        const ipPrefix=filterInput.value.trim(); if(!ipPrefix){alert("Nhập đầu IP muốn lọc");return;}
+        const storeData=proxyDataStore.get(apiKey); const ids=(storeData&&storeData.proxyIds)||[];
+        if(!ids.length){status.innerText="⚠️ Chưa có proxy";return;}
+        filterBtn.disabled=true; status.innerText="⏳ Lọc IP...";
+        try{
+            let ok=0;
+            for(const id of ids){
+                const url=`${UUID_API_BASE}${apiKey}/update?filter_ip=${encodeURIComponent(ipPrefix)}&minute_change_ip=0&id=${id}&change_ip=`;
+                const res=await fetch(url,{cache:"no-store"}); const data=await res.json();
+                let portError=false,portMsg="";
+                if(data.data&&typeof data.data==="object"){const portObj=Object.values(data.data).find(v=>v&&typeof v==="object"&&v.status);if(portObj){portError=portObj.status==="error";portMsg=portObj.msg||"";}}
+                if(data.status==="success"&&!portError)ok++;
+                else status.innerText="⏳ "+(portMsg||data.msg||data.message||"Lỗi lọc IP");
             }
-            if (ok > 0) { status.innerText = "✅ Lọc IP xong"; setTimeout(fetchAndRender, 1500); }
-        } catch(err) { status.innerText = "❌ Lỗi lọc IP"; }
-        filterBtn.disabled = false;
+            if(ok>0){status.innerText="✅ Lọc IP xong";setTimeout(fetchAndRender,1500);}
+        }catch(err){status.innerText="❌ Lỗi lọc IP";}
+        filterBtn.disabled=false;
     }
-
-    changeIpBtn.onclick = changeAllIPs;
-
-    const filterInput = document.createElement("input");
-    filterInput.type = "text";
-    filterInput.placeholder = "Lọc đầu IP (vd: 27)";
-    filterInput.addEventListener("keydown", e => { if (e.key === "Enter") filterIp(); });
-
-    const filterBtn = document.createElement("button");
-    filterBtn.className = "btn-cyan";
-    filterBtn.innerHTML = "🔍 Lọc IP";
-    filterBtn.onclick = filterIp;
-
-    const filterRow = document.createElement("div");
-    filterRow.className = "filter-row";
-    filterRow.append(filterInput, filterBtn);
-
-    const actionBtns = document.createElement("div");
-    actionBtns.className = "action-btns";
-    actionBtns.append(copyHttpBtn2, copySocksBtn2, changeIpBtn, delBtn);
-
-    const actions = document.createElement("div");
-    actions.className = "proxy-actions";
-    actions.append(filterRow, actionBtns);
-
-    const proxyBody = document.createElement("div");
-    proxyBody.className = "proxy-body";
-    proxyBody.append(proxyArea);
-
-    const proxyFooter = document.createElement("div");
-    proxyFooter.className = "proxy-footer";
-    proxyFooter.append(actions, status);
-
-    box.append(proxyBody, proxyFooter);
-    proxyList.appendChild(box);
+    changeIpBtn.onclick=changeAllIPs;
+    const filterInput=document.createElement("input"); filterInput.type="text"; filterInput.placeholder="Lọc đầu IP (vd: 27)";
+    filterInput.addEventListener("keydown",e=>{if(e.key==="Enter")filterIp();});
+    const filterBtn=document.createElement("button"); filterBtn.className="btn-cyan"; filterBtn.innerHTML="🔍 Lọc IP"; filterBtn.onclick=filterIp;
+    const filterRow=document.createElement("div"); filterRow.className="filter-row"; filterRow.append(filterInput,filterBtn);
+    const actionBtns=document.createElement("div"); actionBtns.className="action-btns"; actionBtns.append(copyHttpBtn2,copySocksBtn2,changeIpBtn,delBtn);
+    const actions=document.createElement("div"); actions.className="proxy-actions"; actions.append(filterRow,actionBtns);
+    const proxyBody=document.createElement("div"); proxyBody.className="proxy-body"; proxyBody.append(proxyArea);
+    const proxyFooter=document.createElement("div"); proxyFooter.className="proxy-footer"; proxyFooter.append(actions,status);
+    box.append(proxyBody,proxyFooter);
+    document.getElementById("proxyList").appendChild(box);
     await fetchAndRender();
 }
 
 function createProxyBox(apiKey) {
-    const info = API_MAP[apiKey];
-    if (!info) return;
-    const box = document.createElement("div"); box.className = "proxy-container";
-
-    const proxyText = document.createElement("div"); proxyText.className = "proxy-text"; proxyText.innerText = info.proxy;
-
-    const copyBtn = document.createElement("button"); copyBtn.className = "btn-copy"; copyBtn.innerHTML = "⎘ COPY";
-    copyBtn.onclick = async () => {
-        await navigator.clipboard.writeText(proxyText.innerText);
-        copyBtn.innerHTML = "✅ Copied"; setTimeout(() => copyBtn.innerHTML = "⎘ COPY", 800);
+    const info=API_MAP[apiKey]; if(!info)return;
+    const box=document.createElement("div"); box.className="proxy-container";
+    const proxyText=document.createElement("div"); proxyText.className="proxy-text"; proxyText.innerText=info.proxy;
+    const copyBtn=document.createElement("button"); copyBtn.className="btn-copy"; copyBtn.innerHTML="⎘ COPY";
+    copyBtn.onclick=async()=>{await navigator.clipboard.writeText(proxyText.innerText);copyBtn.innerHTML="✅ Copied";setTimeout(()=>copyBtn.innerHTML="⎘ COPY",800);};
+    const rotateBtn=document.createElement("button"); rotateBtn.className="btn-primary"; rotateBtn.innerHTML="⟳ Xoay";
+    const status=document.createElement("span"); status.className="status";
+    rotateBtn.onclick=async()=>{
+        rotateBtn.disabled=true; status.innerText="⏳ Xoay...";
+        try{
+            let url=info.rotate;
+            if(url.includes("reset?proxy="))url+=encodeURIComponent(info.proxy); else url+=apiKey;
+            const res=await fetch(url); const data=await res.json();
+            if(data.success===false){status.innerText="⚠️ "+(data.message||"Không xoay được");}
+            else{if(data.data?.proxy){info.proxy=data.data.proxy;proxyText.innerText=data.data.proxy;}status.innerText="✅ Xoay xong";}
+        }catch(err){status.innerText="❌ Lỗi xoay";}
+        rotateBtn.disabled=false;
     };
-
-    const rotateBtn = document.createElement("button"); rotateBtn.className = "btn-primary"; rotateBtn.innerHTML = "⟳ Xoay";
-    const status = document.createElement("span"); status.className = "status";
-
-    rotateBtn.onclick = async () => {
-        rotateBtn.disabled = true; status.innerText = "⏳ Xoay...";
-        try {
-            let url = info.rotate;
-            if (url.includes("reset?proxy=")) url += encodeURIComponent(info.proxy);
-            else url += apiKey;
-            const res  = await fetch(url);
-            const data = await res.json();
-            if (data.success === false) {
-                status.innerText = "⚠️ " + (data.message || "Không xoay được");
-            } else {
-                if (data.data?.proxy) { info.proxy = data.data.proxy; proxyText.innerText = data.data.proxy; }
-                status.innerText = "✅ Xoay xong";
-            }
-        } catch(err) {
-            status.innerText = "❌ Bình tẽn xoay tutu";
-        }
-        rotateBtn.disabled = false;
+    const delBtn=document.createElement("button"); delBtn.className="btn-red"; delBtn.innerHTML="✕ XÓA";
+    delBtn.onclick=()=>{
+        savedApis=savedApis.filter(k=>k!==apiKey);
+        localStorage.setItem("proxy_api_keys",JSON.stringify(savedApis));
+        box.style.opacity="0"; box.style.transform="translateY(-6px)"; box.style.transition="all .2s";
+        setTimeout(()=>{if(box.parentNode)document.getElementById("proxyList").removeChild(box);},200);
     };
-
-    const delBtn = document.createElement("button"); delBtn.className = "btn-red"; delBtn.innerHTML = "✕ XÓA";
-    delBtn.onclick = () => {
-        savedApis = savedApis.filter(k => k !== apiKey);
-        localStorage.setItem("proxy_api_keys", JSON.stringify(savedApis));
-        box.style.opacity = "0";
-        box.style.transform = "translateY(-6px)";
-        box.style.transition = "all .2s";
-        setTimeout(() => { if (box.parentNode) proxyList.removeChild(box); }, 200);
-    };
-
-    const actions = document.createElement("div"); actions.className = "proxy-actions";
-    actions.append(copyBtn, rotateBtn, delBtn);
-
-    const proxyBody2 = document.createElement("div");
-    proxyBody2.className = "proxy-body";
-    proxyBody2.append(proxyText);
-
-    const proxyFooter2 = document.createElement("div");
-    proxyFooter2.className = "proxy-footer";
-    proxyFooter2.style.flexDirection = "row";
-    proxyFooter2.style.flexWrap = "wrap";
-    proxyFooter2.style.alignItems = "center";
-    proxyFooter2.append(actions, status);
-
-    box.append(proxyBody2, proxyFooter2);
-    proxyList.appendChild(box);
+    const actions=document.createElement("div"); actions.className="proxy-actions";
+    const actionBtns2=document.createElement("div"); actionBtns2.className="action-btns"; actionBtns2.append(copyBtn,rotateBtn,delBtn);
+    actions.style.flexDirection="row"; actions.style.flexWrap="wrap"; actions.style.alignItems="center";
+    actions.append(actionBtns2,status);
+    box.append(proxyText,actions);
+    document.getElementById("proxyList").appendChild(box);
 }
 
-addApiBtn.onclick = async () => {
-    const keys = apiInput.value.trim().split(/\r?\n/).map(k => k.trim()).filter(Boolean);
-    let a = 0, s = 0, i = 0;
-    for (const k of keys) {
-        if (savedApis.includes(k)) { s++; continue; }
-        if (UUID_REGEX.test(k)) {
-            savedApis.push(k);
-            await createUuidProxyBox(k); a++;
-        } else {
-            if (!API_MAP[k]) { i++; continue; }
-            savedApis.push(k); createProxyBox(k); a++;
-        }
+document.getElementById("addApiBtn").onclick = async () => {
+    const keys=document.getElementById("apiInput").value.trim().split(/\r?\n/).map(k=>k.trim()).filter(Boolean);
+    let a=0,s=0,i=0;
+    for(const k of keys){
+        if(savedApis.includes(k)){s++;continue;}
+        if(UUID_REGEX.test(k)){savedApis.push(k);await createUuidProxyBox(k);a++;}
+        else{if(!API_MAP[k]){i++;continue;}savedApis.push(k);createProxyBox(k);a++;}
     }
-    localStorage.setItem("proxy_api_keys", JSON.stringify(savedApis));
-    apiStatus.innerText = `+ Thêm ${a}  ·  ~ Trùng ${s}  ·  ✕ Sai ${i}`;
-    apiStatus.classList.add("visible");
-    apiInput.value = "";
+    localStorage.setItem("proxy_api_keys",JSON.stringify(savedApis));
+    const el=document.getElementById("apiStatus");
+    el.innerText=`+ Thêm ${a}  ·  ~ Trùng ${s}  ·  ✕ Sai ${i}`;
+    el.classList.add("visible");
+    document.getElementById("apiInput").value="";
 };
 
-rotateAllBtn.onclick = async () => {
-    const buttons = document.querySelectorAll(".btn-orange, .btn-primary");
-    for (const btn of buttons) {
-        if (!btn.disabled) { btn.click(); await new Promise(r => setTimeout(r, 800)); }
-    }
+document.getElementById("rotateAllBtn").onclick = async () => {
+    const buttons=document.querySelectorAll(".btn-orange, .btn-primary");
+    for(const btn of buttons){if(!btn.disabled){btn.click();await new Promise(r=>setTimeout(r,800));}}
 };
 
 loadApiMap();
