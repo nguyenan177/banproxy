@@ -4,6 +4,73 @@
 <meta charset="UTF-8">
 <title>Thuê SMS OKVIP</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Firebase compat -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+  firebase.initializeApp({
+    apiKey:            "AIzaSyDq5ew_s9QpgDPBF_ZA0Ksr2ge3m6TtRjA",
+    authDomain:        "autobank-dba16.firebaseapp.com",
+    databaseURL:       "https://autobank-dba16-default-rtdb.firebaseio.com",
+    projectId:         "autobank-dba16",
+    storageBucket:     "autobank-dba16.firebasestorage.app",
+    messagingSenderId: "1072197275549",
+    appId:             "1:1072197275549:web:617068339935d992106974"
+  });
+  const _auth = firebase.auth();
+  const _db   = firebase.database();
+
+  const PRICE_OKVIP = 5000;
+  const PRICE_SV2   = 3000;
+  let _uid = null, _balance = 0;
+
+  _auth.onAuthStateChanged(user => {
+    if (user) {
+      _uid = user.uid;
+      _db.ref(`users/${_uid}/balance`).on("value", snap => {
+        _balance = snap.val() || 0;
+        document.getElementById("balanceBox").textContent = "💰 " + formatVND(_balance);
+      });
+      document.getElementById("balanceBox").style.display = "inline-block";
+      document.getElementById("loginPrompt").style.display = "none";
+    } else {
+      _uid = null; _balance = 0;
+      document.getElementById("balanceBox").style.display = "none";
+      document.getElementById("loginPrompt").style.display = "inline-block";
+    }
+  });
+
+  function formatVND(n) { return (n||0).toLocaleString("vi-VN") + " ₫"; }
+
+  async function deductBalance(amount, simId, phone, type) {
+    if (!_uid) return;
+    // Dùng transaction để atomic — tránh race condition
+    const balRef = _db.ref(`users/${_uid}/balance`);
+    let success  = false;
+    await balRef.transaction(current => {
+      const bal = current || 0;
+      if (bal < amount) return; // abort transaction
+      success = true;
+      return bal - amount;
+    });
+    if (!success) throw new Error(`Số dư không đủ! Cần ${formatVND(amount)}, có ${formatVND(_balance)}`);
+    await _db.ref(`transactions/${_uid}/SMS_${Date.now()}`).set({
+      type, amount: -amount, simId, phone, createdAt: Date.now()
+    });
+  }
+
+  async function refundBalance(amount, simId, phone) {
+    if (!_uid) return;
+    // Dùng transaction để atomic — tránh cộng sai
+    await _db.ref(`users/${_uid}/balance`).transaction(current => (current || 0) + amount);
+    await _db.ref(`transactions/${_uid}/REFUND_${Date.now()}`).set({
+      type: "Hoàn tiền SIM", amount, simId, phone, createdAt: Date.now()
+    });
+  }
+</script>
+
 <style>
 body { font-family: Arial, sans-serif; background: #f2f2f2; padding: 20px; }
 .box { background: #fff; padding: 20px; border-radius: 8px; max-width: 820px; margin: auto; position: relative; }
@@ -13,7 +80,7 @@ button { cursor: pointer; }
 .sim b { font-size: 16px; }
 pre { background: #111; color: #0f0; padding: 12px; height: 180px; overflow: auto; font-size: 13px; }
 .lock { background: #eee; padding: 10px; border-radius: 6px; margin-bottom: 10px; }
-.proxy-btn { position: absolute; top: 15px; right: 15px; width: auto; padding: 8px 14px; background: #007bff; color: #fff; border: none; border-radius: 6px; }
+.proxy-btn { position: absolute; top: 15px; right: 15px; width: auto; padding: 8px 14px; background: #007bff; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
 .sv2-btn { position: absolute; top: 15px; right: 120px; width: auto; padding: 8px 14px; background: #28a745; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
 .copy-btn { width: auto; padding: 4px 8px; margin-left: 6px; font-size: 12px; }
 audio { width: 100%; margin-top: 6px; }
@@ -21,8 +88,14 @@ audio { width: 100%; margin-top: 6px; }
 .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: bold; margin-left: 8px; }
 .badge-okvip { background: #ff6b00; color: #fff; }
 .badge-sv2 { background: #007bff; color: #fff; }
-.badge-unknown { background: #aaa; color: #fff; }
-#apiTypeLabel { font-size: 13px; color: #888; margin: 2px 0 6px 2px; min-height: 18px; }
+/* Tabs chọn server */
+.server-tabs { display: flex; gap: 8px; margin-bottom: 10px; }
+.server-tab { flex: 1; padding: 10px; border: 2px solid #ddd; border-radius: 6px; background: #f9f9f9; color: #333; font-weight: bold; font-size: 14px; cursor: pointer; transition: all .15s; }
+.server-tab.active.okvip { border-color: #ff6b00; background: #fff3eb; color: #ff6b00; }
+.server-tab.active.sv2   { border-color: #007bff; background: #ebf3ff; color: #007bff; }
+/* Balance */
+#balanceBox { display:none; position:absolute; top:15px; right:260px; width:auto; padding:8px 14px; background:linear-gradient(135deg,#16a34a,#15803d); color:#fff; border:none; border-radius:6px; font-weight:bold; font-size:13px; }
+#loginPrompt { display:none; position:absolute; top:15px; right:260px; width:auto; padding:8px 14px; background:#dc2626; color:#fff; border-radius:6px; font-size:12px; font-weight:bold; text-decoration:none; }
 </style>
 </head>
 <body>
@@ -30,12 +103,20 @@ audio { width: 100%; margin-top: 6px; }
 
 <button class="sv2-btn" onclick="window.location.href='Sv2.html'">⚡ SV2</button>
 <button class="proxy-btn" onclick="window.location.href='index.html'">🌐 PROXY</button>
+<span id="balanceBox">💰 0 ₫</span>
+<a href="eagle-proxy.html" id="loginPrompt">🔐 Đăng nhập</a>
 
 <h2>📲 Thuê SMS OKVIP</h2>
 
-<input id="apiKey" placeholder="Nhập API key (OKVIP hoặc Sv2)" oninput="onApiKeyInput()">
-<div id="apiTypeLabel">🔍 Chưa nhập key</div>
-<button onclick="loadAccount()">🔑 Lấy thông tin tài khoản</button>
+<!-- Chọn server -->
+<div class="server-tabs">
+  <button class="server-tab okvip active" id="tabOkvip" onclick="selectServer('okvip')">
+    🟠 OKVIP — 5,000 ₫
+  </button>
+  <button class="server-tab sv2" id="tabSv2" onclick="selectServer('sv2')">
+    🔵 Sv2 Admin — 3,000 ₫
+  </button>
+</div>
 
 <div class="lock" id="priceLock">
   🔒 <b>Thuê sms:</b> Okvip – <b>5K</b>
@@ -65,58 +146,39 @@ document.addEventListener("keydown", e => {
 });
 
 /* ===== CONFIG ===== */
-const WORKER        = "https://api.dblgamingg.workers.dev"; // proxy cho OKVIP
-const SV2_BASE  = "https://noisy-darkness-b3aa.dblgamingg.workers.dev/api";
-const FIXED_SERVICE_ID = 49; // OKVIP service id
+const WORKER           = "https://api.dblgamingg.workers.dev";
+const SV2_BASE         = "https://noisy-darkness-b3aa.dblgamingg.workers.dev/api";
+const OKVIP_KEY        = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ0dWFuMjQiLCJqdGkiOiI4Njk2NCIsImlhdCI6MTc2OTgzNjg2OCwiZXhwIjoxODMyMDQ0ODY4fQ.qP0nIoD-GzWxH_Wz4dNLDNqoGFTpny-jZkgKEZMpFDDIRjK3lQwt0mRF0zUPo3r856n5KxRZAHoRXjPXT3a16Q";
+const SV2_KEY          = "edf7f0bfd68cba376074d7e7f3234a13";
+const FIXED_SERVICE_ID = 49;
 
-/* ===== DETECT API TYPE ===== */
-function detectApiType(key) {
-  if (!key) return null;
-  if (key.startsWith("eyJ") && key.split(".").length === 3) return "okvip";
-  if (/^[a-f0-9]{32}$/i.test(key)) return "sv2";
-  return "unknown";
-}
+let currentServer = "okvip";
 
-function onApiKeyInput() {
-  const key = document.getElementById("apiKey").value.trim();
-  const t = detectApiType(key);
-  const label = document.getElementById("apiTypeLabel");
-  const lock  = document.getElementById("priceLock");
-
-  if (t === "okvip") {
-    label.innerHTML = '🟠 Đã nhận diện: <span class="badge badge-okvip">OKVIP</span>';
-    lock.innerHTML  = '🔒 <b>Thuê sms:</b> Okvip – <b>5K</b>';
-  } else if (t === "sv2") {
-    label.innerHTML = '🔵 Đã nhận diện: <span class="badge badge-sv2">Sv2</span>';
-    lock.innerHTML  = '🔒 <b>Thuê sms:</b> Sv ADmin (Okvip) – <b>3.0K</b>';
-  } else if (t === "unknown") {
-    label.innerHTML = '⚠️ <span class="badge badge-unknown">Không nhận diện được key</span>';
-  } else {
-    label.innerHTML = '🔍 Chưa nhập key';
-  }
+function selectServer(server) {
+  currentServer = server;
+  document.getElementById("tabOkvip").className = "server-tab okvip" + (server==="okvip"?" active":"");
+  document.getElementById("tabSv2").className   = "server-tab sv2"   + (server==="sv2"  ?" active":"");
+  document.getElementById("priceLock").innerHTML = server === "okvip"
+    ? '🔒 <b>Thuê sms:</b> Okvip – <b>5K</b>'
+    : '🔒 <b>Thuê sms:</b> Sv ADmin (Okvip) – <b>3.0K</b>';
+  if (server === "okvip") loadNetworksOkvip();
+  else                    loadNetworksSv2();
 }
 
 /* ===== STORAGE ===== */
-const SIM_KEY      = "okvip_sims";
-const API_KEY_STORE = "okvip_api_key";
-
-let sims = [];
-let otpTimer = null;
+const SIM_KEY = "okvip_sims";
+let sims = [], otpTimer = null;
 
 const log = (t) => document.getElementById("log").textContent =
   typeof t === "object" ? JSON.stringify(t, null, 2) : t;
 
-const getApiKey  = () => document.getElementById("apiKey").value.trim();
-const getApiType = () => detectApiType(getApiKey());
-
-/* ===== HTTP HELPERS ===== */
+/* ===== HTTP ===== */
 async function callOkvip(path) {
   const res = await fetch(WORKER + path);
   return res.json();
 }
-
 async function callSv2(params) {
-  const url = SV2_BASE + "?" + new URLSearchParams({ apik: getApiKey(), ...params });
+  const url = SV2_BASE + "?" + new URLSearchParams({ apik: SV2_KEY, ...params });
   const res = await fetch(url);
   return res.json();
 }
@@ -125,33 +187,22 @@ async function callSv2(params) {
 function copyText(btn, text, stripLeadingZero = false) {
   if (!text) return;
   let v = (stripLeadingZero && text.startsWith("0")) ? text.slice(1) : text;
-
   const finish = (ok) => {
     const old = btn.textContent;
     btn.textContent = ok ? "✅" : "❌";
     setTimeout(() => btn.textContent = old, 1400);
   };
-
-  if (navigator.clipboard && window.isSecureContext) {
+  if (navigator.clipboard && window.isSecureContext)
     navigator.clipboard.writeText(v).then(() => finish(true)).catch(() => fallbackCopy(v, finish));
-  } else {
-    fallbackCopy(v, finish);
-  }
+  else fallbackCopy(v, finish);
 }
-
 function fallbackCopy(text, finish) {
   try {
     const ta = document.createElement("textarea");
-    ta.value = text;
-    ta.style.cssText = "position:fixed;top:-9999px;left:-9999px;opacity:0";
-    document.body.appendChild(ta);
-    ta.focus(); ta.select();
-    const ok = document.execCommand("copy");
-    document.body.removeChild(ta);
-    finish(ok);
-  } catch(e) {
-    finish(false);
-  }
+    ta.value = text; ta.style.cssText = "position:fixed;top:-9999px;left:-9999px;opacity:0";
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    finish(document.execCommand("copy")); document.body.removeChild(ta);
+  } catch(e) { finish(false); }
 }
 
 /* ===== PERSIST ===== */
@@ -160,48 +211,20 @@ function loadSims() {
   const raw = localStorage.getItem(SIM_KEY);
   if (!raw) return;
   sims = JSON.parse(raw);
+  // Migration: SIM cũ không có pricePaid → set 0 tránh hoàn nhầm
+  sims.forEach(s => { if (s.pricePaid === undefined) s.pricePaid = 0; });
   if (sims.length) { renderSims(); startOtp(); }
-}
-
-/* ===== ACCOUNT ===== */
-async function loadAccount() {
-  const key = getApiKey();
-  if (!key) return alert("Nhập API key");
-  localStorage.setItem(API_KEY_STORE, key);
-
-  const t = getApiType();
-  let d;
-
-  if (t === "okvip") {
-    d = await callOkvip(`/account?api_key=${key}`);
-    if (d?.data?.balance) d.data.balance /= 0.4; // hiển thị giá thật
-    log(d);
-    loadNetworksOkvip();
-
-  } else if (t === "sv2") {
-    d = await callSv2({ act: "account" });
-    if (d?.Result?.Balance) d.Result.Balance /= 0.4; // hiển thị giá thật
-    log(d);
-    loadNetworksSv2();
-
-  } else {
-    return alert("❌ Không nhận diện được loại API key!");
-  }
 }
 
 /* ===== NETWORKS ===== */
 async function loadNetworksOkvip() {
-  const d = await callOkvip(`/networks?api_key=${getApiKey()}`);
+  const d = await callOkvip(`/networks?api_key=${OKVIP_KEY}`);
   const n = document.getElementById("network");
   n.innerHTML = '<option value="">-- Tất cả nhà mạng --</option>';
-  d?.data?.forEach(x => {
-    n.innerHTML += `<option value="${x.id}">${x.name}</option>`;
-  });
+  d?.data?.forEach(x => { n.innerHTML += `<option value="${x.id}">${x.name}</option>`; });
 }
-
 function loadNetworksSv2() {
-  const n = document.getElementById("network");
-  n.innerHTML = `
+  document.getElementById("network").innerHTML = `
     <option value="">-- Tất cả nhà mạng --</option>
     <option value="Viettel">Viettel</option>
     <option value="Mobi">Mobifone</option>
@@ -213,106 +236,87 @@ function loadNetworksSv2() {
 
 /* ===== GET SIM ===== */
 async function getSim() {
-  const key = getApiKey();
-  if (!key) return alert("Thiếu API key");
-
-  const t       = getApiType();
+  const btn = document.querySelector("button[onclick='getSim()']");
+  if (btn.disabled) return;
+  btn.disabled = true;
+  btn.textContent = "⏳ Đang lấy số...";
   const network = document.getElementById("network").value;
   const prefix  = document.getElementById("prefix").value.trim();
-
-  if (t === "okvip") {
-    await getSimOkvip(key, network, prefix);
-  } else if (t === "sv2") {
-    await getSimSv2(key, network, prefix);
-  } else {
-    alert("❌ Không nhận diện được loại API key!");
+  try {
+    if (currentServer === "okvip") await getSimOkvip(network, prefix);
+    else                           await getSimSv2(network, prefix);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "📞 Lấy số";
   }
 }
 
-async function getSimOkvip(key, network, prefix) {
-  let q = `/get-sim?api_key=${key}&service_id=${FIXED_SERVICE_ID}`;
+async function getSimOkvip(network, prefix) {
+  if (_uid) {
+    try { await deductBalance(PRICE_OKVIP, "pending", "", "Thuê SIM OKVIP"); }
+    catch (e) { return alert("❌ " + e.message); }
+  }
+  let q = `/get-sim?api_key=${OKVIP_KEY}&service_id=${FIXED_SERVICE_ID}`;
   if (network) q += `&network_id=${network}`;
   if (prefix)  q += `&phone=${prefix}`;
-
   const d = await callOkvip(q);
-  if (d?.status !== 200) return log("❌ OKVIP: Không lấy được số\n" + JSON.stringify(d));
-
-  sims.push({
-    source: "okvip",
-    otpId:  d.data.otpId,
-    simId:  d.data.simId,
-    phone:  d.data.phone,
-    code: null, audio: null, done: false
-  });
+  if (d?.status !== 200) {
+    if (_uid) await refundBalance(PRICE_OKVIP, "failed", "");
+    return log("❌ OKVIP: Không lấy được số\n" + JSON.stringify(d));
+  }
+  sims.push({ source:"okvip", otpId:d.data.otpId, simId:d.data.simId, phone:d.data.phone, code:null, audio:null, done:false, pricePaid: _uid ? PRICE_OKVIP : 0 });
   saveSims(); renderSims(); startOtp();
+  log("✅ Đã lấy số" + (_uid ? `, trừ ${formatVND(PRICE_OKVIP)}` : ""));
 }
 
-async function getSimSv2(key, network, prefix) {
-  const appId = 1200; // for88 – cố định
-  const params = { act: "number", appId };
+async function getSimSv2(network, prefix) {
+  if (_uid) {
+    try { await deductBalance(PRICE_SV2, "pending", "", "Thuê SIM Sv2"); }
+    catch (e) { return alert("❌ " + e.message); }
+  }
+  const params = { act:"number", appId:1200 };
   if (network) params.carrier = network;
   if (prefix)  params.prefix  = prefix;
-
   const d = await callSv2(params);
   if (d?.ResponseCode !== 0) {
-    if (d?.ResponseCode === 3) {
-      d.Msg = "Kho số cho ứng dụng đang tạm hết, vui lòng liên hệ Telegram @nguyenanlk để được hỗ trợ";
-    }
+    if (_uid) await refundBalance(PRICE_SV2, "failed", "");
+    if (d?.ResponseCode === 3) d.Msg = "Kho số tạm hết, thử lại sau";
     return log("❌ Sv2: Không lấy được số\n" + JSON.stringify(d));
   }
-
-  sims.push({
-    source: "sv2",
-    otpId:  d.Result.Id,
-    simId:  d.Result.Id,
-    phone:  "0" + d.Result.Number,
-    code: null, audio: null, done: false
-  });
+  sims.push({ source:"sv2", otpId:d.Result.Id, simId:d.Result.Id, phone:"0"+d.Result.Number, code:null, audio:null, done:false, pricePaid: _uid ? PRICE_SV2 : 0 });
   saveSims(); renderSims(); startOtp();
+  log("✅ Đã lấy số" + (_uid ? `, trừ ${formatVND(PRICE_SV2)}` : ""));
 }
 
 /* ===== RENDER ===== */
 function renderSims() {
   const box = document.getElementById("simList");
   box.innerHTML = "";
-
   sims.forEach((s, i) => {
-    const badgeHtml = s.source === "okvip"
+    const badgeHtml = s.source==="okvip"
       ? '<span class="badge badge-okvip">OKVIP</span>'
       : '<span class="badge badge-sv2">Sv2</span>';
-
-    const div = document.createElement("div");
-    div.className = "sim";
-
-    const otpHtml = s.code
-      ? `<span class="done">${s.code}</span> <button class="copy-btn" data-copy="${s.code}">📋</button>`
-      : "Đang chờ...";
-
-    const smsHtml  = s.sms   ? `<br>📩 <small>${s.sms}</small>` : "";
+    const div       = document.createElement("div");
+    div.className   = "sim";
+    const otpHtml   = s.code  ? `<span class="done">${s.code}</span> <button class="copy-btn" data-copy="${s.code}">📋</button>` : "Đang chờ...";
+    const smsHtml   = s.sms   ? `<br>📩 <small>${s.sms}</small>` : "";
     const audioHtml = s.audio ? `<div>🎧 OTP GỌI:<audio controls preload="none"><source src="${s.audio}" type="audio/mpeg"></audio></div>` : "";
-
     div.innerHTML = `
       <b>📞 ${s.phone}</b>
       <button class="copy-btn" data-copy="${s.phone}" data-strip="1">📋</button>
       ${badgeHtml}<br>
       🆔 ID: ${s.otpId}<br>
       🔐 OTP: ${otpHtml}
-      ${smsHtml}
-      ${audioHtml}
+      ${smsHtml}${audioHtml}
       <button data-cancel="${i}">❌ Hủy SIM</button>
     `;
     box.appendChild(div);
   });
-
-  // Event delegation – tránh lỗi inline onclick với ký tự đặc biệt
   box.onclick = (e) => {
     const btn = e.target.closest("button[data-copy], button[data-cancel]");
     if (!btn) return;
-    if (btn.dataset.cancel !== undefined) {
-      cancelSim(Number(btn.dataset.cancel));
-    } else if (btn.dataset.copy !== undefined) {
-      copyText(btn, btn.dataset.copy, btn.dataset.strip === "1");
-    }
+    if (btn.dataset.cancel !== undefined) cancelSim(Number(btn.dataset.cancel));
+    else if (btn.dataset.copy !== undefined) copyText(btn, btn.dataset.copy, btn.dataset.strip==="1");
   };
 }
 
@@ -321,68 +325,59 @@ function startOtp() {
   if (otpTimer) return;
   otpTimer = setInterval(pollOtp, 4000);
 }
-
 async function pollOtp() {
   let changed = false;
-  const key = getApiKey();
-
   for (const s of sims) {
     if (s.done) continue;
-
     if (s.source === "okvip") {
-      const d = await callOkvip(`/get-otp?api_key=${key}&otp_id=${s.otpId}`);
+      const d = await callOkvip(`/get-otp?api_key=${OKVIP_KEY}&otp_id=${s.otpId}`);
       if (!d?.data) continue;
-      const content = d.data.content || "";
-      const audio   = d.data.audio   || "";
+      const content = d.data.content||"", audio = d.data.audio||"";
       const match   = content.match(/\b\d{4,8}\b/);
-      if (match)  { s.code = match[0]; s.sms = content; s.done = true; changed = true; }
-      else if (audio) { s.audio = audio; s.done = true; changed = true; }
-
-    } else if (s.source === "sv2") {
-      const d = await callSv2({ act: "code", id: s.otpId });
+      if (match)       { s.code=match[0]; s.sms=content; s.done=true; changed=true; }
+      else if (audio)  { s.audio=audio; s.done=true; changed=true; }
+    } else {
+      const d = await callSv2({ act:"code", id:s.otpId });
       if (!d) continue;
-      if (d.ResponseCode === 0 && d.Result) {
-        s.sms  = d.Result.SMS  || "";
-        s.code = d.Result.Code || "";
-        if (d.Result.IsCall && d.Result.CallFile) s.audio = d.Result.CallFile;
-        s.done = true; changed = true;
-      } else if (d.ResponseCode === 2) {
-        s.done = true; s.code = "⏰ Hết giờ"; changed = true;
-      }
+      if (d.ResponseCode===0 && d.Result) {
+        s.sms=d.Result.SMS||""; s.code=d.Result.Code||"";
+        if (d.Result.IsCall && d.Result.CallFile) s.audio=d.Result.CallFile;
+        s.done=true; changed=true;
+      } else if (d.ResponseCode===2) { s.done=true; s.code="⏰ Hết giờ"; changed=true; }
     }
   }
-
   if (changed) { saveSims(); renderSims(); }
 }
 
 /* ===== CANCEL ===== */
 async function cancelSim(index) {
   const s   = sims[index];
-  const key = getApiKey();
+  if (s._cancelling) return; // tránh bấm 2 lần
+  s._cancelling = true;
+  saveSims();
 
-  if (s.source === "okvip") {
-    await callOkvip(`/cancel?api_key=${key}&sim_id=${s.simId}`);
-  } else if (s.source === "sv2") {
-    await callSv2({ act: "expired", id: s.otpId });
+  try {
+    if (s.source==="okvip") await callOkvip(`/cancel?api_key=${OKVIP_KEY}&sim_id=${s.simId}`);
+    else                    await callSv2({ act:"expired", id:s.otpId });
+  } catch {}
+
+  // Hoàn tiền nếu chưa hoàn và có pricePaid hợp lệ
+  if (_uid && s.pricePaid > 0 && !s.refunded) {
+    s.refunded = true;
+    await refundBalance(s.pricePaid, s.simId, s.phone);
+    log("✅ Đã hủy SIM, hoàn " + formatVND(s.pricePaid));
+  } else {
+    log("✅ Đã hủy SIM");
   }
 
   sims.splice(index, 1);
   saveSims(); renderSims();
-
-  if (!sims.length) {
-    clearInterval(otpTimer);
-    otpTimer = null;
-    localStorage.removeItem(SIM_KEY);
-  }
+  if (!sims.length) { clearInterval(otpTimer); otpTimer=null; localStorage.removeItem(SIM_KEY); }
 }
 
 /* ===== INIT ===== */
 window.onload = () => {
-  const savedKey = localStorage.getItem(API_KEY_STORE);
-  if (savedKey) {
-    document.getElementById("apiKey").value = savedKey;
-    onApiKeyInput();
-  }
+  loadNetworksOkvip();
   loadSims();
 };
 </script>
