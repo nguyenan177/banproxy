@@ -559,7 +559,7 @@ pre#simLog { background:transparent; color:var(--accent); padding:12px 14px; hei
     <button class="topbar-tab proxy-tab" id="navProxy" onclick="switchPage('proxy')">🌐 Proxy Xoay</button>
     <button class="topbar-tab sim-tab active" id="navSim" onclick="switchPage('sim')">📱 Thuê SIM OTP</button>
     <button class="topbar-tab promo-tab" id="navPromo" onclick="switchPage('promo')">🎁 Khuyến Mãi</button>
-    <button class="topbar-tab bank-tab" id="navBank" onclick="switchPage('bank')">🏦 Thuê Bank Real</button>
+    <button class="topbar-tab bank-tab" id="navBank" onclick="switchPage('bank')">🏦 Biến Động NH</button>
     <button class="topbar-tab game-tab" id="navGame" onclick="switchPage('game')">🃏 So Bài</button>
   </div>
   <div class="topbar-right">
@@ -628,12 +628,12 @@ pre#simLog { background:transparent; color:var(--accent); padding:12px 14px; hei
   <div class="panel sim-panel">
     <div class="panel-label sim-label">Chọn máy chủ</div>
     <div class="sim-server-tabs">
-      <button class="sim-server-tab okvip active" id="tabOkvip" onclick="selectServer('okvip')">
+      <button class="sim-server-tab okvip" id="tabOkvip" onclick="selectServer('okvip')">
         <span class="tab-name">🟠 OKVIP</span>
         <span class="tab-price">2,000 ₫</span>
         <span class="tab-desc">Máy chủ chính — Ổn định cao</span>
       </button>
-      <button class="sim-server-tab sv2" id="tabSv2" onclick="selectServer('sv2')">
+      <button class="sim-server-tab sv2 active" id="tabSv2" onclick="selectServer('sv2')">
         <span class="tab-name">🔵 Sv2 Admin</span>
         <span class="tab-price">3,000 ₫</span>
         <span class="tab-desc">Giá rẻ — Tốc độ nhanh</span>
@@ -645,7 +645,7 @@ pre#simLog { background:transparent; color:var(--accent); padding:12px 14px; hei
     <div class="price-lock" id="priceLock">
       <span>🔒</span>
       <span class="lk-label">Giá thuê:</span>
-      <span class="lk-val" id="priceVal">OKVIP — 2,000 ₫</span>
+      <span class="lk-val" id="priceVal">Sv2 Admin — 3,000 ₫</span>
     </div>
     <div class="field-row">
       <div class="field">
@@ -1001,7 +1001,7 @@ const OKVIP_KEY        = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ0dWFuMjQiLCJqdGkiOiI4N
 const SV2_KEY          = "edf7f0bfd68cba376074d7e7f3234a13";
 const FIXED_SERVICE_ID = 49;
 const SIM_STORE_KEY    = "okvip_sims";
-let currentServer = "okvip";
+let currentServer = "sv2";
 let sims = [], otpTimer = null;
 
 const simLog = t => document.getElementById("simLog").textContent = (typeof t==="object"?JSON.stringify(t,null,2):t);
@@ -1711,7 +1711,7 @@ async function getSimOkvip(network,prefix){
   let q=`/get-sim?api_key=${OKVIP_KEY}&service_id=${FIXED_SERVICE_ID}`;
   if(network)q+=`&network_id=${network}`;if(prefix)q+=`&phone=${prefix}`;
   const d=await callOkvip(q);
-  if(d?.status!==200){if(_uid)await refundBalance(PRICE_OKVIP,"failed","");return simLog("❌ OKVIP: Không lấy được số\n"+JSON.stringify(d));}
+  if(d?.status!==200){if(_uid)await refundBalance(PRICE_OKVIP,"failed","");return simLog("⚠️ LỖI Bảo Trì\nVui lòng Dùng Sv 2");}
   sims.push({source:"okvip",otpId:d.data.otpId,simId:d.data.simId,phone:d.data.phone,code:null,audio:null,done:false,pricePaid:_uid?PRICE_OKVIP:0});
   saveSims();renderSims();startOtp();simLog("✅ Lấy số thành công!"+(_uid?` Đã trừ ${formatVND(PRICE_OKVIP)}`:""));
 }
@@ -1858,7 +1858,7 @@ function renderLiveBets(bets){
 }
 
 function listenLeaderboard(){
-  _db.ref(`${GAME_REF}/leaderboard`).orderByChild('coins').limitToLast(5).on('value',snap=>{
+  _db.ref(`${GAME_REF}/leaderboard`).orderByChild('balance').limitToLast(5).on('value',snap=>{
     const el=document.getElementById('leaderboard');if(!el)return;
     const raw=snap.val();if(!raw){el.innerHTML='<span style="font-family:Space Mono,monospace;font-size:10px;color:rgba(255,255,255,.25);">Chưa có dữ liệu</span>';return;}
     const sorted=Object.values(raw).sort((a,b)=>b.balance-a.balance).slice(0,5);
@@ -1953,7 +1953,7 @@ function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 function initGame(){renderCoins();renderBet();listenGame();ensureRoundExists();listenLeaderboard();}
 
 /* ── INIT ── */
-window.onload=()=>{loadApiMap();loadNetworksOkvip();loadSims();initGame();};
+window.onload=()=>{loadApiMap();loadNetworksSv2();loadSims();initGame();};
 </script>
 </body>
 </html>
