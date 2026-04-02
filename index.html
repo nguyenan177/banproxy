@@ -2,1958 +2,1058 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>Eagle Panel — Proxy & SIM OTP</title>
+<title>PROXY XOAY EAGLE</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Barlow+Condensed:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-<script>
-  window.BANK_CONFIG = { bankId:"TPB", accountNo:"10001979021", accountName:"NGUYEN QUOC AN", template:"compact" };
-
-  const _app = firebase.initializeApp({
-    apiKey:"AIzaSyDq5ew_s9QpgDPBF_ZA0Ksr2ge3m6TtRjA",
-    authDomain:"autobank-dba16.firebaseapp.com",
-    databaseURL:"https://autobank-dba16-default-rtdb.firebaseio.com",
-    projectId:"autobank-dba16",
-    storageBucket:"autobank-dba16.firebasestorage.app",
-    messagingSenderId:"1072197275549",
-    appId:"1:1072197275549:web:617068339935d992106974"
-  });
-  const _auth = firebase.auth();
-  const _db   = firebase.database();
-
-  const PRICE_OKVIP = 2000;
-  const PRICE_SV2   = 3000;
-  let _uid = null, _balance = 0;
-  window._uid = null; window._balance = 0;
-
-  _auth.onAuthStateChanged(async (user) => {
-    if (user) {
-      _uid = user.uid;
-      window._uid = user.uid;
-      window._currentUser = user;
-      const snap = await _db.ref(`users/${user.uid}`).get();
-      if (!snap.exists()) {
-        await _db.ref(`users/${user.uid}`).set({
-          displayName: user.displayName || user.email.split("@")[0],
-          email: user.email, balance: 0, createdAt: Date.now()
-        });
-      }
-      if (window._listenBalance) window._listenBalance(user.uid);
-      if (window._onLogin) window._onLogin(user);
-    } else {
-      _uid = null; _balance = 0;
-      window._uid = null; window._balance = 0;
-      window._currentUser = null;
-      if (window._onLogout) window._onLogout();
-    }
-  });
-
-  function formatVND(n) { return (n||0).toLocaleString("vi-VN") + " ₫"; }
-
-  async function deductBalance(amount, simId, phone, type) {
-    if (!_uid) return;
-    const balRef = _db.ref(`users/${_uid}/balance`);
-    let success = false;
-    await balRef.transaction(current => {
-      const bal = current || 0;
-      if (bal < amount) return;
-      success = true;
-      return bal - amount;
-    });
-    if (!success) throw new Error(`Số dư không đủ! Cần ${formatVND(amount)}, có ${formatVND(_balance)}`);
-    await _db.ref(`transactions/${_uid}/SMS_${Date.now()}`).set({ type, amount:-amount, simId, phone, createdAt:Date.now() });
-  }
-
-  async function refundBalance(amount, simId, phone) {
-    if (!_uid) return;
-    await _db.ref(`users/${_uid}/balance`).transaction(current => (current||0) + amount);
-    await _db.ref(`transactions/${_uid}/REFUND_${Date.now()}`).set({ type:"Hoàn tiền SIM", amount, simId, phone, createdAt:Date.now() });
-  }
-</script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Barlow+Condensed:wght@400;600;700;800&display=swap" rel="stylesheet">
 
 <style>
 :root {
-  --bg:      #f4f6fb;
-  --surface: #ffffff;
-  --card:    #fafafa;
-  --surface2:#f0f2f8;
-  --border:  #e2e5f0;
-  --border2: #cdd1e8;
-  --text:    #1a1a2e;
-  --muted:   #8890b0;
-  --muted2:  #6070a0;
-  --accent:  #4f52d0;
-  --accent2: #3d40bf;
-  --orange:  #f97316;
-  --green:   #16a34a;
-  --red:     #dc2626;
-  --blue:    #2563eb;
-  --purple:  #7c3aed;
-  --cyan:    #0891b2;
-  --teal:    #0d9488;
-  --glow:    rgba(79,82,208,.12);
+    --bg: #ffffff;
+    --surface: #f5f5f8;
+    --card: #fafafa;
+    --card2: #f0f0f5;
+    --border: #e2e2ec;
+    --border2: #d0d0de;
+    --text: #1a1a2e;
+    --muted: #9090a8;
+    --muted2: #6a6a88;
+    --accent: #5254cc;
+    --accent2: #4446b8;
+    --orange: #f97316;
+    --green: #16a34a;
+    --red: #dc2626;
+    --blue: #2563eb;
+    --purple: #7c3aed;
+    --cyan: #0891b2;
+    --glow: rgba(82,84,204,.12);
+    --glow-sm: rgba(82,84,204,.08);
 }
-*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
 body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'Barlow Condensed', sans-serif;
-  font-size: 15px;
-  min-height: 100vh;
-  overflow-x: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 15px;
+    min-height: 100vh;
+    overflow-x: hidden;
 }
 
-#matrix-canvas { position:fixed; top:0; left:0; width:100%; height:100%; z-index:0; pointer-events:none; opacity:.3; }
+#matrix-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.55;
+}
+
 body::before {
-  content:''; position:fixed; inset:0;
-  background-image: linear-gradient(rgba(79,82,208,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(79,82,208,.03) 1px,transparent 1px);
-  background-size:52px 52px; pointer-events:none; z-index:1;
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(82,84,204,.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(82,84,204,.04) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 1;
 }
+
 body::after {
-  content:''; position:fixed; inset:0;
-  background: radial-gradient(ellipse at 50% 0%, rgba(255,255,255,.9) 0%, rgba(244,246,251,.75) 100%);
-  pointer-events:none; z-index:2;
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 50%, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.45) 60%, rgba(255,255,255,0.25) 100%);
+    pointer-events: none;
+    z-index: 2;
 }
 
-/* ═══ TOPBAR ═══ */
-.topbar {
-  position: fixed; top:0; left:0; right:0; z-index:500;
-  height: 56px;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 20px;
-  background: rgba(255,255,255,.92);
-  backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--border);
-  box-shadow: 0 2px 20px rgba(0,0,0,.06);
-  gap: 12px;
-}
-.topbar-logo {
-  display: flex; align-items: center; gap: 10px;
-  font-weight: 800; font-size: 17px; letter-spacing: -.3px; color: var(--text);
-  flex-shrink: 0; text-decoration: none;
-}
-.topbar-logo .logo-icon {
-  width: 32px; height: 32px; border-radius: 8px;
-  background: linear-gradient(135deg, var(--accent), var(--purple));
-  display: flex; align-items: center; justify-content: center;
-  font-size: 17px; box-shadow: 0 2px 10px rgba(79,82,208,.3);
-}
-.topbar-logo .logo-text { background: linear-gradient(135deg,var(--accent),var(--purple)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-
-.topbar-tabs {
-  display: flex; align-items: center; gap: 4px;
-  background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 4px;
-}
-.topbar-tab {
-  padding: 6px 16px; border-radius: 7px; border: none; background: transparent;
-  color: var(--muted); font-family: 'Barlow Condensed', sans-serif;
-  font-size: 13px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase;
-  cursor: pointer; transition: all .18s; white-space: nowrap;
-  display: flex; align-items: center; gap: 6px;
-}
-.topbar-tab:hover { color: var(--text); background: rgba(255,255,255,.7); }
-.topbar-tab.active.proxy-tab { background: linear-gradient(135deg,var(--accent),#4f46e5); color: #fff; box-shadow: 0 2px 10px rgba(79,82,208,.3); }
-.topbar-tab.active.sim-tab   { background: linear-gradient(135deg,var(--orange),#ea580c); color: #fff; box-shadow: 0 2px 10px rgba(249,115,22,.3); }
-.topbar-tab.active.promo-tab { background: linear-gradient(135deg,#16a34a,#15803d); color: #fff; box-shadow: 0 2px 10px rgba(22,163,74,.3); }
-.topbar-tab.active.bank-tab  { background: linear-gradient(135deg,var(--teal),#0891b2); color: #fff; box-shadow: 0 2px 10px rgba(13,148,136,.3); }
-.topbar-tab.active.game-tab  { background: linear-gradient(135deg,#dc2626,#991b1b); color: #fff; box-shadow: 0 2px 10px rgba(220,38,38,.3); }
-
-.topbar-right { display:flex; align-items:center; gap:8px; }
-
-.user-widget {
-  display:flex; align-items:center; gap:8px;
-  background:var(--surface2); border:1px solid var(--border);
-  border-radius:9px; padding:6px 12px; cursor:pointer;
-  transition:all .15s; position:relative;
-}
-.user-widget:hover { border-color:var(--accent); box-shadow:0 0 0 3px rgba(79,82,208,.08); }
-.user-avatar { width:26px; height:26px; border-radius:50%; background:linear-gradient(135deg,var(--accent),var(--purple)); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:#fff; flex-shrink:0; }
-.user-name  { font-size:12px; font-weight:700; color:var(--text); line-height:1; }
-.user-balance { font-family:'Space Mono',monospace; font-size:10px; color:var(--green); line-height:1; }
-.user-menu {
-  display:none; position:absolute; top:calc(100% + 6px); right:0;
-  background:#fff; border:1px solid var(--border2); border-radius:10px;
-  box-shadow:0 8px 30px rgba(0,0,0,.12); z-index:600; min-width:200px; overflow:hidden;
-}
-.user-menu.open { display:block; animation:dropIn .12s ease; }
-.user-menu button {
-  display:flex; align-items:center; gap:8px; width:100%;
-  padding:10px 14px; font-family:'Barlow Condensed',sans-serif;
-  font-size:12px; font-weight:700; letter-spacing:.5px; text-transform:uppercase;
-  background:transparent; border:none; border-bottom:1px solid var(--border);
-  color:var(--text); cursor:pointer; transition:background .12s;
-}
-.user-menu button:last-child { border-bottom:none; }
-.user-menu button:hover { background:rgba(79,82,208,.05); }
-.user-menu button.danger { color:var(--red); }
-@keyframes dropIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:none} }
-
-.login-btn {
-  background:linear-gradient(135deg,var(--accent),#4f46e5); color:#fff; padding:7px 16px;
-  font-size:12px; font-weight:700; font-family:'Barlow Condensed',sans-serif; letter-spacing:.5px;
-  border-radius:7px; border:none; cursor:pointer; text-transform:uppercase;
-  box-shadow:0 2px 10px rgba(79,82,208,.25); transition:all .18s; white-space:nowrap;
-}
-.login-btn:hover { transform:translateY(-1px); box-shadow:0 4px 16px rgba(79,82,208,.38); }
-
-/* ═══ PAGES ═══ */
-.page-section { display:none; position:relative; z-index:10; max-width:880px; margin:0 auto; padding:76px 16px 60px; }
-.page-section.active { display:block; }
-
-/* ═══ HERO ═══ */
-.hero { text-align:center; padding:16px 0 24px; }
-.hero-badge { display:inline-flex; align-items:center; gap:6px; padding:4px 14px; border-radius:99px; border:1px solid rgba(79,82,208,.2); background:rgba(79,82,208,.06); color:var(--accent); font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-bottom:12px; font-family:'Space Mono',monospace; }
-.hero-badge.sim-badge { border-color:rgba(249,115,22,.25); background:rgba(249,115,22,.07); color:var(--orange); }
-.hero h1 { font-size: clamp(26px,6vw,42px); font-weight:800; letter-spacing:-1px; line-height:1.1; background:linear-gradient(135deg,var(--text) 0%,var(--accent) 55%,var(--purple) 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; text-transform:uppercase; margin-bottom:8px; }
-.hero h1.sim-h1 { background:linear-gradient(135deg,var(--text) 0%,var(--orange) 55%,#ea580c 100%); -webkit-background-clip:text; background-clip:text; }
-.hero-sub { font-family:'Space Mono',monospace; font-size:10px; color:var(--muted); letter-spacing:2px; text-transform:uppercase; }
-.hero-line { width:60px; height:2px; background:linear-gradient(90deg,transparent,var(--accent),transparent); margin:14px auto 0; }
-.hero-line.sim-line { background:linear-gradient(90deg,transparent,var(--orange),transparent); }
-
-/* ═══ PANELS ═══ */
-.panel { background:rgba(255,255,255,.9); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:16px; position:relative; box-shadow:0 2px 12px rgba(0,0,0,.05); backdrop-filter:blur(8px); }
-.panel::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent 5%,var(--accent) 50%,transparent 95%); opacity:.35; border-radius:12px 12px 0 0; }
-.panel.sim-panel::before { background:linear-gradient(90deg,transparent 5%,var(--orange) 50%,transparent 95%); }
-.panel-label { font-family:'Space Mono',monospace; font-size:10px; color:var(--muted2); letter-spacing:2px; text-transform:uppercase; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
-.panel-label::before { content:''; display:inline-block; width:6px; height:6px; background:var(--accent); border-radius:50%; box-shadow:0 0 6px rgba(79,82,208,.5); }
-.panel-label.sim-label::before { background:var(--orange); box-shadow:0 0 6px rgba(249,115,22,.5); }
-
-/* ═══ INPUTS ═══ */
-textarea, input.field-input, select.field-input { width:100%; background:var(--surface2); border:1.5px solid var(--border2); border-radius:8px; padding:10px 13px; font-family:'Space Mono',monospace; font-size:12px; color:var(--text); transition:border-color .2s,box-shadow .2s; }
-textarea { resize:vertical; min-height:88px; line-height:1.6; }
-textarea::placeholder, input.field-input::placeholder { color:var(--muted); }
-textarea:focus, input.field-input:focus, select.field-input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--glow); }
-select.field-input { -webkit-appearance:none; appearance:none; cursor:pointer; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%238890b0' viewBox='0 0 20 20'%3E%3Cpath d='M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center; background-size:16px; padding-right:36px; }
-select.field-input option { background:#f0f2f8; }
-.field-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
-.field { display:flex; flex-direction:column; gap:6px; }
-.field label { font-family:'Space Mono',monospace; font-size:10px; color:var(--muted2); letter-spacing:1px; text-transform:uppercase; }
-
-/* ═══ BUTTONS ═══ */
-.btn-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; align-items:center; }
-button { font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; padding:9px 16px; border-radius:7px; border:none; cursor:pointer; color:#fff; transition:all .15s; display:inline-flex; align-items:center; gap:5px; white-space:nowrap; }
-button:hover:not(:disabled) { transform:translateY(-1px); filter:brightness(1.08); }
-button:active:not(:disabled) { transform:translateY(0); filter:brightness(.96); }
-button:disabled { opacity:.4; cursor:not-allowed; }
-.btn-add     { background:#fff; border:1.5px solid var(--border2); color:var(--text); box-shadow:0 1px 4px rgba(0,0,0,.07); }
-.btn-add:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); }
-.btn-rotate  { background:linear-gradient(135deg,var(--accent),#4f46e5); box-shadow:0 2px 10px rgba(79,82,208,.25); }
-.btn-copy    { background:linear-gradient(135deg,#15803d,#16a34a); box-shadow:0 2px 8px rgba(22,163,74,.18); }
-.btn-red     { background:linear-gradient(135deg,#b91c1c,#dc2626); }
-.btn-orange  { background:linear-gradient(135deg,#c2410c,#ea580c); }
-.btn-blue    { background:linear-gradient(135deg,#1d4ed8,#2563eb); }
-.btn-purple  { background:linear-gradient(135deg,#6d28d9,#7c3aed); }
-.btn-cyan    { background:linear-gradient(135deg,#0e7490,#0891b2); }
-.btn-primary { background:linear-gradient(135deg,var(--accent),#4f46e5); box-shadow:0 2px 10px rgba(79,82,208,.2); }
-.btn-green   { background:linear-gradient(135deg,#15803d,#16a34a); box-shadow:0 2px 8px rgba(22,163,74,.2); }
-.btn-teal    { background:linear-gradient(135deg,#0d9488,#0891b2); box-shadow:0 2px 8px rgba(13,148,136,.2); }
-.btn-sim-primary { background:linear-gradient(135deg,var(--orange),#ea580c); box-shadow:0 4px 18px rgba(249,115,22,.28); width:100%; justify-content:center; padding:13px; font-size:15px; border-radius:10px; }
-.btn-full  { width:100%; justify-content:center; padding:12px; font-size:14px; border-radius:8px; margin-top:4px; }
-
-#apiStatus { font-family:'Space Mono',monospace; font-size:11px; color:var(--muted2); margin-top:10px; padding:6px 10px; background:var(--surface2); border-left:2px solid var(--accent); border-radius:0 4px 4px 0; display:none; }
-#apiStatus.visible { display:block; }
-
-/* ═══ COPY ALL DROPDOWN ═══ */
-.copy-all-wrapper { position:relative; display:inline-block; }
-.copy-all-dropdown { display:none; position:absolute; top:calc(100% + 8px); left:0; background:#fff; border:1px solid var(--border2); border-radius:10px; box-shadow:0 8px 30px rgba(0,0,0,.12); z-index:200; min-width:210px; overflow:hidden; }
-.copy-all-dropdown.open { display:block; animation:dropIn .12s ease; }
-.copy-all-dropdown button { display:flex; align-items:center; gap:10px; width:100%; padding:11px 14px; font-size:12px; border-radius:0; background:transparent; color:var(--text); border-bottom:1px solid var(--border); transform:none; box-shadow:none; }
-.copy-all-dropdown button:last-child { border-bottom:none; }
-.copy-all-dropdown button:hover { background:rgba(79,82,208,.05); transform:none; filter:none; }
-.dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
-.dot-http   { background:var(--blue); }
-.dot-socks5 { background:var(--purple); }
-.dot-all    { background:conic-gradient(var(--blue) 0% 50%,var(--purple) 50% 100%); }
-
-/* ═══ PROXY CARDS ═══ */
-#proxyList { display:flex; flex-direction:column; gap:12px; }
-.proxy-container { background:rgba(255,255,255,.9); border:1px solid var(--border); border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:10px; position:relative; transition:border-color .2s,box-shadow .2s; animation:cardIn .25s ease; box-shadow:0 1px 6px rgba(0,0,0,.05); backdrop-filter:blur(8px); }
-@keyframes cardIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
-.proxy-container:hover { border-color:var(--border2); box-shadow:0 4px 20px rgba(0,0,0,.08); }
-.proxy-container.uuid-type { border-left:3px solid var(--purple); }
-.proxy-text { font-family:'Space Mono',monospace; font-size:12px; background:var(--surface2); border:1px solid var(--border); border-radius:7px; padding:12px 14px; word-break:break-all; color:var(--accent2); line-height:1.6; flex:1; overflow-x:auto; }
-.proxy-text.uuid-proxies { display:flex; flex-direction:column; gap:8px; background:transparent; border:none; padding:0; }
-.proxy-line { display:flex; align-items:center; gap:8px; flex-wrap:wrap; background:var(--surface2); border:1px solid var(--border); border-radius:7px; padding:8px 10px; cursor:pointer; transition:background .15s,border-color .15s; position:relative; }
-.proxy-line:hover { background:rgba(79,82,208,.06); border-color:var(--accent); }
-.proxy-line:hover::after { content:'⎘ COPY'; position:absolute; right:10px; top:50%; transform:translateY(-50%); font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; letter-spacing:1px; color:var(--accent); background:rgba(79,82,208,.1); border:1px solid rgba(79,82,208,.25); border-radius:3px; padding:2px 7px; }
-.proxy-line.copied { background:rgba(22,163,74,.08)!important; border-color:var(--green)!important; }
-.proxy-line.copied::after { content:'✅ COPIED'!important; color:var(--green)!important; background:rgba(22,163,74,.1)!important; border-color:rgba(22,163,74,.3)!important; }
-.proxy-label { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; letter-spacing:1.5px; padding:2px 8px; border-radius:3px; color:#fff; white-space:nowrap; text-transform:uppercase; }
-.proxy-label.http   { background:var(--blue); }
-.proxy-label.socks5 { background:var(--purple); }
-.proxy-value { font-family:'Space Mono',monospace; font-size:12px; color:var(--text); word-break:break-all; flex:1; min-width:0; }
-.status { font-family:'Space Mono',monospace; font-size:11px; color:var(--muted2); padding:4px 8px; background:var(--surface2); border:1px solid var(--border); border-radius:4px; white-space:nowrap; }
-.proxy-actions { display:flex; flex-direction:column; gap:7px; width:100%; }
-.filter-row { display:flex; gap:6px; align-items:center; width:100%; }
-.filter-row input { background:var(--surface2); border:1.5px solid var(--border2); border-radius:7px; padding:7px 10px; font-family:'Space Mono',monospace; font-size:11px; color:var(--text); flex:1; transition:border-color .2s; }
-.filter-row input::placeholder { color:var(--muted); }
-.filter-row input:focus { outline:none; border-color:var(--cyan); }
-.action-btns { display:flex; gap:6px; flex-wrap:nowrap; width:100%; }
-.action-btns button { flex:1 1 0; min-width:0; font-size:11px; padding:8px 4px; justify-content:center; }
-@media(min-width:540px) {
-  .proxy-actions { flex-direction:row; align-items:center; }
-  .filter-row { flex:1.6 1 0; width:auto; }
-  .action-btns { flex:3 1 0; width:auto; }
-}
-.ip-info-row { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:0 2px; flex-wrap:wrap; }
-.real-ip-label { font-family:'Space Mono',monospace; font-size:10px; color:var(--muted); display:flex; align-items:center; gap:4px; }
-.real-ip-label::before { content:'◉'; font-size:9px; color:var(--green); }
-.btn-test-km { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; background:rgba(217,119,6,.08); border:1px solid rgba(217,119,6,.3); color:#b45309; padding:3px 10px; border-radius:4px; cursor:pointer; transition:all .15s; text-transform:uppercase; }
-.btn-test-km:hover:not(:disabled) { background:rgba(217,119,6,.15); border-color:#d97706; transform:none; }
-.proxy-divider { height:1px; background:var(--border); margin:2px 0; }
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.35} }
-.loading-text { animation:blink 1.2s infinite; color:var(--muted); font-family:'Space Mono',monospace; font-size:12px; }
-
-/* ═══ SIM ═══ */
-.sim-server-tabs { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-.sim-server-tab { padding:14px 16px; border-radius:10px; border:1.5px solid var(--border); background:var(--surface2); color:var(--muted); font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; transition:all .2s; display:flex; flex-direction:column; align-items:flex-start; gap:3px; }
-.sim-server-tab .tab-name  { font-size:15px; font-weight:800; color:var(--text); }
-.sim-server-tab .tab-price { font-family:'JetBrains Mono',monospace; font-size:16px; font-weight:700; }
-.sim-server-tab .tab-desc  { font-size:11px; color:var(--muted); font-weight:500; }
-.sim-server-tab:hover { border-color:var(--border2); }
-.sim-server-tab.active.okvip { border-color:var(--orange); background:rgba(249,115,22,.06); }
-.sim-server-tab.active.okvip .tab-name,.sim-server-tab.active.okvip .tab-price { color:var(--orange); }
-.sim-server-tab.active.sv2 { border-color:var(--accent); background:rgba(79,82,208,.06); }
-.sim-server-tab.active.sv2 .tab-name,.sim-server-tab.active.sv2 .tab-price { color:var(--accent); }
-.price-lock { display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; margin-bottom:14px; font-size:13px; }
-.price-lock .lk-label { color:var(--muted); font-weight:600; }
-.price-lock .lk-val { font-family:'JetBrains Mono',monospace; font-weight:700; color:var(--orange); font-size:14px; margin-left:auto; }
-#simList { display:flex; flex-direction:column; gap:10px; margin-bottom:2px; }
-.sim-card { background:rgba(255,255,255,.9); border:1px solid var(--border); border-radius:11px; padding:14px 16px; animation:cardIn .2s ease; transition:border-color .2s; box-shadow:0 1px 6px rgba(0,0,0,.04); }
-.sim-card:hover { border-color:var(--border2); box-shadow:0 4px 16px rgba(0,0,0,.07); }
-.sim-top { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:10px; }
-.sim-phone { font-family:'JetBrains Mono',monospace; font-size:18px; font-weight:700; color:var(--text); display:flex; align-items:center; gap:8px; }
-.sim-badges { display:flex; gap:6px; }
-.badge { display:inline-flex; align-items:center; padding:3px 10px; border-radius:99px; font-size:10px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; }
-.badge-okvip { background:rgba(249,115,22,.12); color:var(--orange); border:1px solid rgba(249,115,22,.3); }
-.badge-sv2   { background:rgba(79,82,208,.1); color:var(--accent); border:1px solid rgba(79,82,208,.25); }
-.sim-meta { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
-.sim-meta span { font-family:'Space Mono',monospace; font-size:10px; color:var(--muted); background:var(--surface2); padding:3px 9px; border-radius:5px; border:1px solid var(--border); display:flex; align-items:center; gap:4px; }
-.sim-otp-box { display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--surface2); border-radius:9px; border:1px solid var(--border); margin-bottom:10px; flex-wrap:wrap; }
-.sim-otp-label { font-family:'Space Mono',monospace; font-size:10px; font-weight:700; color:var(--muted2); letter-spacing:1px; text-transform:uppercase; flex-shrink:0; }
-.otp-waiting { display:flex; align-items:center; gap:6px; color:var(--muted); font-size:12px; font-family:'Space Mono',monospace; }
-.otp-dots span { display:inline-block; width:5px; height:5px; border-radius:50%; background:var(--muted); margin:0 2px; animation:bdot 1.2s infinite; }
-.otp-dots span:nth-child(2) { animation-delay:.2s; }
-.otp-dots span:nth-child(3) { animation-delay:.4s; }
-@keyframes bdot { 0%,80%,100%{opacity:.2} 40%{opacity:1} }
-.otp-code { font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:700; color:var(--green); letter-spacing:3px; }
-.otp-sms { font-size:12px; color:var(--muted); margin-top:4px; font-family:'Space Mono',monospace; }
-audio { width:100%; margin-top:6px; border-radius:7px; height:34px; }
-.sim-actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
-.copy-btn { display:inline-flex; align-items:center; gap:5px; padding:6px 12px; border-radius:7px; border:1.5px solid var(--border2); background:var(--surface2); color:var(--text); font-size:11px; font-weight:700; cursor:pointer; font-family:'Barlow Condensed',sans-serif; letter-spacing:.4px; text-transform:uppercase; transition:all .14s; }
-.copy-btn:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); background:rgba(79,82,208,.05); transform:none; filter:none; }
-.cancel-btn { display:inline-flex; align-items:center; gap:5px; padding:6px 14px; border-radius:7px; border:1.5px solid rgba(220,38,38,.25); background:rgba(220,38,38,.05); color:var(--red); font-size:11px; font-weight:700; cursor:pointer; font-family:'Barlow Condensed',sans-serif; letter-spacing:.4px; text-transform:uppercase; transition:all .14s; margin-left:auto; }
-.cancel-btn:hover:not(:disabled) { background:rgba(220,38,38,.1); border-color:var(--red); transform:none; filter:none; }
-.log-wrap { background:#f8f9ff; border:1px solid var(--border); border-radius:10px; overflow:hidden; }
-.log-hdr { display:flex; align-items:center; justify-content:space-between; padding:8px 14px; border-bottom:1px solid var(--border); font-family:'Space Mono',monospace; font-size:9px; color:var(--muted2); letter-spacing:1.5px; text-transform:uppercase; }
-.log-dot { width:7px; height:7px; border-radius:50%; background:var(--green); box-shadow:0 0 5px var(--green); animation:pulse-dot 2s infinite; }
-@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.35} }
-pre#simLog { background:transparent; color:var(--accent); padding:12px 14px; height:80px; overflow:auto; font-family:'Space Mono',monospace; font-size:11px; line-height:1.6; margin:0; }
-.sim-list-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
-.sim-list-title { font-family:'Space Mono',monospace; font-size:10px; font-weight:700; color:var(--muted2); text-transform:uppercase; letter-spacing:1.5px; }
-.sim-count-badge { font-size:11px; font-weight:700; padding:3px 10px; border-radius:99px; background:rgba(22,163,74,.1); color:var(--green); border:1px solid rgba(22,163,74,.25); font-family:'Space Mono',monospace; }
-
-/* ═══ GAME ═══ */
-.game-coins { display:flex; align-items:center; justify-content:center; gap:12px; background:linear-gradient(135deg,#1a1a2e,#2d1b69); border:1px solid rgba(255,215,0,.25); border-radius:14px; padding:16px 20px; margin-bottom:18px; position:relative; overflow:hidden; }
-.game-coins::before { content:''; position:absolute; inset:0; background:radial-gradient(ellipse at 50% 0%,rgba(255,215,0,.08),transparent 70%); pointer-events:none; }
-.coin-icon { font-size:28px; }
-.coin-label { font-family:'Space Mono',monospace; font-size:10px; color:rgba(255,215,0,.6); text-transform:uppercase; letter-spacing:1.5px; }
-.coin-amount { font-family:'JetBrains Mono',monospace; font-size:26px; font-weight:700; color:#ffd700; text-shadow:0 0 20px rgba(255,215,0,.4); }
-.game-table { background:linear-gradient(135deg,#0f4c2a,#1a6b3a,#0f4c2a); border:3px solid rgba(255,215,0,.3); border-radius:20px; padding:24px 20px; margin-bottom:16px; position:relative; box-shadow:inset 0 2px 20px rgba(0,0,0,.4), 0 4px 24px rgba(0,0,0,.2); }
-.game-table::before { content:''; position:absolute; inset:6px; border:1px solid rgba(255,255,255,.07); border-radius:14px; pointer-events:none; }
-.playing-card { width:80px; height:110px; border-radius:10px; background:#fff; border:2px solid #e0e0e0; display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; box-shadow:0 6px 20px rgba(0,0,0,.35); font-size:32px; font-weight:800; transition:all .3s; user-select:none; }
-.playing-card.red  { color:#dc2626; }
-.playing-card.black { color:#1a1a2e; }
-.playing-card.back { background:linear-gradient(135deg,#1e3a8a,#1e40af); border-color:#3b82f6; color:transparent; font-size:0; background-image: repeating-linear-gradient(45deg,rgba(255,255,255,.04) 0px,rgba(255,255,255,.04) 2px,transparent 2px,transparent 8px); }
-.playing-card.back::after { content:'🂠'; font-size:48px; color:rgba(255,255,255,.3); }
-.playing-card.flip-in { animation:flipIn .4s cubic-bezier(.34,1.56,.64,1); }
-@keyframes flipIn { 0%{transform:rotateY(90deg) scale(.8);opacity:0} 100%{transform:rotateY(0) scale(1);opacity:1} }
-.card-rank { font-size:22px; font-weight:900; line-height:1; }
-.card-suit { font-size:20px; line-height:1; }
-.bet-section { margin-bottom:16px; }
-.bet-label { font-family:'Space Mono',monospace; font-size:10px; color:rgba(255,255,255,.5); letter-spacing:1.5px; text-transform:uppercase; margin-bottom:10px; text-align:center; }
-.bet-chips { display:flex; justify-content:center; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
-.chip { width:52px; height:52px; border-radius:50%; border:3px dashed rgba(255,255,255,.4); display:flex; align-items:center; justify-content:center; flex-direction:column; font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:12px; color:#fff; cursor:pointer; transition:all .18s; position:relative; user-select:none; }
-.chip:hover { transform:translateY(-4px) scale(1.08); box-shadow:0 8px 20px rgba(0,0,0,.35); }
-.chip:active { transform:translateY(-1px) scale(.98); }
-.chip.c10   { background:radial-gradient(circle,#3b82f6,#1d4ed8); border-color:rgba(147,197,253,.5); }
-.chip.c50   { background:radial-gradient(circle,#f97316,#c2410c); border-color:rgba(253,186,116,.5); }
-.chip.c100  { background:radial-gradient(circle,#dc2626,#991b1b); border-color:rgba(252,165,165,.5); }
-.chip.c500  { background:radial-gradient(circle,#7c3aed,#5b21b6); border-color:rgba(196,181,253,.5); }
-.chip.c1000 { background:radial-gradient(circle,#ffd700,#f59e0b); border-color:rgba(253,230,138,.5); color:#1a1a2e; }
-.chip.selected { transform:translateY(-6px) scale(1.12)!important; box-shadow:0 0 0 3px rgba(255,255,255,.6),0 8px 24px rgba(0,0,0,.4)!important; }
-.current-bet-row { display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:14px; }
-.current-bet-label { font-family:'Space Mono',monospace; font-size:10px; color:rgba(255,255,255,.5); }
-.current-bet-val { font-family:'JetBrains Mono',monospace; font-size:18px; font-weight:700; color:#ffd700; }
-.clear-bet-btn { font-size:10px; padding:4px 10px; background:rgba(220,38,38,.25); border:1px solid rgba(220,38,38,.4); color:#fca5a5; border-radius:5px; cursor:pointer; font-family:'Barlow Condensed',sans-serif; font-weight:700; transition:all .14s; }
-.clear-bet-btn:hover { background:rgba(220,38,38,.4); }
-.choice-btns { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
-.btn-red-choice, .btn-black-choice { padding:14px; border-radius:12px; border:2px solid transparent; font-family:'Barlow Condensed',sans-serif; font-size:17px; font-weight:800; letter-spacing:.5px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all .18s; text-transform:uppercase; }
-.btn-red-choice { background:linear-gradient(135deg,#dc2626,#991b1b); color:#fff; box-shadow:0 4px 16px rgba(220,38,38,.4); }
-.btn-black-choice { background:linear-gradient(135deg,#1a1a2e,#374151); color:#fff; border-color:rgba(255,255,255,.15); box-shadow:0 4px 16px rgba(0,0,0,.4); }
-.btn-red-choice:hover   { transform:translateY(-2px); box-shadow:0 6px 24px rgba(220,38,38,.55); }
-.btn-black-choice:hover { transform:translateY(-2px); box-shadow:0 6px 24px rgba(0,0,0,.5); border-color:rgba(255,255,255,.3); }
-.btn-red-choice:disabled, .btn-black-choice:disabled { opacity:.4; cursor:not-allowed; transform:none; box-shadow:none; }
-.game-result { text-align:center; padding:16px; border-radius:12px; margin-bottom:14px; font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:800; letter-spacing:.5px; display:none; animation:resultPop .35s cubic-bezier(.34,1.56,.64,1); }
-@keyframes resultPop { from{transform:scale(.7);opacity:0} to{transform:scale(1);opacity:1} }
-.game-result.win  { background:rgba(22,163,74,.2); border:1px solid rgba(22,163,74,.5); color:#4ade80; display:block; }
-.game-result.lose { background:rgba(220,38,38,.15); border:1px solid rgba(220,38,38,.4); color:#f87171; display:block; }
-.game-result.draw { background:rgba(255,215,0,.12); border:1px solid rgba(255,215,0,.35); color:#ffd700; display:block; }
-.game-history { display:flex; flex-direction:column; gap:5px; max-height:180px; overflow-y:auto; }
-.game-history-item { display:flex; align-items:center; justify-content:space-between; padding:7px 12px; border-radius:7px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08); font-size:12px; }
-.gh-desc { color:rgba(255,255,255,.7); font-weight:600; }
-.gh-amount { font-family:'JetBrains Mono',monospace; font-weight:700; }
-.gh-amount.plus  { color:#4ade80; }
-.gh-amount.minus { color:#f87171; }
-
-/* ═══ MODALS ═══ */
-.modal-overlay { display:none; position:fixed; inset:0; z-index:900; background:rgba(10,10,30,.5); backdrop-filter:blur(6px); align-items:center; justify-content:center; padding:16px; }
-.modal-overlay.open { display:flex; animation:mFadeIn .18s ease; }
-@keyframes mFadeIn { from{opacity:0} to{opacity:1} }
-.modal { background:#fff; border:1px solid var(--border2); border-radius:16px; box-shadow:0 24px 80px rgba(0,0,0,.18); width:100%; max-width:420px; max-height:90vh; overflow-y:auto; position:relative; animation:mSlideUp .22s cubic-bezier(.34,1.56,.64,1); }
-@keyframes mSlideUp { from{opacity:0;transform:translateY(20px) scale(.97)} to{opacity:1;transform:none} }
-.modal-header { padding:18px 20px 14px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; background:#fff; z-index:2; }
-.modal-title { font-size:17px; font-weight:800; color:var(--text); display:flex; align-items:center; gap:8px; }
-.modal-close { width:30px; height:30px; border-radius:8px; background:var(--surface2); border:1px solid var(--border); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:14px; color:var(--muted2); transition:all .14s; flex-shrink:0; }
-.modal-close:hover { background:rgba(220,38,38,.08); border-color:rgba(220,38,38,.3); color:var(--red); transform:none; filter:none; }
-.modal-body { padding:20px 22px; }
-
-.auth-tabs { display:flex; gap:0; margin-bottom:18px; border:1px solid var(--border); border-radius:9px; overflow:hidden; }
-.auth-tab { flex:1; padding:9px; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; background:transparent; border:none; color:var(--muted2); cursor:pointer; transition:all .14s; transform:none; filter:none; }
-.auth-tab:hover { background:var(--surface2); color:var(--text); transform:none; filter:none; }
-.auth-tab.active { background:var(--accent); color:#fff; }
-
-.form-group { margin-bottom:14px; }
-.form-label { display:block; font-family:'Space Mono',monospace; font-size:10px; color:var(--muted2); letter-spacing:1.5px; text-transform:uppercase; margin-bottom:6px; }
-.form-input { width:100%; background:var(--surface2); border:1.5px solid var(--border); border-radius:8px; padding:10px 12px; font-family:'Space Mono',monospace; font-size:12px; color:var(--text); transition:border-color .2s,box-shadow .2s; box-sizing:border-box; }
-.form-input::placeholder { color:var(--muted); }
-.form-input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--glow); }
-.form-error { font-family:'Space Mono',monospace; font-size:10px; color:var(--red); margin-top:5px; display:none; }
-.form-error.visible { display:block; }
-
-.balance-display { background:linear-gradient(135deg,rgba(79,82,208,.07),rgba(124,58,237,.07)); border:1px solid rgba(79,82,208,.18); border-radius:10px; padding:14px 16px; text-align:center; margin-bottom:18px; }
-.balance-label { font-family:'Space Mono',monospace; font-size:10px; color:var(--muted2); letter-spacing:2px; text-transform:uppercase; margin-bottom:4px; }
-.balance-amount { font-family:'Space Mono',monospace; font-size:24px; font-weight:700; color:var(--accent); }
-.topup-presets { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:16px; }
-.preset-btn { background:var(--surface2); border:1.5px solid var(--border2); border-radius:8px; padding:10px 6px; font-size:13px; font-weight:700; color:var(--text); cursor:pointer; transition:all .15s; transform:none; filter:none; }
-.preset-btn:hover { border-color:var(--accent); background:rgba(79,82,208,.06); color:var(--accent); transform:none; filter:none; }
-.preset-btn.selected { border-color:var(--accent); background:rgba(79,82,208,.1); color:var(--accent); }
-.qr-section { text-align:center; margin-top:16px; }
-.qr-image { width:200px; height:200px; border-radius:10px; border:2px solid var(--border2); margin:0 auto 10px; display:block; background:var(--surface2); }
-.qr-bank-info { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px; text-align:left; margin-bottom:12px; }
-.qr-bank-row { display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid var(--border); font-size:12px; }
-.qr-bank-row:last-child { border-bottom:none; }
-.qr-bank-row .lbl { font-family:'Space Mono',monospace; font-size:10px; color:var(--muted2); }
-.qr-bank-row .val { font-family:'Space Mono',monospace; font-size:12px; font-weight:700; color:var(--text); }
-.qr-note { font-family:'Space Mono',monospace; font-size:10px; color:var(--muted2); background:rgba(79,82,208,.06); border:1px dashed rgba(79,82,208,.2); border-radius:6px; padding:8px 10px; margin-bottom:12px; }
-.qr-note strong { color:var(--accent); }
-
-.history-list { display:flex; flex-direction:column; gap:6px; max-height:260px; overflow-y:auto; margin-top:10px; }
-.history-item { display:flex; align-items:center; justify-content:space-between; gap:8px; background:var(--surface2); border:1px solid var(--border); border-radius:7px; padding:8px 10px; }
-.hi-left { display:flex; flex-direction:column; gap:2px; }
-.hi-type { font-size:11px; font-weight:700; letter-spacing:.5px; color:var(--text); text-transform:uppercase; }
-.hi-date { font-family:'Space Mono',monospace; font-size:9px; color:var(--muted); }
-.hi-amount { font-family:'Space Mono',monospace; font-size:13px; font-weight:700; }
-.hi-amount.plus  { color:var(--green); }
-.hi-amount.minus { color:var(--red); }
-
-/* ═══ PROMO ═══ */
-.hero-badge.promo-badge { border-color:rgba(22,163,74,.25); background:rgba(22,163,74,.07); color:var(--green); }
-.hero h1.promo-h1 { background:linear-gradient(135deg,var(--text) 0%,var(--green) 55%,#15803d 100%); -webkit-background-clip:text; background-clip:text; }
-.hero-line.promo-line { background:linear-gradient(90deg,transparent,var(--green),transparent); }
-.promo-card { background:#fff; border:1px solid var(--border); border-radius:16px; padding:24px; margin-bottom:16px; position:relative; box-shadow:0 2px 16px rgba(0,0,0,.06); overflow:hidden; }
-.promo-card.featured { border-color:rgba(22,163,74,.35); box-shadow:0 4px 24px rgba(22,163,74,.12),0 1px 4px rgba(0,0,0,.05); }
-.promo-card.featured::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg,var(--green),#4ade80,var(--green)); background-size:200% 100%; animation:shimmer 2.5s linear infinite; }
-@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
-.promo-card-badge { position:absolute; top:16px; right:16px; background:linear-gradient(135deg,#f97316,#ea580c); color:#fff; font-size:10px; font-weight:800; padding:4px 10px; border-radius:99px; letter-spacing:.8px; font-family:'Barlow Condensed',sans-serif; box-shadow:0 2px 8px rgba(249,115,22,.35); }
-.promo-card-header { display:flex; align-items:flex-start; gap:16px; margin-bottom:20px; }
-.promo-icon { font-size:36px; flex-shrink:0; width:58px; height:58px; border-radius:14px; background:linear-gradient(135deg,rgba(22,163,74,.1),rgba(74,222,128,.15)); border:1px solid rgba(22,163,74,.2); display:flex; align-items:center; justify-content:center; }
-.promo-title { font-size:16px; font-weight:800; color:var(--text); letter-spacing:-.2px; margin-bottom:6px; }
-.promo-subtitle { font-size:13px; color:var(--muted2); line-height:1.5; font-weight:500; }
-.promo-detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px; }
-.promo-detail-item { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px 14px; display:flex; flex-direction:column; gap:4px; }
-.promo-detail-label { font-family:'Space Mono',monospace; font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; }
-.promo-detail-val { font-family:'JetBrains Mono',monospace; font-size:15px; font-weight:700; color:var(--text); }
-.promo-detail-val.green  { color:var(--green); }
-.promo-detail-val.orange { color:var(--orange); }
-.promo-detail-val.accent { color:var(--accent); }
-.promo-steps { display:flex; align-items:center; gap:6px; flex-wrap:wrap; background:rgba(79,82,208,.04); border:1px solid rgba(79,82,208,.1); border-radius:10px; padding:14px 16px; margin-bottom:18px; }
-.promo-step { display:flex; align-items:center; gap:7px; font-size:12px; font-weight:600; color:var(--text); }
-.step-num { width:22px; height:22px; border-radius:50%; background:linear-gradient(135deg,var(--accent),var(--purple)); color:#fff; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-.promo-step-arrow { font-size:14px; color:var(--muted); flex-shrink:0; }
-.promo-status-box { display:flex; align-items:center; gap:10px; padding:12px 16px; border-radius:10px; margin-bottom:14px; background:var(--surface2); border:1px solid var(--border); font-size:13px; font-weight:600; }
-.promo-status-box.eligible   { background:rgba(22,163,74,.07); border-color:rgba(22,163,74,.3); color:var(--green); }
-.promo-status-box.claimed    { background:rgba(79,82,208,.07); border-color:rgba(79,82,208,.3); color:var(--accent); }
-.promo-status-box.ineligible { background:rgba(220,38,38,.06); border-color:rgba(220,38,38,.25); color:var(--red); }
-.promo-status-box.notlogged  { background:rgba(249,115,22,.07); border-color:rgba(249,115,22,.25); color:var(--orange); }
-.promo-status-icon { font-size:18px; flex-shrink:0; }
-.btn-claim-promo { width:100%; padding:14px; border-radius:11px; border:none; background:linear-gradient(135deg,var(--green),#15803d); color:#fff; font-size:15px; font-weight:800; font-family:'Barlow Condensed',sans-serif; letter-spacing:.5px; text-transform:uppercase; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 20px rgba(22,163,74,.35); transition:all .18s; margin-bottom:12px; }
-.btn-claim-promo:hover:not(:disabled) { filter:brightness(1.08); transform:translateY(-1px); }
-.btn-claim-promo:disabled { opacity:.45; cursor:not-allowed; transform:none; box-shadow:none; filter:none; }
-.promo-note { font-family:'Space Mono',monospace; font-size:10px; color:var(--muted); line-height:1.6; }
-.promo-coming-soon { background:#fff; border:1px dashed var(--border2); border-radius:14px; padding:32px 20px; text-align:center; }
-.coming-icon  { font-size:36px; margin-bottom:10px; }
-.coming-title { font-size:16px; font-weight:800; color:var(--text); margin-bottom:6px; }
-.coming-sub   { font-size:13px; color:var(--muted); }
-
-/* ═══ BANK ═══ */
-.bank-live-badge {
-  display: inline-flex; align-items: center; gap: 5px;
-  font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase;
-  color: var(--green); background: rgba(22,163,74,.08); border: 1px solid rgba(22,163,74,.25);
-  border-radius: 99px; padding: 3px 10px;
-}
-.bank-live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse-dot 1.5s infinite; }
-.bank-tx-item {
-  display: flex; align-items: center; gap: 10px;
-  background: var(--surface2); border: 1px solid var(--border); border-radius: 9px;
-  padding: 10px 12px; transition: border-color .15s; animation: cardIn .18s ease;
-}
-.bank-tx-item:hover { border-color: var(--border2); }
-.bank-tx-icon {
-  width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center;
-  justify-content: center; font-size: 15px; flex-shrink: 0;
-}
-.bank-tx-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
-.bank-tx-type { font-size: 12px; font-weight: 700; color: var(--text); }
-.bank-tx-meta { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bank-tx-amount { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; white-space: nowrap; }
-
-/* ═══ RESPONSIVE ═══ */
-@media(max-width:600px) {
-  .topbar-tabs { display:none; }
-  .mobile-tabs { display:flex!important; }
-  .field-row { grid-template-columns:1fr; }
-  .modal-overlay { align-items:flex-end; padding:0; }
-  .modal { border-radius:16px 16px 0 0; max-width:100%; }
-  @keyframes mSlideUp { from{transform:translateY(100%)} to{transform:none} }
-  .sim-server-tabs { grid-template-columns:1fr; }
+.page-wrap {
+    position: relative;
+    z-index: 10;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 28px 16px 60px;
 }
 
-.mobile-tabs { display:none; position:fixed; bottom:0; left:0; right:0; z-index:500; background:rgba(255,255,255,.95); backdrop-filter:blur(12px); border-top:1px solid var(--border); padding:8px 16px 12px; gap:8px; }
-.mobile-tab { flex:1; padding:8px 10px; border-radius:9px; border:none; background:var(--surface2); color:var(--muted); font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; cursor:pointer; transition:all .18s; display:flex; flex-direction:column; align-items:center; gap:2px; }
-.mobile-tab span:first-child { font-size:18px; }
-.mobile-tab.active.proxy-tab { background:linear-gradient(135deg,var(--accent),#4f46e5); color:#fff; box-shadow:0 2px 10px rgba(79,82,208,.3); }
-.mobile-tab.active.sim-tab   { background:linear-gradient(135deg,var(--orange),#ea580c); color:#fff; box-shadow:0 2px 10px rgba(249,115,22,.3); }
-.mobile-tab.active.promo-tab { background:linear-gradient(135deg,#16a34a,#15803d); color:#fff; box-shadow:0 2px 10px rgba(22,163,74,.3); }
-.mobile-tab.active.bank-tab  { background:linear-gradient(135deg,var(--teal),#0891b2); color:#fff; box-shadow:0 2px 10px rgba(13,148,136,.3); }
-.mobile-tab.active.game-tab  { background:linear-gradient(135deg,#dc2626,#991b1b); color:#fff; box-shadow:0 2px 10px rgba(220,38,38,.3); }
+.sms-okvip-btn {
+    position: fixed;
+    top: 18px; right: 18px;
+    background: linear-gradient(135deg, #f59e0b, #f97316);
+    color: #fff;
+    padding: 9px 16px;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: 'Barlow Condensed', sans-serif;
+    letter-spacing: 0.5px;
+    border-radius: 6px;
+    text-decoration: none;
+    box-shadow: 0 0 20px rgba(249,115,22,.25), 0 2px 8px rgba(0,0,0,.12);
+    z-index: 999;
+    transition: all .2s;
+    text-transform: uppercase;
+}
+.sms-okvip-btn:hover { transform: translateY(-1px); box-shadow: 0 0 28px rgba(249,115,22,.4), 0 4px 12px rgba(0,0,0,.15); }
+
+/* ── Header ── */
+.header { text-align: center; margin-bottom: 32px; padding-top: 12px; }
+.header-tag {
+    display: inline-block;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    background: rgba(82,84,204,.07);
+    border: 1px solid rgba(82,84,204,.18);
+    padding: 3px 10px;
+    border-radius: 3px;
+}
+.header h1 {
+    font-size: 42px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    line-height: 1;
+    background: linear-gradient(135deg, #1a1a2e 0%, var(--accent) 50%, #7c3aed 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-transform: uppercase;
+}
+.header-sub {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    margin-top: 8px;
+}
+.header-line {
+    width: 80px; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    margin: 14px auto 0;
+}
+
+/* ── Panel ── */
+.panel {
+    background: rgba(250,250,250,0.88);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 18px;
+    position: relative;
+    overflow: visible;
+    box-shadow: 0 1px 6px rgba(0,0,0,.06);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+.panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent 5%, var(--accent) 50%, transparent 95%);
+    opacity: .4;
+    border-radius: 10px 10px 0 0;
+    pointer-events: none;
+}
+.panel-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--muted2);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.panel-label::before {
+    content: '';
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 6px rgba(82,84,204,.5);
+}
+
+/* ── Textarea / Input ── */
+textarea, input[type="text"], input[type="number"] {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 10px 14px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+    transition: border-color .2s, box-shadow .2s;
+    line-height: 1.6;
+}
+textarea { resize: vertical; min-height: 88px; }
+textarea::placeholder, input::placeholder { color: var(--muted); }
+textarea:focus, input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--glow-sm);
+}
+
+/* ── Buttons ── */
+.btn-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+    align-items: center;
+}
+button {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    padding: 9px 16px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    color: #fff;
+    transition: all .15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+}
+button:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.08); }
+button:active:not(:disabled) { transform: translateY(0); filter: brightness(.96); }
+button:disabled { opacity: .4; cursor: not-allowed; }
+
+.btn-add { background: #ffffff; border: 1.5px solid var(--border2); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+.btn-add:hover:not(:disabled) { border-color: var(--accent); box-shadow: 0 0 12px var(--glow-sm); color: var(--accent); }
+.btn-rotate { background: linear-gradient(135deg, var(--accent), #4f46e5); box-shadow: 0 2px 10px rgba(82,84,204,.25); }
+.btn-copy { background: linear-gradient(135deg, #15803d, #16a34a); box-shadow: 0 2px 8px rgba(22,163,74,.18); }
+.btn-delete { background: linear-gradient(135deg, #b91c1c, #dc2626); box-shadow: 0 2px 8px rgba(220,38,38,.18); }
+.btn-red { background: linear-gradient(135deg, #b91c1c, #dc2626); box-shadow: 0 2px 8px rgba(220,38,38,.18); }
+.btn-orange { background: linear-gradient(135deg, #c2410c, #ea580c); box-shadow: 0 2px 10px rgba(234,88,12,.2); }
+.btn-blue { background: linear-gradient(135deg, #1d4ed8, #2563eb); box-shadow: 0 2px 8px rgba(37,99,235,.2); }
+.btn-purple { background: linear-gradient(135deg, #6d28d9, #7c3aed); box-shadow: 0 2px 8px rgba(124,58,237,.2); }
+.btn-cyan { background: linear-gradient(135deg, #0e7490, #0891b2); box-shadow: 0 2px 8px rgba(8,145,178,.2); }
+.btn-primary { background: linear-gradient(135deg, var(--accent), #4f46e5); box-shadow: 0 2px 10px rgba(82,84,204,.25); }
+.btn-teal { background: linear-gradient(135deg, #0f766e, #0d9488); box-shadow: 0 2px 8px rgba(13,148,136,.2); }
+.btn-full { width: 100%; justify-content: center; }
+
+#apiStatus {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted2);
+    margin-top: 10px;
+    padding: 6px 10px;
+    background: var(--surface);
+    border-left: 2px solid var(--accent);
+    border-radius: 0 4px 4px 0;
+    display: none;
+}
+#apiStatus.visible { display: block; }
+
+/* ── Copy All Dropdown ── */
+.copy-all-wrapper { position: relative; display: inline-block; }
+.copy-all-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    background: #ffffff;
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.12), 0 0 0 1px rgba(0,0,0,.04);
+    z-index: 200;
+    min-width: 200px;
+    overflow: hidden;
+}
+.copy-all-dropdown.open { display: block; animation: dropIn .12s ease; }
+@keyframes dropIn { from { opacity:0; transform: translateY(-4px) scale(.98); } to { opacity:1; transform:none; } }
+.copy-all-dropdown button {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%; padding: 11px 14px; font-size: 12px;
+    border-radius: 0; background: transparent; color: var(--text);
+    text-align: left; border-bottom: 1px solid var(--border);
+    text-transform: uppercase; letter-spacing: 0.5px;
+    transform: none; box-shadow: none;
+}
+.copy-all-dropdown button:last-child { border-bottom: none; }
+.copy-all-dropdown button:hover { background: rgba(82,84,204,.06); transform: none; filter: none; }
+.copy-all-dropdown button .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dot-http   { background: var(--blue); }
+.dot-socks5 { background: var(--purple); }
+.dot-all    { background: conic-gradient(var(--blue) 0% 50%, var(--purple) 50% 100%); }
+
+/* ── Proxy List ── */
+#proxyList { display: flex; flex-direction: column; gap: 12px; }
+
+/* ── Proxy Card ── */
+.proxy-container {
+    background: rgba(250,250,250,0.88);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color .2s, box-shadow .2s;
+    animation: cardIn .25s ease;
+    box-shadow: 0 1px 4px rgba(0,0,0,.05);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+@keyframes cardIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: none; } }
+.proxy-container::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(82,84,204,.2), transparent);
+}
+.proxy-container:hover { border-color: var(--border2); box-shadow: 0 4px 18px rgba(0,0,0,.08); }
+.proxy-container.uuid-type { border-left: 2px solid var(--purple); }
+.proxy-container.uuid-type::before { background: linear-gradient(90deg, transparent, rgba(124,58,237,.2), transparent); }
+
+/* Fproxy card — teal accent */
+.proxy-container.fproxy-type { border-left: 2px solid #0d9488; }
+.proxy-container.fproxy-type::before { background: linear-gradient(90deg, transparent, rgba(13,148,136,.25), transparent); }
+
+/* ── Proxy Text ── */
+.proxy-text {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
+    word-break: break-all;
+    overflow-wrap: anywhere;
+    user-select: text;
+    color: var(--accent2);
+    line-height: 1.6;
+    flex: 1;
+    overflow-x: auto;
+}
+.proxy-text.uuid-proxies { display: flex; flex-direction: column; gap: 8px; background: transparent; border: none; padding: 0; }
+
+/* ── Proxy lines ── */
+.proxy-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+    position: relative;
+}
+.proxy-line:hover { background: rgba(82,84,204,.06); border-color: var(--accent); }
+.proxy-line:hover::after {
+    content: '⎘ COPY';
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    font-family: 'Barlow Condensed', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 1px;
+    color: var(--accent); background: rgba(82,84,204,.1); border: 1px solid rgba(82,84,204,.25); border-radius: 3px; padding: 2px 7px; pointer-events: none;
+}
+.proxy-line.copied { background: rgba(22,163,74,.08) !important; border-color: var(--green) !important; }
+.proxy-line.copied::after { content: '✅ COPIED' !important; color: var(--green) !important; background: rgba(22,163,74,.1) !important; border-color: rgba(22,163,74,.3) !important; }
+
+/* Fproxy lines — teal hover */
+.fproxy-proxy-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+    position: relative;
+}
+.fproxy-proxy-line:hover { background: rgba(13,148,136,.06); border-color: #0d9488; }
+.fproxy-proxy-line:hover::after {
+    content: '⎘ COPY';
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    font-family: 'Barlow Condensed', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 1px;
+    color: #0f766e; background: rgba(13,148,136,.1); border: 1px solid rgba(13,148,136,.25); border-radius: 3px; padding: 2px 7px; pointer-events: none;
+}
+.fproxy-proxy-line.copied { background: rgba(22,163,74,.08) !important; border-color: var(--green) !important; }
+.fproxy-proxy-line.copied::after { content: '✅ COPIED' !important; color: var(--green) !important; background: rgba(22,163,74,.1) !important; border-color: rgba(22,163,74,.3) !important; }
+
+.proxy-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    color: #fff;
+    white-space: nowrap;
+    text-transform: uppercase;
+}
+.proxy-label.http   { background: var(--blue); }
+.proxy-label.socks5 { background: var(--purple); }
+
+.proxy-sublabel {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 9px;
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+.proxy-value { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--text); word-break: break-all; overflow-wrap: anywhere; flex: 1; min-width: 0; }
+
+/* ── Status ── */
+.status {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted2);
+    padding: 4px 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    white-space: nowrap;
+    width: 100%;
+    text-align: center;
+}
+@media (min-width: 540px) { .status { width: auto; text-align: left; align-self: center; } }
+
+/* ── Proxy actions wrapper ── */
+.proxy-actions { display: flex; flex-direction: column; gap: 7px; width: 100%; }
+.filter-row { display: flex; gap: 6px; align-items: center; width: 100%; }
+.filter-row input { background: var(--surface); border: 1.5px solid var(--border2); border-radius: 6px; padding: 7px 10px; font-family: 'Space Mono', monospace; font-size: 11px; color: var(--text); flex: 1; min-width: 0; transition: border-color .2s; width: auto; }
+.filter-row input::placeholder { color: var(--muted); }
+.filter-row input:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 2px rgba(8,145,178,.1); }
+.action-btns { display: flex; gap: 6px; flex-wrap: nowrap; width: 100%; }
+.action-btns button { flex: 1 1 0; min-width: 0; font-size: 11px; padding: 8px 4px; overflow: hidden; text-overflow: ellipsis; justify-content: center; }
+
+@media (min-width: 540px) {
+    .proxy-actions { flex-direction: row; align-items: center; }
+    .filter-row { flex: 1.6 1 0; width: auto; }
+    .action-btns { flex: 3 1 0; width: auto; }
+}
+
+/* ── IP row ── */
+.ip-info-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 0 2px; flex-wrap: wrap; }
+.real-ip-label { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); display: flex; align-items: center; gap: 4px; }
+.real-ip-label::before { content: '◉'; font-size: 9px; color: var(--green); }
+
+.btn-test-km {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
+    background: rgba(217,119,6,.08); border: 1px solid rgba(217,119,6,.3); color: #b45309;
+    padding: 3px 10px; border-radius: 4px; cursor: pointer; transition: all .15s; text-transform: uppercase;
+}
+.btn-test-km:hover:not(:disabled) { background: rgba(217,119,6,.15); border-color: #d97706; transform: none; filter: none; }
+
+/* Badge + IP row: badges trái, IP + TEST KM phải */
+.fproxy-badge-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
+}
+.fproxy-badge {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px; font-weight: 700; letter-spacing: 1px;
+    padding: 2px 8px; border-radius: 3px;
+    color: #fff; text-transform: uppercase;
+}
+.fproxy-badge.loc  { background: linear-gradient(135deg, #0e7490, #0891b2); }
+.fproxy-badge.wait { background: linear-gradient(135deg, #c2410c, #ea580c); }
+.fproxy-badge.die  { background: linear-gradient(135deg, #7c3aed, #6d28d9); }
+
+.proxy-divider { height: 1px; background: var(--border); margin: 2px 0; }
+
+/* Domain copy button — inline on each proxy row */
+.btn-domain {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 9px; font-weight: 700; letter-spacing: 0.8px;
+    padding: 3px 7px; border-radius: 3px; flex-shrink: 0;
+    background: rgba(8,145,178,.1); border: 1px solid rgba(8,145,178,.35); color: #0891b2;
+    cursor: pointer; transition: all .15s; text-transform: uppercase; white-space: nowrap;
+    transform: none; box-shadow: none;
+}
+.btn-domain:hover { background: rgba(8,145,178,.2); border-color: #0891b2; transform: none; filter: none; }
+.btn-domain.copied-domain { background: rgba(22,163,74,.1); border-color: rgba(22,163,74,.4); color: #16a34a; }
+
+@keyframes blink { 0%,100% { opacity:1; } 50% { opacity:.35; } }
+.loading-text { animation: blink 1.2s infinite; color: var(--muted); font-family: 'Space Mono', monospace; font-size: 12px; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 </style>
 </head>
 <body>
 
 <canvas id="matrix-canvas"></canvas>
 
-<!-- ══ TOPBAR ══ -->
-<div class="topbar">
-  <div class="topbar-logo">
-    <div class="logo-icon">🦅</div>
-    <span class="logo-text">EAGLE PANEL</span>
-  </div>
-  <div class="topbar-tabs">
-    <button class="topbar-tab proxy-tab" id="navProxy" onclick="switchPage('proxy')">🌐 Proxy Xoay</button>
-    <button class="topbar-tab sim-tab active" id="navSim" onclick="switchPage('sim')">📱 Thuê SIM OTP</button>
-    <button class="topbar-tab promo-tab" id="navPromo" onclick="switchPage('promo')">🎁 Khuyến Mãi</button>
-    <button class="topbar-tab bank-tab" id="navBank" onclick="switchPage('bank')">🏦 Thuê Bank Real</button>
-    <button class="topbar-tab game-tab" id="navGame" onclick="switchPage('game')">🃏 So Bài</button>
-  </div>
-  <div class="topbar-right">
-    <button class="login-btn" id="openAuthBtn" style="display:none">🔐 Đăng nhập</button>
-    <div class="user-widget" id="userWidget" style="display:none">
-      <div class="user-avatar" id="userAvatar">U</div>
-      <div>
-        <div class="user-name" id="userName">...</div>
-        <div class="user-balance" id="userBalance">0 ₫</div>
-      </div>
-      <span style="font-size:10px;color:var(--muted);margin-left:2px">▾</span>
-      <div class="user-menu" id="userMenu">
-        <button id="openTopupBtn">💳 NẠP TIỀN</button>
-        <button id="openHistoryBtn">📋 LỊCH SỬ</button>
-        <button class="danger" id="logoutBtn">⏻ ĐĂNG XUẤT</button>
-      </div>
-    </div>
-  </div>
-</div>
+<a href="SMSOKVIP.html" class="sms-okvip-btn">📱 THUÊ SMS OKVIP</a>
 
-<!-- Mobile bottom tabs -->
-<div class="mobile-tabs">
-  <button class="mobile-tab proxy-tab" onclick="switchPage('proxy')"><span>🌐</span><span>PROXY</span></button>
-  <button class="mobile-tab sim-tab active" onclick="switchPage('sim')"><span>📱</span><span>SIM OTP</span></button>
-  <button class="mobile-tab promo-tab" onclick="switchPage('promo')"><span>🎁</span><span>KM</span></button>
-  <button class="mobile-tab bank-tab" onclick="switchPage('bank')"><span>🏦</span><span>NH</span></button>
-  <button class="mobile-tab game-tab" onclick="switchPage('game')"><span>🃏</span><span>SO BÀI</span></button>
-</div>
+<div class="page-wrap">
 
-<!-- ══ PAGE: PROXY ══ -->
-<div class="page-section" id="page-proxy">
-  <div class="hero">
-    <div class="hero-badge">// ROTATING PROXY SYSTEM V2.0</div>
+<div class="header">
+    <div class="header-tag">// ROTATING PROXY SYSTEM v2.1</div>
     <h1>🦅 EAGLE PROXY</h1>
-    <div class="hero-sub">HIGH-PERFORMANCE · ROTATING · MULTI-PROTOCOL</div>
-    <div class="hero-line"></div>
-  </div>
-  <div class="panel">
+    <div class="header-sub">HIGH-PERFORMANCE · ROTATING · MULTI-PROTOCOL</div>
+    <div class="header-line"></div>
+</div>
+
+<div class="panel">
     <div class="panel-label">API KEY INPUT</div>
-    <textarea id="apiInput" class="field-input" placeholder="Nhập API Key — mỗi dòng 1 key&#10;Hỗ trợ key thường và UUID key&#10;(xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)"></textarea>
+    <textarea id="apiInput" placeholder="Nhập API Key — mỗi dòng 1 key&#10;Eagle UUID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx&#10;Eagle thường: key từ api_map&#10;Eagle API: ukhe73wa4j6..."></textarea>
+
     <div class="btn-row">
-      <button class="btn-add" id="addApiBtn">＋ THÊM API</button>
-      <button class="btn-rotate" id="rotateAllBtn">⟳ XOAY TẤT CẢ</button>
-      <div class="copy-all-wrapper" id="copyAllWrapper">
-        <button class="btn-copy" id="copyAllBtn">⎘ COPY TẤT CẢ ▾</button>
-        <div class="copy-all-dropdown" id="copyAllDropdown">
-          <button id="copyHttpBtn"><span class="dot dot-http"></span> Chỉ HTTP</button>
-          <button id="copySocksBtn"><span class="dot dot-socks5"></span> Chỉ SOCKS5</button>
-          <button id="copyBothBtn"><span class="dot dot-all"></span> HTTP + SOCKS5</button>
+        <button class="btn-add" id="addApiBtn">＋ THÊM API</button>
+        <button class="btn-rotate" id="rotateAllBtn">⟳ XOAY TẤT CẢ</button>
+
+        <div class="copy-all-wrapper" id="copyAllWrapper">
+            <button class="btn-copy" id="copyAllBtn">⎘ COPY TẤT CẢ ▾</button>
+            <div class="copy-all-dropdown" id="copyAllDropdown">
+                <button id="copyHttpBtn"><span class="dot dot-http"></span> Chỉ HTTP</button>
+                <button id="copySocksBtn"><span class="dot dot-socks5"></span> Chỉ SOCKS5</button>
+                <button id="copyBothBtn"><span class="dot dot-all"></span> HTTP + SOCKS5</button>
+            </div>
         </div>
-      </div>
     </div>
+
     <div id="apiStatus"></div>
-  </div>
-  <div id="proxyList"></div>
 </div>
 
-<!-- ══ PAGE: SIM OTP ══ -->
-<div class="page-section active" id="page-sim">
-  <div class="hero">
-    <div class="hero-badge sim-badge">📱 DỊCH VỤ THUÊ SIM NHẬN OTP</div>
-    <h1 class="sim-h1">SIM OTP EXPRESS</h1>
-    <div class="hero-sub">OKVIP & SV2 · TỰ ĐỘNG POLLING · HOÀN TIỀN NẾU THẤT BẠI</div>
-    <div class="hero-line sim-line"></div>
-  </div>
-  <div class="panel sim-panel">
-    <div class="panel-label sim-label">Chọn máy chủ</div>
-    <div class="sim-server-tabs">
-      <button class="sim-server-tab okvip" id="tabOkvip" onclick="selectServer('okvip')">
-        <span class="tab-name">🟠 OKVIP</span>
-        <span class="tab-price">2,000 ₫</span>
-        <span class="tab-desc">Máy chủ chính — Ổn định cao</span>
-      </button>
-      <button class="sim-server-tab sv2 active" id="tabSv2" onclick="selectServer('sv2')">
-        <span class="tab-name">🔵 Sv2 Admin</span>
-        <span class="tab-price">3,000 ₫</span>
-        <span class="tab-desc">Giá rẻ — Tốc độ nhanh</span>
-      </button>
-    </div>
-  </div>
-  <div class="panel sim-panel">
-    <div class="panel-label sim-label">Lấy số điện thoại</div>
-    <div class="price-lock" id="priceLock">
-      <span>🔒</span>
-      <span class="lk-label">Giá thuê:</span>
-      <span class="lk-val" id="priceVal">Sv2 Admin — 3,000 ₫</span>
-    </div>
-    <div class="field-row">
-      <div class="field">
-        <label>Nhà mạng</label>
-        <select id="simNetwork" class="field-input"><option value="">-- Tất cả nhà mạng --</option></select>
-      </div>
-      <div class="field">
-        <label>Đầu số (không bắt buộc)</label>
-        <input id="simPrefix" class="field-input" placeholder="vd: 098, 090...">
-      </div>
-    </div>
-    <button class="btn-sim-primary" onclick="getSim()"><span>📞</span> Lấy số ngay</button>
-  </div>
-  <div class="panel sim-panel">
-    <div class="sim-list-hdr">
-      <div class="sim-list-title">📋 SIM đang chờ OTP</div>
-      <span class="sim-count-badge" id="simCount">0</span>
-    </div>
-    <div id="simList"></div>
-  </div>
-  <div class="log-wrap">
-    <div class="log-hdr"><span>Nhật ký hoạt động</span><span class="log-dot"></span></div>
-    <pre id="simLog">Sẵn sàng...</pre>
-  </div>
-</div>
+<div id="proxyList"></div>
 
-<!-- ══ PAGE: KHUYẾN MÃI ══ -->
-<div class="page-section" id="page-promo">
-  <div class="hero">
-    <div class="hero-badge promo-badge">🎁 CHƯƠNG TRÌNH ƯU ĐÃI ĐẶC BIỆT</div>
-    <h1 class="promo-h1">KHUYẾN MÃI</h1>
-    <div class="hero-sub">ƯU ĐÃI HẤP DẪN · CẬP NHẬT LIÊN TỤC · CHỈ CÓ TẠI EAGLE</div>
-    <div class="hero-line promo-line"></div>
-  </div>
-  <div class="promo-card featured">
-    <div class="promo-card-badge">🔥 NỔI BẬT</div>
-    <div class="promo-card-header">
-      <div class="promo-icon">🎉</div>
-      <div class="promo-info">
-        <div class="promo-title">NẠP ĐẦU — TẶNG NGAY 10,000 ₫</div>
-        <div class="promo-subtitle">Lần nạp tiền đầu tiên từ 10,000 ₫ → nhận thêm 10,000 ₫ miễn phí</div>
-      </div>
-    </div>
-    <div class="promo-detail-grid">
-      <div class="promo-detail-item"><span class="promo-detail-label">Nạp tối thiểu</span><span class="promo-detail-val green">10,000 ₫</span></div>
-      <div class="promo-detail-item"><span class="promo-detail-label">Thưởng thêm</span><span class="promo-detail-val orange">+10,000 ₫</span></div>
-      <div class="promo-detail-item"><span class="promo-detail-label">Nhận tổng</span><span class="promo-detail-val accent">20,000 ₫</span></div>
-      <div class="promo-detail-item"><span class="promo-detail-label">Áp dụng</span><span class="promo-detail-val">1 lần / tài khoản</span></div>
-    </div>
-    <div class="promo-steps">
-      <div class="promo-step"><span class="step-num">1</span><span>Đăng ký tài khoản mới</span></div>
-      <div class="promo-step-arrow">→</div>
-      <div class="promo-step"><span class="step-num">2</span><span>Nạp từ 10,000 ₫ lần đầu</span></div>
-      <div class="promo-step-arrow">→</div>
-      <div class="promo-step"><span class="step-num">3</span><span>Nhận 10,000 ₫ tự động</span></div>
-    </div>
-    <div class="promo-status-box ineligible" id="promoStatusBox">
-      <span class="promo-status-icon" id="promoStatusIcon">⛔</span>
-      <span class="promo-status-text" id="promoStatusText">Tài khoản của bạn đã trùng IP / Thiết bị.</span>
-    </div>
-    <button class="btn-claim-promo" id="claimPromoBtn" disabled onclick="claimFirstDepositBonus()">
-      <span>🔒</span> Không đủ điều kiện
-    </button>
-    <div class="promo-note">* Hệ thống phát hiện trùng IP hoặc thiết bị. Mỗi tài khoản / thiết bị chỉ áp dụng 1 lần.</div>
-  </div>
-  <div class="promo-coming-soon">
-    <div class="coming-icon">🚀</div>
-    <div class="coming-title">Nhiều khuyến mãi sắp ra mắt</div>
-    <div class="coming-sub">Theo dõi để không bỏ lỡ ưu đãi mới nhất từ Eagle Panel</div>
-  </div>
-</div>
-
-<!-- ══ PAGE: BIẾN ĐỘNG NGÂN HÀNG ══ -->
-<div class="page-section" id="page-bank">
-  <div class="hero">
-    <div class="hero-badge" style="border-color:rgba(13,148,136,.25);background:rgba(13,148,136,.07);color:var(--teal);">🏦 BIẾN ĐỘNG NHIỀU TÀI KHOẢN</div>
-    <h1 style="background:linear-gradient(135deg,var(--text) 0%,var(--teal) 55%,#0891b2 100%);-webkit-background-clip:text;background-clip:text;">BIẾN ĐỘNG NH</h1>
-    <div class="hero-sub">TỰ ĐỘNG NHẬN TK · REALTIME · TIỀN VÀO</div>
-    <div class="hero-line" style="background:linear-gradient(90deg,transparent,var(--teal),transparent);"></div>
-  </div>
-
-  <!-- View 1: Danh sách tài khoản -->
-  <div id="bankViewAccounts">
-    <div class="panel" style="padding:0;overflow:hidden;">
-      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent 5%,var(--teal) 50%,transparent 95%);opacity:.5;border-radius:12px 12px 0 0;"></div>
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px 12px;border-bottom:1px solid var(--border);">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span class="bank-live-badge"><span class="bank-live-dot"></span> AUTO DETECT</span>
-          <span id="bankAccCount" style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted2);">Đang tải...</span>
-        </div>
-        <button id="refreshAccBtn" onclick="refreshBankAccounts()" style="font-size:11px;padding:5px 10px;background:var(--surface2);border:1.5px solid var(--border2);color:var(--muted2);border-radius:7px;font-family:'Barlow Condensed',sans-serif;font-weight:700;">⟳ Làm mới</button>
-      </div>
-      <div id="bankAccCards" style="padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-height:80px;"></div>
-    </div>
-  </div>
-
-  <!-- View 2: Chi tiết giao dịch -->
-  <div id="bankViewDetail" style="display:none;">
-    <!-- Header -->
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
-      <button onclick="closeBankDetail()" style="font-size:11px;padding:6px 14px;background:var(--surface2);border:1.5px solid var(--border2);color:var(--muted2);border-radius:7px;font-family:'Barlow Condensed',sans-serif;font-weight:700;">← BACK</button>
-      <span id="bankDetailTitle" style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:var(--teal);">—</span>
-      <span class="bank-live-badge"><span class="bank-live-dot"></span> LIVE</span>
-    </div>
-    <!-- Stats -->
-    <div style="background:linear-gradient(135deg,rgba(13,148,136,.08),rgba(8,145,178,.08));border:1px solid rgba(13,148,136,.2);border-radius:12px;padding:14px 20px;display:flex;align-items:center;justify-content:space-around;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
-      <div style="text-align:center;">
-        <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--teal);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;">Tổng tháng này</div>
-        <div id="bankStatTotal" style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:var(--teal);">0 ₫</div>
-      </div>
-      <div style="width:1px;height:36px;background:rgba(13,148,136,.2);"></div>
-      <div style="text-align:center;">
-        <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;">Số GD</div>
-        <div id="bankStatCount" style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:var(--muted2);">0</div>
-      </div>
-      <div style="width:1px;height:36px;background:rgba(13,148,136,.2);"></div>
-      <div style="text-align:center;">
-        <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;">Gần nhất</div>
-        <div id="bankStatLast" style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--muted2);">—</div>
-      </div>
-    </div>
-    <!-- Search -->
-    <input type="text" id="bankSearchInput" class="field-input" placeholder="🔍 Tìm nội dung, số tiền..." oninput="filterBankList()" style="margin-bottom:12px;">
-    <!-- TX List -->
-    <div class="panel" style="padding:0;overflow:hidden;">
-      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent 5%,var(--teal) 50%,transparent 95%);opacity:.45;border-radius:12px 12px 0 0;"></div>
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px 10px;border-bottom:1px solid var(--border);">
-        <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted2);letter-spacing:1.5px;text-transform:uppercase;">📋 Giao dịch tiền vào</div>
-        <span id="bankTxCountBadge" style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;background:rgba(13,148,136,.1);color:var(--teal);border:1px solid rgba(13,148,136,.25);font-family:'Space Mono',monospace;">0</span>
-      </div>
-      <div id="bankTxList" style="max-height:480px;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:7px;">
-        <div style="text-align:center;padding:24px;font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);">⏳ Đang tải...</div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ══ PAGE: GAME ══ -->
-<div class="page-section" id="page-game">
-  <div class="hero">
-    <div class="hero-badge" style="border-color:rgba(220,38,38,.3);background:rgba(220,38,38,.07);color:#dc2626;">🃏 MINI GAME GIẢI TRÍ — ĐIỂM ẢO</div>
-    <h1 style="background:linear-gradient(135deg,#dc2626 0%,#f97316 50%,#7c3aed 100%);-webkit-background-clip:text;background-clip:text;">SO BÀI</h1>
-    <div class="hero-sub">CHỌN TRÁI HAY PHẢI · LÁ LỚN THẮNG · MỌI NGƯỜI CÙNG CHƠI</div>
-    <div class="hero-line" style="background:linear-gradient(90deg,transparent,#f97316,transparent);"></div>
-  </div>
-  <div class="game-coins">
-    <span class="coin-icon">💰</span>
-    <div><div class="coin-label">Số dư hiện tại</div><div class="coin-amount" id="gameCoins">0 ₫</div></div>
-  </div>
-  <div class="game-table">
-    <div style="text-align:center;margin-bottom:16px;">
-      <div id="roundPhaseLabel" style="font-family:'Space Mono',monospace;font-size:10px;color:rgba(255,255,255,.5);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;">Đang tải...</div>
-      <div style="display:flex;align-items:center;justify-content:center;gap:16px;">
-        <div style="position:relative;width:64px;height:64px;flex-shrink:0;">
-          <svg width="64" height="64" style="transform:rotate(-90deg)">
-            <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="5"/>
-            <circle id="countdownArc" cx="32" cy="32" r="26" fill="none" stroke="#ffd700" stroke-width="5" stroke-dasharray="163" stroke-dashoffset="0" stroke-linecap="round" style="transition:stroke-dashoffset .9s linear,stroke .3s;"/>
-          </svg>
-          <div id="countdownNum" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:#ffd700;">10</div>
-        </div>
-        <div style="text-align:center;"><div style="font-family:'Space Mono',monospace;font-size:9px;color:rgba(255,255,255,.4);">VÒNG</div><div id="roundNumber" style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:#fff;">#1</div></div>
-        <div style="text-align:center;"><div style="font-family:'Space Mono',monospace;font-size:9px;color:rgba(255,255,255,.4);">NGƯỜI CHƠI</div><div id="playerCount" style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:#4ade80;">0</div></div>
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;margin-bottom:16px;">
-      <div style="text-align:center;">
-        <div style="font-family:'Space Mono',monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-bottom:8px;">TRÁI</div>
-        <div style="display:flex;justify-content:center;"><div class="playing-card back" id="cardLeft"></div></div>
-        <div id="cardLeftVal" style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:rgba(255,255,255,.4);margin-top:8px;min-height:20px;"></div>
-      </div>
-      <div style="text-align:center;"><div id="vsLabel" style="font-family:'Barlow Condensed',monospace;font-size:28px;font-weight:900;color:rgba(255,215,0,.7);text-shadow:0 0 16px rgba(255,215,0,.3);">VS</div></div>
-      <div style="text-align:center;">
-        <div style="font-family:'Space Mono',monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-bottom:8px;">PHẢI</div>
-        <div style="display:flex;justify-content:center;"><div class="playing-card back" id="cardRight"></div></div>
-        <div id="cardRightVal" style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:rgba(255,255,255,.4);margin-top:8px;min-height:20px;"></div>
-      </div>
-    </div>
-    <div class="game-result" id="gameResult"></div>
-    <div class="bet-section">
-      <div class="bet-label">Chọn mức cược</div>
-      <div class="bet-chips">
-        <div class="chip c10"   onclick="selectChip(10000)"   data-val="10000">  <span>10K</span>  </div>
-        <div class="chip c50"   onclick="selectChip(50000)"   data-val="50000">  <span>50K</span>  </div>
-        <div class="chip c100"  onclick="selectChip(100000)"  data-val="100000"> <span>100K</span> </div>
-        <div class="chip c500"  onclick="selectChip(500000)"  data-val="500000"> <span>500K</span> </div>
-        <div class="chip c1000" onclick="selectChip(1000000)" data-val="1000000"><span>1M</span>   </div>
-      </div>
-      <div class="current-bet-row">
-        <span class="current-bet-label">Cược:</span>
-        <span class="current-bet-val" id="currentBetDisplay">0</span>
-        <button class="clear-bet-btn" onclick="clearBet()">✕ Xóa</button>
-      </div>
-    </div>
-    <div class="choice-btns">
-      <button class="btn-red-choice" id="btnLeft" onclick="placeBet('left')" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);box-shadow:0 4px 16px rgba(124,58,237,.4);">◀ TRÁI</button>
-      <button class="btn-black-choice" id="btnRight" onclick="placeBet('right')" style="background:linear-gradient(135deg,#dc2626,#991b1b);box-shadow:0 4px 16px rgba(220,38,38,.4);border-color:transparent;">PHẢI ▶</button>
-    </div>
-    <div id="myBetInfo" style="display:none;text-align:center;padding:8px 14px;background:rgba(255,215,0,.08);border:1px solid rgba(255,215,0,.2);border-radius:8px;margin-bottom:12px;font-family:'Space Mono',monospace;font-size:11px;color:#ffd700;"></div>
-    <div style="font-family:'Space Mono',monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;">👥 Người đang cược vòng này</div>
-    <div id="liveBetsList" style="display:flex;flex-wrap:wrap;gap:6px;min-height:32px;margin-bottom:14px;"></div>
-    <div style="font-family:'Space Mono',monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;">🏆 Bảng xếp hạng xu</div>
-    <div id="leaderboard" style="display:flex;flex-direction:column;gap:5px;margin-bottom:14px;"></div>
-    <div style="font-family:'Space Mono',monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;">📋 Lịch sử ván gần đây</div>
-    <div class="game-history" id="gameHistory">
-      <div style="text-align:center;padding:12px;font-family:'Space Mono',monospace;font-size:10px;color:rgba(255,255,255,.3);">Chưa có ván nào</div>
-    </div>
-  </div>
-</div>
-
-<!-- ══ MODAL: AUTH ══ -->
-<div class="modal-overlay" id="authModal">
-  <div class="modal">
-    <div class="modal-header">
-      <span class="modal-title">🔐 <span id="authModalTitle">Đăng nhập</span></span>
-      <button class="modal-close" id="closeAuthModal">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="auth-tabs">
-        <button class="auth-tab active" id="tabLogin" onclick="switchTab('login')">Đăng nhập</button>
-        <button class="auth-tab" id="tabRegister" onclick="switchTab('register')">Tạo tài khoản</button>
-      </div>
-      <div id="loginForm">
-        <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="loginEmail" placeholder="email@example.com"></div>
-        <div class="form-group"><label class="form-label">Mật khẩu</label><input type="password" class="form-input" id="loginPassword" placeholder="••••••••"></div>
-        <div class="form-error" id="loginError"></div>
-        <button class="btn-primary btn-full" id="loginBtn">🔐 ĐĂNG NHẬP</button>
-      </div>
-      <div id="registerForm" style="display:none">
-        <div class="form-group"><label class="form-label">Tên hiển thị</label><input type="text" class="form-input" id="regName" placeholder="Tên của bạn"></div>
-        <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="regEmail" placeholder="email@example.com"></div>
-        <div class="form-group"><label class="form-label">Mật khẩu</label><input type="password" class="form-input" id="regPassword" placeholder="Tối thiểu 6 ký tự"></div>
-        <div class="form-group"><label class="form-label">Xác nhận mật khẩu</label><input type="password" class="form-input" id="regConfirm" placeholder="Nhập lại mật khẩu"></div>
-        <div class="form-error" id="regError"></div>
-        <button class="btn-green btn-full" id="registerBtn">✅ TẠO TÀI KHOẢN</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ══ MODAL: NẠP TIỀN ══ -->
-<div class="modal-overlay" id="topupModal">
-  <div class="modal">
-    <div class="modal-header">
-      <span class="modal-title">💳 Nạp tiền</span>
-      <button class="modal-close" id="closeTopupModal">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="balance-display">
-        <div class="balance-label">Số dư hiện tại</div>
-        <div class="balance-amount" id="topupBalance">0 ₫</div>
-      </div>
-      <div class="form-label" style="margin-bottom:10px">Chọn mệnh giá</div>
-      <div class="topup-presets" id="presetBtns">
-        <button class="preset-btn" data-amount="10000">10K</button>
-        <button class="preset-btn" data-amount="50000">50K</button>
-        <button class="preset-btn" data-amount="100000">100K</button>
-        <button class="preset-btn" data-amount="200000">200K</button>
-        <button class="preset-btn" data-amount="500000">500K</button>
-        <button class="preset-btn" data-amount="1000000">1M</button>
-        <button class="preset-btn" data-amount="2000000">2M</button>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Hoặc nhập số tiền tùy chỉnh (₫)</label>
-        <input type="number" class="form-input" id="customAmount" placeholder="VD: 150000" min="10000" step="10000">
-      </div>
-      <div id="qrSection" class="qr-section" style="display:none">
-        <div class="qr-bank-info" id="qrBankInfo"></div>
-        <div class="qr-note" id="qrNote"></div>
-        <img class="qr-image" id="qrImg" src="" alt="QR">
-        <div id="waitingBox" style="margin-top:14px;background:rgba(79,82,208,.06);border:1px dashed rgba(79,82,208,.2);border-radius:10px;padding:14px;text-align:center">
-          <div style="font-size:22px;margin-bottom:6px">⏳</div>
-          <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted2);line-height:1.7">Chuyển khoản xong → tiền sẽ vào<br><strong style="color:var(--accent)">tự động trong vài giây</strong></div>
-        </div>
-        <div id="topupSuccessBox" style="display:none;margin-top:14px;background:rgba(22,163,74,.07);border:1px solid rgba(22,163,74,.3);border-radius:10px;padding:14px;text-align:center">
-          <div style="font-size:28px;margin-bottom:6px">🎉</div>
-          <div style="font-family:'Space Mono',monospace;font-size:12px;color:var(--green);font-weight:700" id="topupSuccessMsg">Nạp tiền thành công!</div>
-          <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted2);margin-top:4px" id="topupSuccessNew"></div>
-        </div>
-      </div>
-      <button class="btn-primary btn-full" id="generateQrBtn" style="margin-top:8px">📲 TẠO MÃ QR THANH TOÁN</button>
-    </div>
-  </div>
-</div>
-
-<!-- ══ MODAL: LỊCH SỬ ══ -->
-<div class="modal-overlay" id="historyModal">
-  <div class="modal">
-    <div class="modal-header">
-      <span class="modal-title">📋 Lịch sử giao dịch</span>
-      <button class="modal-close" id="closeHistoryModal">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="balance-display">
-        <div class="balance-label">Số dư hiện tại</div>
-        <div class="balance-amount" id="histBalance">0 ₫</div>
-      </div>
-      <div class="history-list" id="historyList">
-        <div style="text-align:center;padding:20px;font-family:'Space Mono',monospace;font-size:11px;color:var(--muted)">Chưa có giao dịch nào</div>
-      </div>
-    </div>
-  </div>
-</div>
+</div><!-- end page-wrap -->
 
 <script>
-/* ── MATRIX RAIN ── */
-(function(){
-  const canvas=document.getElementById('matrix-canvas');
-  const ctx=canvas.getContext('2d');
-  const chars=('0123456789ABCDEFabcdefghijklmnopqrstuvwxyz{}[]()=><>/\\|proxy.rotate.api.key.http.socks5.sim.otp').split('');
-  const COLORS=[{r:79,g:82,b:208},{r:22,g:163,b:74},{r:37,g:99,b:235},{r:124,g:58,b:237},{r:249,g:115,b:22}];
-  const FS=13; let cols=0,drops=[],colorsArr=[],speedArr=[],frame=0;
-  function resize(){canvas.width=innerWidth;canvas.height=innerHeight;cols=Math.floor(canvas.width/FS);drops=Array.from({length:cols},(_,i)=>drops[i]??Math.random()*-80);colorsArr=Array.from({length:cols},(_,i)=>colorsArr[i]??COLORS[Math.floor(Math.random()*COLORS.length)]);speedArr=Array.from({length:cols},(_,i)=>speedArr[i]??(0.3+Math.random()*0.7));}
-  resize();addEventListener('resize',resize);
-  function draw(){frame++;ctx.fillStyle='rgba(255,255,255,0.055)';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.font=`${FS}px "Space Mono",monospace`;for(let i=0;i<cols;i++){if(frame%Math.round(2/speedArr[i])!==0)continue;const c=colorsArr[i],y=drops[i]*FS;ctx.fillStyle='rgba(255,255,255,0.95)';ctx.fillText(chars[Math.floor(Math.random()*chars.length)],i*FS,y);ctx.fillStyle=`rgba(${c.r},${c.g},${c.b},${0.45+Math.random()*.2})`;ctx.fillText(chars[Math.floor(Math.random()*chars.length)],i*FS,y-FS);ctx.fillStyle=`rgba(${c.r},${c.g},${c.b},0.18)`;ctx.fillText(chars[Math.floor(Math.random()*chars.length)],i*FS,y-FS*2);if(y>canvas.height&&Math.random()>.975){drops[i]=0;colorsArr[i]=COLORS[Math.floor(Math.random()*COLORS.length)];speedArr[i]=0.3+Math.random()*.7;}drops[i]++;}}
-  setInterval(draw,22);
+// ══════════════════════════════════════════════
+//  MATRIX RAIN
+// ══════════════════════════════════════════════
+(function() {
+    const canvas = document.getElementById('matrix-canvas');
+    const ctx = canvas.getContext('2d');
+    const chars = (
+        '0123456789ABCDEF' + 'abcdefghijklmnopqrstuvwxyz' + 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' +
+        '{}[]()=><>/\\|;:.,!@#$%^&*' + '01' +
+        '192.168.0.proxy.rotate.api.key.http.socks5.tunnel.auth.pass.' +
+        'ｦｧｨｩｪｫｬｭｮｯｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ'
+    ).split('');
+    const COLORS = [
+        { r: 82,  g: 84,  b: 204 }, { r: 22,  g: 163, b: 74  },
+        { r: 37,  g: 99,  b: 235 }, { r: 124, g: 58,  b: 237 },
+        { r: 8,   g: 145, b: 178 },
+    ];
+    const FONT_SIZE = 13;
+    let cols=0, drops=[], colorsArr=[], speedArr=[], frameCount=0;
+    function resize() {
+        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+        cols = Math.floor(canvas.width / FONT_SIZE);
+        drops     = Array.from({ length: cols }, (_, i) => drops[i] ?? Math.random() * -80);
+        colorsArr = Array.from({ length: cols }, (_, i) => colorsArr[i] ?? COLORS[Math.floor(Math.random() * COLORS.length)]);
+        speedArr  = Array.from({ length: cols }, (_, i) => speedArr[i]  ?? (0.3 + Math.random() * 0.7));
+    }
+    resize(); window.addEventListener('resize', resize);
+    function draw() {
+        frameCount++;
+        ctx.fillStyle = 'rgba(255,255,255, 0.055)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.font = `${FONT_SIZE}px "Space Mono", monospace`;
+        for (let i = 0; i < cols; i++) {
+            if (frameCount % Math.round(2 / speedArr[i]) !== 0) continue;
+            const c = colorsArr[i]; const y = drops[i] * FONT_SIZE;
+            ctx.fillStyle = `rgba(255, 255, 255, 0.95)`; ctx.fillText(chars[Math.floor(Math.random()*chars.length)], i*FONT_SIZE, y);
+            ctx.fillStyle = `rgba(${c.r},${c.g},${c.b}, ${0.55+Math.random()*.25})`; ctx.fillText(chars[Math.floor(Math.random()*chars.length)], i*FONT_SIZE, y-FONT_SIZE);
+            ctx.fillStyle = `rgba(${c.r},${c.g},${c.b}, 0.25)`; ctx.fillText(chars[Math.floor(Math.random()*chars.length)], i*FONT_SIZE, y-FONT_SIZE*2);
+            if (y > canvas.height && Math.random() > 0.975) {
+                drops[i] = 0; colorsArr[i] = COLORS[Math.floor(Math.random()*COLORS.length)]; speedArr[i] = 0.3+Math.random()*.7;
+            }
+            drops[i]++;
+        }
+    }
+    setInterval(draw, 22);
 })();
 
-/* ── PAGE SWITCHING ── */
-function switchPage(page) {
-  document.querySelectorAll('.page-section').forEach(s=>s.classList.remove('active'));
-  document.querySelectorAll('.topbar-tab').forEach(b=>b.classList.remove('active'));
-  document.querySelectorAll('.mobile-tab').forEach(b=>b.classList.remove('active'));
-  document.getElementById('page-'+page).classList.add('active');
-  const tbMap={proxy:'navProxy',sim:'navSim',promo:'navPromo',bank:'navBank',game:'navGame'};
-  const el=document.getElementById(tbMap[page]);
-  if(el)el.classList.add('active');
-  document.querySelectorAll('.mobile-tab').forEach(b=>{if(b.classList.contains(page+'-tab'))b.classList.add('active');});
-  if(page==='promo') checkPromoStatus();
-  if(page==='bank')  initBankPage();
-}
-
-/* ── SECURITY ── */
-document.addEventListener("contextmenu",e=>e.preventDefault());
-document.addEventListener("keydown",e=>{
-  if(e.key==="F12")e.preventDefault();
-  if(e.ctrlKey&&e.key.toLowerCase()==="u")e.preventDefault();
-  if(e.ctrlKey&&e.shiftKey&&["i","j","c"].includes(e.key.toLowerCase()))e.preventDefault();
-  if(e.ctrlKey&&["s","p"].includes(e.key.toLowerCase()))e.preventDefault();
+// ══════════════════════════════════════════════
+//  DEVTOOLS BLOCK
+// ══════════════════════════════════════════════
+document.addEventListener("contextmenu", e => e.preventDefault());
+document.addEventListener("keydown", e => {
+    if (e.key === "F12") e.preventDefault();
+    if (e.ctrlKey && e.key.toLowerCase() === "u") e.preventDefault();
+    if (e.ctrlKey && e.shiftKey && ["i","j","c"].includes(e.key.toLowerCase())) e.preventDefault();
+    if (e.ctrlKey && ["s","p"].includes(e.key.toLowerCase())) e.preventDefault();
+    if (e.ctrlKey && e.key.toLowerCase() === "a") return;
 });
 
-/* ── GLOBALS ── */
+// ══════════════════════════════════════════════
+//  EAGLE PROXY SECTION
+// ══════════════════════════════════════════════
 const UUID_REGEX    = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const UUID_API_BASE = "https://svproxy2.nguyenanlk2872.workers.dev/proxy/access_key/";
-const API_MAP_URL   = "https://raw.githubusercontent.com/nguyenan177/apiv2/refs/heads/main/api_map.json";
 let API_MAP = {};
+const API_MAP_URL = "https://raw.githubusercontent.com/nguyenan177/apiv2/refs/heads/main/api_map.json";
 const proxyDataStore = new Map();
-let savedApis = JSON.parse(localStorage.getItem("proxy_api_keys")||"[]");
-let _currentBalance=0, _balanceUnsubscribe=null, _selectedAmount=0;
 
-const WORKER           = "https://api.dblgamingg.workers.dev";
-const SV2_BASE         = "https://noisy-darkness-b3aa.dblgamingg.workers.dev/api";
-const OKVIP_KEY        = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ0dWFuMjQiLCJqdGkiOiI4Njk2NCIsImlhdCI6MTc2OTgzNjg2OCwiZXhwIjoxODMyMDQ0ODY4fQ.qP0nIoD-GzWxH_Wz4dNLDNqoGFTpny-jZkgKEZMpFDDIRjK3lQwt0mRF0zUPo3r856n5KxRZAHoRXjPXT3a16Q";
-const SV2_KEY          = "edf7f0bfd68cba376074d7e7f3234a13";
-const FIXED_SERVICE_ID = 49;
-const SIM_STORE_KEY    = "okvip_sims";
-let currentServer = "sv2";
-let sims = [], otpTimer = null;
+const apiInput        = document.getElementById("apiInput");
+const addApiBtn       = document.getElementById("addApiBtn");
+const rotateAllBtn    = document.getElementById("rotateAllBtn");
+const apiStatus       = document.getElementById("apiStatus");
+const proxyList       = document.getElementById("proxyList");
+const copyAllBtn      = document.getElementById("copyAllBtn");
+const copyAllDropdown = document.getElementById("copyAllDropdown");
+const copyAllWrapper  = document.getElementById("copyAllWrapper");
 
-const simLog = t => document.getElementById("simLog").textContent = (typeof t==="object"?JSON.stringify(t,null,2):t);
+copyAllBtn.onclick = (e) => { e.stopPropagation(); copyAllDropdown.classList.toggle("open"); };
+document.addEventListener("click", (e) => { if (!copyAllWrapper.contains(e.target)) copyAllDropdown.classList.remove("open"); });
 
-/* ═══ BANK — REWRITTEN ═══ */
-let _bankAccounts       = [];   // list từ bank_accounts_meta
-let _activeAccNode      = null; // node đang xem, vd "bank_tx_tpb"
-let _allTxData          = [];   // toàn bộ TX của TK đang xem
-let _bankAccListener    = null; // unsubscribe fn
-let _bankTxListener     = null; // unsubscribe fn
-
-const BANK_COLORS = ['#0d9488','#2563eb','#7c3aed','#f97316','#16a34a','#dc2626','#0891b2','#d97706'];
-
-/* ── CONFIRM FEE MODAL ── */
-function showConfirmFee(accLabel, fee) {
-  return new Promise(resolve => {
-    // Tạo overlay
-    const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:1000;background:rgba(10,10,30,.55);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px;animation:mFadeIn .18s ease;';
-
-    overlay.innerHTML = `
-      <div style="background:#fff;border:1px solid var(--border2);border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.18);width:100%;max-width:360px;overflow:hidden;animation:mSlideUp .22s cubic-bezier(.34,1.56,.64,1);">
-        <div style="padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">
-          <span style="font-size:22px;">🏦</span>
-          <span style="font-size:16px;font-weight:800;color:var(--text);">Xác nhận xem biến động</span>
-        </div>
-        <div style="padding:20px 22px;">
-          <div style="background:linear-gradient(135deg,rgba(13,148,136,.07),rgba(8,145,178,.07));border:1px solid rgba(13,148,136,.2);border-radius:10px;padding:14px 16px;margin-bottom:16px;text-align:center;">
-            <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;">Tài khoản</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--teal);">${accLabel}</div>
-          </div>
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(220,38,38,.05);border:1px solid rgba(220,38,38,.2);border-radius:8px;margin-bottom:18px;">
-            <span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted2);">Phí xem</span>
-            <span style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;color:var(--red);">-${fee.toLocaleString('vi-VN')} ₫</span>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-            <button id="cfCancel" style="padding:11px;border-radius:9px;border:1.5px solid var(--border2);background:var(--surface2);color:var(--muted2);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:.5px;cursor:pointer;">✕ HỦY</button>
-            <button id="cfOk" style="padding:11px;border-radius:9px;border:none;background:linear-gradient(135deg,var(--teal),#0891b2);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:.5px;cursor:pointer;box-shadow:0 2px 10px rgba(13,148,136,.3);">✓ XÁC NHẬN</button>
-          </div>
-        </div>
-      </div>`;
-
-    document.body.appendChild(overlay);
-
-    overlay.querySelector('#cfOk').onclick = () => { document.body.removeChild(overlay); resolve(true); };
-    overlay.querySelector('#cfCancel').onclick = () => { document.body.removeChild(overlay); resolve(false); };
-    overlay.addEventListener('click', e => { if (e.target === overlay) { document.body.removeChild(overlay); resolve(false); } });
-  });
+async function copyAndFlash(lines, btn, label) {
+    if (!lines.length) { alert("Không có proxy để copy"); return; }
+    await navigator.clipboard.writeText(lines.join("\n"));
+    copyAllDropdown.classList.remove("open");
+    const orig = btn.innerHTML;
+    btn.innerHTML = `✅ ĐÃ COPY ${lines.length} PROXY`;
+    setTimeout(() => btn.innerHTML = orig, 1500);
 }
 
-function initBankPage() {
-  // Chỉ attach listener 1 lần
-  if (_bankAccListener) return;
-  _listenBankAccounts();
-}
+document.getElementById("copyHttpBtn").onclick = async () => {
+    const lines = [];
+    document.querySelectorAll(".proxy-container:not(.uuid-type):not(.fproxy-type) .proxy-text").forEach(el => { const t = el.innerText.trim(); if(t) lines.push(t); });
+    document.querySelectorAll(".proxy-container.uuid-type").forEach(box => { const d = proxyDataStore.get(box.dataset.uuid); if(d && d.httpLines) lines.push(...d.httpLines); });
+    document.querySelectorAll(".proxy-container.fproxy-type").forEach(box => { const d = proxyDataStore.get(box.dataset.fpkey); if(d && d.httpLines) lines.push(...d.httpLines); });
+    await copyAndFlash(lines, document.getElementById("copyHttpBtn"), "HTTP");
+};
+document.getElementById("copySocksBtn").onclick = async () => {
+    const lines = [];
+    document.querySelectorAll(".proxy-container.uuid-type").forEach(box => { const d = proxyDataStore.get(box.dataset.uuid); if(d && d.socksLines) lines.push(...d.socksLines); });
+    document.querySelectorAll(".proxy-container.fproxy-type").forEach(box => { const d = proxyDataStore.get(box.dataset.fpkey); if(d && d.socksLines) lines.push(...d.socksLines); });
+    await copyAndFlash(lines, document.getElementById("copySocksBtn"), "SOCKS5");
+};
+document.getElementById("copyBothBtn").onclick = async () => {
+    const lines = [];
+    document.querySelectorAll(".proxy-container:not(.uuid-type):not(.fproxy-type) .proxy-text").forEach(el => { const t = el.innerText.trim(); if(t) lines.push(t); });
+    document.querySelectorAll(".proxy-container.uuid-type").forEach(box => { const d = proxyDataStore.get(box.dataset.uuid); if(d && d.proxyLines) lines.push(...d.proxyLines); });
+    document.querySelectorAll(".proxy-container.fproxy-type").forEach(box => { const d = proxyDataStore.get(box.dataset.fpkey); if(d && d.proxyLines) lines.push(...d.proxyLines); });
+    await copyAndFlash(lines, document.getElementById("copyBothBtn"), "HTTP + SOCKS5");
+};
 
-function refreshBankAccounts() {
-  // Detach rồi attach lại
-  if (_bankAccListener) { _bankAccListener(); _bankAccListener = null; }
-  _listenBankAccounts();
-}
+let savedApis   = JSON.parse(localStorage.getItem("proxy_api_keys") || "[]");
+let savedFpKeys = JSON.parse(localStorage.getItem("fproxy_saved_keys") || "[]");
 
-function _listenBankAccounts() {
-  const ref = _db.ref('bank_accounts_meta');
-  const handler = async snap => {
-    const raw = snap.val();
-    const countEl = document.getElementById('bankAccCount');
-    if (!raw) {
-      _bankAccounts = [];
-      if (countEl) countEl.textContent = 'Chưa có dữ liệu';
-    } else {
-      const accsRaw = Object.values(raw);
-      const accs = await Promise.all(accsRaw.map(async (acc, i) => {
-        const node = acc.node || acc.number;
-        const buyersSnap = await _db.ref(`bank_buyers/${node}`).get();
-        const buyerCount = buyersSnap.exists() ? Object.keys(buyersSnap.val()).length : 0;
-        return {
-          id:         node,
-          node:       node,
-          label:      acc.label || acc.number || node,
-          number:     acc.number || '',
-          color:      BANK_COLORS[i % BANK_COLORS.length],
-          buyerCount: buyerCount,
-          hasUsers:   buyerCount > 0
-        };
-      }));
-      _bankAccounts = accs;
-      if (countEl) countEl.textContent = _bankAccounts.length + ' tài khoản';
-    }
-    _renderBankAccCards();
-  };
-  ref.on('value', handler);
-  _bankAccListener = () => ref.off('value', handler);
-}
-
-function _renderBankAccCards() {
-  const el = document.getElementById('bankAccCards');
-  if (!el) return;
-  if (!_bankAccounts.length) {
-    el.innerHTML = `<div style="text-align:center;padding:24px 16px;">
-      <div style="font-size:32px;margin-bottom:8px;">🏦</div>
-      <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);line-height:1.8;">
-        Chưa có tài khoản nào.<br>
-        <span style="font-size:10px;"> sẽ tự ghi vào <code style="background:var(--surface2);padding:0 4px;border-radius:3px;">bank_accounts_meta</code> khi có giao dịch mới.</span>
-      </div>
-    </div>`;
-    return;
-  }
-  el.innerHTML = _bankAccounts.map(acc => `
-    <div onclick="openBankDetail('${acc.id}')"
-      style="display:flex;align-items:center;gap:12px;padding:14px 16px;
-             background:var(--surface2);border:1.5px solid var(--border);
-             border-radius:10px;cursor:pointer;transition:all .15s;"
-      onmouseover="this.style.borderColor='${acc.color}';this.style.background='${acc.color}14'"
-      onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--surface2)'">
-      <div style="width:42px;height:42px;border-radius:50%;background:${acc.color}20;
-                  border:2px solid ${acc.color}50;display:flex;align-items:center;
-                  justify-content:center;font-size:18px;flex-shrink:0;">🏦</div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;
-                    color:var(--text);margin-bottom:3px;">${acc.label}</div>
-        <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);display:flex;align-items:center;gap:8px;">
-          🔒 Bấm để xem · Phí 10,000 ₫
-          ${acc.buyerCount > 0 ? `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:99px;background:rgba(22,163,74,.1);border:1px solid rgba(22,163,74,.25);color:var(--green);font-size:9px;font-weight:700;font-family:'Barlow Condensed',sans-serif;letter-spacing:.5px;">👤 ${acc.buyerCount} người dùng</span>` : ''}
-        </div>
-      </div>
-      <div style="font-size:20px;color:${acc.color};">›</div>
-    </div>`).join('');
-}
-
-async function openBankDetail(accId) {
-  const acc = _bankAccounts.find(a => a.id === accId);
-  if (!acc || !acc.node) {
-    alert('Không tìm thấy thông tin tài khoản!');
-    return;
-  }
-
-  // Kiểm tra đăng nhập
-  if (!_uid) {
-    alert('Vui lòng đăng nhập để xem biến động!');
-    return;
-  }
-
-  // Kiểm tra đã mua chưa
-  const FEE = 10000;
-  const purchasedSnap = await _db.ref(`users/${_uid}/bank_access/${acc.node}`).get();
-  if (!purchasedSnap.exists()) {
-    // Chưa mua — hiện popup xác nhận
-    const confirmed = await showConfirmFee(acc.label, FEE);
-    if (!confirmed) return;
-
-    // Trừ phí
+async function loadApiMap() {
     try {
-      await deductBalance(FEE, 'bank_view', acc.node, `Xem biến động: ${acc.label}`);
-    } catch(e) {
-      alert('❌ ' + e.message);
-      return;
+        const res = await fetch(API_MAP_URL, { cache: "no-store" });
+        API_MAP = await res.json();
+        proxyList.innerHTML = "";
+        savedApis.forEach(k => UUID_REGEX.test(k) ? createUuidProxyBox(k) : createProxyBox(k));
+        // Restore fproxy keys
+        for (const k of savedFpKeys) {
+            await createFproxyBox(k);
+        }
+    } catch(err) {
+        console.warn("Không tải được API MAP:", err);
+        // Still restore fproxy even if API_MAP fails
+        for (const k of savedFpKeys) {
+            await createFproxyBox(k);
+        }
     }
-
-    // Lưu quyền truy cập vĩnh viễn
-    await _db.ref(`users/${_uid}/bank_access/${acc.node}`).set(Date.now());
-    // Ghi vào bank_buyers để đếm số người dùng
-    const uname = window._currentUser?.displayName || window._currentUser?.email?.split('@')[0] || _uid;
-    await _db.ref(`bank_buyers/${acc.node}/${_uid}`).set({ name: uname, ts: Date.now() });
-    // Làm mới card để hiện badge
-    refreshBankAccounts();
-
-    // Ghi buyer vào meta — hiển thị "Đã có người dùng" trên card
-    const userName = window._currentUser?.displayName || window._currentUser?.email?.split('@')[0] || 'Ẩn danh';
-    await _db.ref(`bank_accounts_meta/${acc.node}/buyers/${_uid}`).set({
-      name: userName,
-      ts:   Date.now()
-    });
-  }
-  // Đã mua → vào thẳng, không mất tiền
-
-  _activeAccNode = acc.node;
-  _allTxData = [];
-
-  // Đổi view
-  document.getElementById('bankViewAccounts').style.display = 'none';
-  document.getElementById('bankViewDetail').style.display   = 'block';
-
-  // Cập nhật tiêu đề
-  const titleEl = document.getElementById('bankDetailTitle');
-  if (titleEl) { titleEl.textContent = `${acc.label} · STK: ${acc.number}`; titleEl.style.color = acc.color; }
-
-  // Reset list
-  const listEl = document.getElementById('bankTxList');
-  if (listEl) listEl.innerHTML = '<div style="text-align:center;padding:24px;font-family:\'Space Mono\',monospace;font-size:11px;color:var(--muted);">⏳ Đang tải giao dịch...</div>';
-
-  // Dọn listener cũ
-  if (_bankTxListener) { _bankTxListener(); _bankTxListener = null; }
-
-  // Attach listener mới vào đúng node
-  const ref = _db.ref(acc.node).orderByChild('createdAt').limitToLast(100);
-  const handler = snap => {
-    const raw = snap.val();
-    _allTxData = !raw ? [] :
-      Object.entries(raw)
-        .map(([k,v]) => ({...v, _key: k}))
-        .filter(tx => (tx.amount || 0) > 0)
-        .sort((a, b) => (b.createdAt||0) - (a.createdAt||0));
-    _renderBankTxList(_allTxData, acc.color);
-    _updateBankStats(_allTxData);
-  };
-  ref.on('value', handler);
-  _bankTxListener = () => ref.off('value', handler);
 }
 
-function closeBankDetail() {
-  if (_bankTxListener) { _bankTxListener(); _bankTxListener = null; }
-  _activeAccNode = null;
-  _allTxData = [];
-  document.getElementById('bankViewDetail').style.display   = 'none';
-  document.getElementById('bankViewAccounts').style.display = 'block';
-  // Reset search
-  const s = document.getElementById('bankSearchInput');
-  if (s) s.value = '';
-}
-
-function _updateBankStats(list) {
-  const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
-  const thisMonth  = list.filter(tx => (tx.createdAt||0) >= monthStart.getTime());
-  const total      = thisMonth.reduce((s,tx) => s+(tx.amount||0), 0);
-  const elTotal  = document.getElementById('bankStatTotal');
-  const elCount  = document.getElementById('bankStatCount');
-  const elLast   = document.getElementById('bankStatLast');
-  const elBadge  = document.getElementById('bankTxCountBadge');
-  if (elTotal)  elTotal.textContent  = formatVND(total);
-  if (elCount)  elCount.textContent  = thisMonth.length;
-  if (elBadge)  elBadge.textContent  = list.length;
-  if (elLast)   elLast.textContent   = list.length
-    ? (list[0].transactionDate || new Date(list[0].createdAt).toLocaleString('vi-VN')).slice(0,16)
-    : '—';
-}
-
-function filterBankList() {
-  const q = (document.getElementById('bankSearchInput')?.value||'').toLowerCase().trim();
-  const acc = _bankAccounts.find(a => a.node === _activeAccNode);
-  const color = acc?.color || 'var(--teal)';
-  const filtered = !q ? _allTxData : _allTxData.filter(tx =>
-    (tx.content||'').toLowerCase().includes(q) ||
-    (tx.gateway||'').toLowerCase().includes(q) ||
-    String(tx.amount||'').includes(q) ||
-    (tx.referenceCode||'').toLowerCase().includes(q)
-  );
-  _renderBankTxList(filtered, color);
-}
-
-function _renderBankTxList(list, color) {
-  color = color || 'var(--teal)';
-  const el = document.getElementById('bankTxList');
-  if (!el) return;
-  if (!list || !list.length) {
-    el.innerHTML = `<div style="text-align:center;padding:36px 20px;">
-      <div style="font-size:36px;margin-bottom:10px;">🏦</div>
-      <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);line-height:1.8;">
-        Chưa có giao dịch nào.<br>
-        <span style="font-size:10px;">Thử chuyển khoản vào TK để test.</span>
-      </div></div>`;
-    return;
-  }
-  el.innerHTML = list.map((tx, idx) => {
-    const content = tx.content || '—';
-    const gateway = tx.gateway || '';
-    const ref     = tx.referenceCode || '';
-    const d       = tx.transactionDate
-      || (tx.createdAt ? new Date(tx.createdAt).toLocaleString('vi-VN') : '—');
-    return `<div class="bank-tx-item" style="${idx===0?`border-color:${color}40;background:${color}08;`:''}">
-      <div class="bank-tx-icon" style="background:${color}18;border:1px solid ${color}44;">⬇</div>
-      <div class="bank-tx-info">
-        <div class="bank-tx-type">
-          Tiền vào${gateway ? ` <span style="font-size:10px;color:var(--muted2);font-weight:500;">· ${gateway}</span>` : ''}
-          ${idx===0 ? `<span style="font-size:9px;font-weight:700;color:${color};background:${color}18;border:1px solid ${color}44;border-radius:3px;padding:1px 6px;margin-left:4px;">MỚI NHẤT</span>` : ''}
-        </div>
-        <div class="bank-tx-meta" title="${content}">${content}</div>
-        ${ref ? `<div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);">🔖 ${ref}</div>` : ''}
-        <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);">🕐 ${d}</div>
-      </div>
-      <div class="bank-tx-amount" style="color:${color};">+${formatVND(tx.amount)}</div>
-    </div>`;
-  }).join('');
-}
-
-/* ── AUTH CALLBACKS ── */
-window._onLogin = function(user) {
-  document.getElementById("openAuthBtn").style.display="none";
-  document.getElementById("userWidget").style.display="flex";
-  const name=user.displayName||user.email.split("@")[0];
-  document.getElementById("userName").textContent=name;
-  document.getElementById("userAvatar").textContent=name[0].toUpperCase();
-  if(document.getElementById("page-promo").classList.contains("active"))checkPromoStatus();
-  if(document.getElementById("page-bank").classList.contains("active"))initBankPage();
-};
-window._onLogout = function() {
-  document.getElementById("openAuthBtn").style.display="flex";
-  document.getElementById("userWidget").style.display="none";
-  if(_balanceUnsubscribe){_balanceUnsubscribe();_balanceUnsubscribe=null;}
-  _currentBalance=0; _balance=0;
-  if(typeof renderCoins==='function')renderCoins();
-  if(_bankAccListener){_bankAccListener();_bankAccListener=null;}
-  if(_bankTxListener){_bankTxListener();_bankTxListener=null;}
-  _bankAccounts=[]; _activeAccNode=null; _allTxData=[];
-};
-window._listenBalance = function(uid) {
-  const balRef=_db.ref(`users/${uid}/balance`);
-  balRef.on("value",snap=>{
-    _currentBalance=snap.val()||0;
-    _balance=_currentBalance;
-    window._balance=_currentBalance;
-    const fmt=formatVND(_currentBalance);
-    ["userBalance","topupBalance","histBalance"].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=fmt;});
-    if(typeof renderCoins==='function')renderCoins();
-    if(_uid&&window._currentUser){
-      _db.ref(`${GAME_REF}/leaderboard/${_uid}`).set({
-        name:window._currentUser.displayName||window._currentUser.email.split('@')[0]||'Khách',
-        balance:_currentBalance, ts:Date.now()
-      });
-    }
-  });
-  _balanceUnsubscribe=()=>balRef.off("value");
-};
-document.getElementById("openAuthBtn").style.display="flex";
-
-/* ── MODALS ── */
-function openModal(id)  { document.getElementById(id).classList.add("open"); }
-function closeModal(id) { document.getElementById(id).classList.remove("open"); }
-document.querySelectorAll(".modal-overlay").forEach(o=>o.addEventListener("click",e=>{if(e.target===o)o.classList.remove("open");}));
-document.getElementById("openAuthBtn").onclick     = ()=>openModal("authModal");
-document.getElementById("closeAuthModal").onclick   = ()=>closeModal("authModal");
-document.getElementById("closeTopupModal").onclick  = ()=>closeModal("topupModal");
-document.getElementById("closeHistoryModal").onclick= ()=>closeModal("historyModal");
-document.getElementById("openTopupBtn").onclick = ()=>{document.getElementById("userMenu").classList.remove("open");resetTopupModal();openModal("topupModal");};
-document.getElementById("openHistoryBtn").onclick = ()=>{document.getElementById("userMenu").classList.remove("open");loadHistory();openModal("historyModal");};
-document.getElementById("logoutBtn").onclick = async()=>{document.getElementById("userMenu").classList.remove("open");await _auth.signOut();};
-document.getElementById("userWidget").onclick = e=>{document.getElementById("userMenu").classList.toggle("open");e.stopPropagation();};
-document.addEventListener("click",()=>document.getElementById("userMenu").classList.remove("open"));
-
-/* ── AUTH TABS ── */
-window.switchTab = function(tab) {
-  document.getElementById("loginForm").style.display    = tab==="login"?"block":"none";
-  document.getElementById("registerForm").style.display = tab==="register"?"block":"none";
-  document.getElementById("tabLogin").classList.toggle("active",tab==="login");
-  document.getElementById("tabRegister").classList.toggle("active",tab==="register");
-  document.getElementById("authModalTitle").textContent = tab==="login"?"Đăng nhập":"Tạo tài khoản";
-  document.getElementById("loginError").classList.remove("visible");
-  document.getElementById("regError").classList.remove("visible");
-};
-
-document.getElementById("loginBtn").onclick = async()=>{
-  const btn=document.getElementById("loginBtn");
-  const email=document.getElementById("loginEmail").value.trim();
-  const pass=document.getElementById("loginPassword").value;
-  const errEl=document.getElementById("loginError");
-  errEl.classList.remove("visible");
-  if(!email||!pass){errEl.textContent="Vui lòng điền đầy đủ";errEl.classList.add("visible");return;}
-  btn.disabled=true;btn.textContent="⏳ Đang xử lý...";
-  try{await _auth.signInWithEmailAndPassword(email,pass);closeModal("authModal");}
-  catch(err){errEl.textContent=friendlyError(err.code);errEl.classList.add("visible");}
-  btn.disabled=false;btn.textContent="🔐 ĐĂNG NHẬP";
-};
-
-document.getElementById("registerBtn").onclick = async()=>{
-  const btn=document.getElementById("registerBtn");
-  const name=document.getElementById("regName").value.trim();
-  const email=document.getElementById("regEmail").value.trim();
-  const pass=document.getElementById("regPassword").value;
-  const confirm=document.getElementById("regConfirm").value;
-  const errEl=document.getElementById("regError");
-  errEl.classList.remove("visible");
-  if(!name||!email||!pass||!confirm){errEl.textContent="Vui lòng điền đầy đủ";errEl.classList.add("visible");return;}
-  if(pass!==confirm){errEl.textContent="Mật khẩu xác nhận không khớp";errEl.classList.add("visible");return;}
-  if(pass.length<6){errEl.textContent="Mật khẩu tối thiểu 6 ký tự";errEl.classList.add("visible");return;}
-  btn.disabled=true;btn.textContent="⏳ Đang tạo...";
-  try{
-    const cred=await _auth.createUserWithEmailAndPassword(email,pass);
-    await cred.user.updateProfile({displayName:name});
-    await _db.ref(`users/${cred.user.uid}`).set({displayName:name,email,balance:0,createdAt:Date.now()});
-    closeModal("authModal");
-  }catch(err){errEl.textContent=friendlyError(err.code);errEl.classList.add("visible");}
-  btn.disabled=false;btn.textContent="✅ TẠO TÀI KHOẢN";
-};
-
-function friendlyError(code){
-  const m={"auth/user-not-found":"Email không tồn tại","auth/wrong-password":"Sai mật khẩu","auth/email-already-in-use":"Email đã được sử dụng","auth/invalid-email":"Email không hợp lệ","auth/weak-password":"Mật khẩu quá yếu","auth/too-many-requests":"Quá nhiều lần thử, thử lại sau","auth/invalid-credential":"Email hoặc mật khẩu không đúng"};
-  return m[code]||("Lỗi: "+code);
-}
-
-/* ── TOPUP ── */
-let _balanceSnapshot=0, _topupListenerActive=false, _topupUnsubscribe=null;
-function resetTopupModal(){
-  _selectedAmount=0;
-  document.getElementById("customAmount").value="";
-  document.getElementById("qrSection").style.display="none";
-  document.getElementById("waitingBox").style.display="block";
-  document.getElementById("topupSuccessBox").style.display="none";
-  document.querySelectorAll(".preset-btn").forEach(b=>b.classList.remove("selected"));
-  if(_topupUnsubscribe){_topupUnsubscribe();_topupUnsubscribe=null;}
-  _topupListenerActive=false;
-}
-document.getElementById("presetBtns").addEventListener("click",e=>{
-  const btn=e.target.closest(".preset-btn");if(!btn)return;
-  _selectedAmount=parseInt(btn.dataset.amount);
-  document.querySelectorAll(".preset-btn").forEach(b=>b.classList.remove("selected"));
-  btn.classList.add("selected");
-  document.getElementById("customAmount").value="";
-  document.getElementById("qrSection").style.display="none";
-});
-document.getElementById("customAmount").addEventListener("input",()=>{_selectedAmount=0;document.querySelectorAll(".preset-btn").forEach(b=>b.classList.remove("selected"));document.getElementById("qrSection").style.display="none";});
-document.getElementById("generateQrBtn").onclick=()=>{
-  const custom=parseInt(document.getElementById("customAmount").value)||0;
-  const amount=_selectedAmount||custom;
-  if(amount<10000){alert("Số tiền tối thiểu 10,000 ₫");return;}
-  const user=window._currentUser;
-  if(!user){alert("Vui lòng đăng nhập trước");openModal("authModal");return;}
-  const bc=window.BANK_CONFIG;
-  const ref=`EAGLE ${user.uid.slice(0,8)}`;
-  const qrUrl=`https://img.vietqr.io/image/${bc.bankId}-${bc.accountNo}-${bc.template}.png?amount=${amount}&addInfo=${encodeURIComponent(ref)}&accountName=${encodeURIComponent(bc.accountName)}`;
-  document.getElementById("qrImg").src=qrUrl;
-  document.getElementById("qrBankInfo").innerHTML=`<div class="qr-bank-row"><span class="lbl">Ngân hàng</span><span class="val">${bc.bankId}</span></div><div class="qr-bank-row"><span class="lbl">Số TK</span><span class="val">${bc.accountNo}</span></div><div class="qr-bank-row"><span class="lbl">Tên TK</span><span class="val">${bc.accountName}</span></div><div class="qr-bank-row"><span class="lbl">Số tiền</span><span class="val" style="color:var(--green)">${formatVND(amount)}</span></div>`;
-  document.getElementById("qrNote").innerHTML=`📌 Nội dung chuyển khoản (bắt buộc đúng):<br><strong style="font-size:13px;letter-spacing:1px">${ref}</strong>`;
-  document.getElementById("waitingBox").style.display="block";
-  document.getElementById("topupSuccessBox").style.display="none";
-  document.getElementById("qrSection").style.display="block";
-  _balanceSnapshot=_currentBalance;
-  startTopupListener(user.uid,_balanceSnapshot);
-};
-function startTopupListener(uid,snapshotBalance){
-  if(_topupListenerActive)return;_topupListenerActive=true;
-  const balRef=_db.ref(`users/${uid}/balance`);
-  balRef.on("value",(snap)=>{
-    const newBal=snap.val()||0;
-    if(newBal>snapshotBalance&&_topupListenerActive){
-      const added=newBal-snapshotBalance;_topupListenerActive=false;balRef.off("value");
-      document.getElementById("waitingBox").style.display="none";
-      document.getElementById("topupSuccessBox").style.display="block";
-      document.getElementById("topupSuccessMsg").textContent=`✅ Nhận được +${formatVND(added)}`;
-      document.getElementById("topupSuccessNew").textContent=`Số dư mới: ${formatVND(newBal)}`;
-    }
-  });
-  _topupUnsubscribe=()=>balRef.off("value");
-}
-
-/* ── HISTORY ── */
-async function loadHistory(){
-  const user=window._currentUser;const el=document.getElementById("historyList");
-  if(!user){el.innerHTML='<div style="text-align:center;padding:20px;font-family:Space Mono,monospace;font-size:11px;color:var(--muted)">Chưa đăng nhập</div>';return;}
-  el.innerHTML='<div style="text-align:center;padding:20px;font-family:Space Mono,monospace;font-size:11px;color:var(--muted)">⏳ Đang tải...</div>';
-  try{
-    const snap=await _db.ref(`transactions/${user.uid}`).get();
-    if(!snap.exists()){el.innerHTML='<div style="text-align:center;padding:20px;font-family:Space Mono,monospace;font-size:11px;color:var(--muted)">Chưa có giao dịch nào</div>';return;}
-    const txns=Object.values(snap.val()).sort((a,b)=>b.createdAt-a.createdAt);
-    el.innerHTML="";
-    txns.forEach(t=>{
-      const item=document.createElement("div");item.className="history-item";
-      const d=new Date(t.createdAt);
-      const ds=`${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
-      item.innerHTML=`<div class="hi-left"><span class="hi-type">${t.type||"Giao dịch"}</span><span class="hi-date">${ds}</span></div><span class="hi-amount ${t.amount>0?'plus':'minus'}">${t.amount>0?'+':''}${formatVND(t.amount)}</span>`;
-      el.appendChild(item);
-    });
-  }catch(e){el.innerHTML='<div style="text-align:center;padding:20px;font-family:Space Mono,monospace;font-size:11px;color:var(--red)">❌ Lỗi tải lịch sử</div>';}
-}
-
-/* ═══ PROXY ═══ */
 function buildHttpProxy(p)   { return `${p.host}:${p.port}:${p.username}:${p.password}`; }
 function buildSocks5Proxy(p) { return `${p.host}:${p.socks5_port}:${p.username}:${p.password}`; }
 
-async function copyAndFlash(lines,btn,label){
-  if(!lines.length){alert("Không có proxy để copy");return;}
-  await navigator.clipboard.writeText(lines.join("\n"));
-  document.getElementById("copyAllDropdown").classList.remove("open");
-  const orig=btn.innerHTML;btn.innerHTML=`✅ ĐÃ COPY ${lines.length} PROXY`;
-  setTimeout(()=>btn.innerHTML=orig,1500);
-}
-document.getElementById("copyAllBtn").onclick=e=>{e.stopPropagation();document.getElementById("copyAllDropdown").classList.toggle("open");};
-document.addEventListener("click",()=>document.getElementById("copyAllDropdown").classList.remove("open"));
-document.getElementById("copyAllWrapper").addEventListener("click",e=>e.stopPropagation());
-document.getElementById("copyHttpBtn").onclick=async()=>{const lines=[];document.querySelectorAll(".proxy-container:not(.uuid-type) .proxy-text").forEach(el=>{const t=el.innerText.trim();if(t)lines.push(t);});document.querySelectorAll(".proxy-container.uuid-type").forEach(box=>{const d=proxyDataStore.get(box.dataset.uuid);if(d&&d.httpLines)lines.push(...d.httpLines);});await copyAndFlash(lines,document.getElementById("copyHttpBtn"),"HTTP");};
-document.getElementById("copySocksBtn").onclick=async()=>{const lines=[];document.querySelectorAll(".proxy-container.uuid-type").forEach(box=>{const d=proxyDataStore.get(box.dataset.uuid);if(d&&d.socksLines)lines.push(...d.socksLines);});await copyAndFlash(lines,document.getElementById("copySocksBtn"),"SOCKS5");};
-document.getElementById("copyBothBtn").onclick=async()=>{const lines=[];document.querySelectorAll(".proxy-container:not(.uuid-type) .proxy-text").forEach(el=>{const t=el.innerText.trim();if(t)lines.push(t);});document.querySelectorAll(".proxy-container.uuid-type").forEach(box=>{const d=proxyDataStore.get(box.dataset.uuid);if(d&&d.proxyLines)lines.push(...d.proxyLines);});await copyAndFlash(lines,document.getElementById("copyBothBtn"),"HTTP+SOCKS5");};
+async function createUuidProxyBox(apiKey) {
+    const box = document.createElement("div");
+    box.className = "proxy-container uuid-type"; box.dataset.uuid = apiKey;
+    proxyDataStore.set(apiKey, { httpLines: [], socksLines: [], proxyLines: [], proxyIds: [] });
 
-async function loadApiMap(){
-  try{const res=await fetch(API_MAP_URL,{cache:"no-store"});API_MAP=await res.json();document.getElementById("proxyList").innerHTML="";savedApis.forEach(k=>UUID_REGEX.test(k)?createUuidProxyBox(k):createProxyBox(k));}
-  catch(err){alert("❌ Không tải được API MAP");}
+    const proxyArea = document.createElement("div");
+    proxyArea.className = "proxy-text uuid-proxies";
+    proxyArea.innerHTML = `<span class="loading-text">⏳ Đang tải proxy...</span>`;
+
+    const status = document.createElement("span"); status.className = "status";
+    const changeIpBtn = document.createElement("button"); changeIpBtn.className = "btn-orange"; changeIpBtn.innerHTML = "🌐 ĐỔI IP";
+    const delBtn = document.createElement("button"); delBtn.className = "btn-red"; delBtn.innerHTML = "✕ XÓA";
+    delBtn.onclick = () => {
+        savedApis = savedApis.filter(k => k !== apiKey);
+        localStorage.setItem("proxy_api_keys", JSON.stringify(savedApis));
+        proxyDataStore.delete(apiKey);
+        box.style.opacity="0"; box.style.transform="translateY(-6px)"; box.style.transition="all .2s";
+        setTimeout(() => { if(box.parentNode) proxyList.removeChild(box); }, 200);
+    };
+
+    async function fetchAndRender() {
+        changeIpBtn.disabled = true; status.innerText = "Đang tải...";
+        proxyArea.innerHTML = `<span class="loading-text">⏳ Đang tải proxy...</span>`;
+        try {
+            const res  = await fetch(UUID_API_BASE + apiKey, { cache: "no-store" });
+            const data = await res.json();
+            if (data.status !== "success" || !data.proxies) { proxyArea.innerText = "⚠️ Không lấy được proxy"; status.innerText = "❌ Lỗi"; changeIpBtn.disabled=false; return; }
+            const entries = Object.values(data.proxies);
+            if (!entries.length) { proxyArea.innerText = "⚠️ Không có proxy nào"; status.innerText = ""; changeIpBtn.disabled=false; return; }
+            const store = { httpLines: [], socksLines: [], proxyLines: [], proxyIds: entries.map(p=>p.id) };
+            proxyArea.innerHTML = "";
+            entries.forEach((p, idx) => {
+                const http = buildHttpProxy(p), socks5 = buildSocks5Proxy(p);
+                store.proxyLines.push(http, socks5); store.httpLines.push(http); store.socksLines.push(socks5);
+                if (idx > 0) { const d2=document.createElement("div"); d2.className="proxy-divider"; proxyArea.appendChild(d2); }
+                const rowH=document.createElement("div"); rowH.className="proxy-line";
+                const lH=document.createElement("span"); lH.className="proxy-label http"; lH.innerText="HTTP";
+                const vH=document.createElement("span"); vH.className="proxy-value"; vH.innerText=http;
+                rowH.append(lH,vH); rowH.onclick=async()=>{ await navigator.clipboard.writeText(http); rowH.classList.add("copied"); setTimeout(()=>rowH.classList.remove("copied"),1200); };
+                const rowIP=document.createElement("div"); rowIP.className="ip-info-row";
+                const realIpText=document.createElement("span"); realIpText.className="real-ip-label"; realIpText.innerText=p.real_ip||"";
+                const testKmBtn=document.createElement("button"); testKmBtn.className="btn-test-km"; testKmBtn.innerText="TEST KM";
+                testKmBtn.onclick=async()=>{
+                    const ip=p.real_ip; if(!ip) return; testKmBtn.disabled=true; testKmBtn.innerText="⏳...";
+                    try {
+                        const r=await fetch("https://testdodam.nguyenanlk2872.workers.dev/?ip="+ip,{cache:"no-store"});
+                        const text=await r.text();
+                        if(text.includes("Duplicate entry")){ testKmBtn.innerText="📉 Tỉ Lệ KM Thấp"; testKmBtn.style.background="rgba(220,38,38,.1)"; testKmBtn.style.borderColor="rgba(220,38,38,.4)"; testKmBtn.style.color="#dc2626"; }
+                        else {
+                            try {
+                                const json=JSON.parse(text);
+                                if(json.status==="success"){ testKmBtn.innerText="📈 Tỉ Lệ KM Cao"; testKmBtn.style.background="rgba(22,163,74,.1)"; testKmBtn.style.borderColor="rgba(22,163,74,.4)"; testKmBtn.style.color="#16a34a"; }
+                                else { testKmBtn.innerText="❓ "+(json.message||"?"); testKmBtn.style.background="rgba(107,114,128,.1)"; testKmBtn.style.color="#6b7280"; }
+                            } catch { testKmBtn.innerText="❓ Unknown"; testKmBtn.style.background="rgba(107,114,128,.1)"; }
+                        }
+                    } catch { testKmBtn.innerText="❌ Lỗi"; }
+                    testKmBtn.disabled=false;
+                };
+                rowIP.append(realIpText, testKmBtn);
+                const rowS=document.createElement("div"); rowS.className="proxy-line";
+                const lS=document.createElement("span"); lS.className="proxy-label socks5"; lS.innerText="SOCKS5";
+                const vS=document.createElement("span"); vS.className="proxy-value"; vS.innerText=socks5;
+                rowS.append(lS,vS); rowS.onclick=async()=>{ await navigator.clipboard.writeText(socks5); rowS.classList.add("copied"); setTimeout(()=>rowS.classList.remove("copied"),1200); };
+                proxyArea.append(rowH, rowIP, rowS);
+            });
+            proxyDataStore.set(apiKey, store);
+            status.innerText = `✅ ${entries.length} proxy`;
+        } catch(err) { proxyArea.innerText = "❌ Lỗi kết nối"; status.innerText = "❌"; }
+        changeIpBtn.disabled = false;
+    }
+
+    async function changeAllIPs() {
+        const storeData = proxyDataStore.get(apiKey); const ids = (storeData && storeData.proxyIds) || [];
+        if (!ids.length) { status.innerText = "⚠️ Chưa có proxy"; return; }
+        changeIpBtn.disabled=true; status.innerText="⏳ Đổi IP...";
+        try {
+            let ok=0, fail=0;
+            for (const id of ids) {
+                const url=`${UUID_API_BASE}${apiKey}/update?filter_ip=&minute_change_ip=&id=${id}&change_ip=yes`;
+                const res=await fetch(url,{cache:"no-store"}); const data=await res.json();
+                let portMsg="", portError=false;
+                if(data.data && typeof data.data==="object"){ const portObj=Object.values(data.data).find(v=>v&&typeof v==="object"&&v.status); if(portObj){ portError=portObj.status==="error"; portMsg=portObj.msg||""; } }
+                if(data.status==="success" && !portError){ ok++; } else { fail++; status.innerText="⏳ "+(portMsg||data.msg||data.message||"Lỗi đổi IP"); }
+            }
+            if(ok>0){ status.innerText="✅ Xoay xong"; setTimeout(fetchAndRender,1500); } else { changeIpBtn.disabled=false; }
+        } catch(err) { status.innerText="❌ Lỗi đổi IP"; changeIpBtn.disabled=false; }
+    }
+
+    const copyHttpBtn2=document.createElement("button"); copyHttpBtn2.className="btn-blue"; copyHttpBtn2.innerHTML="HTTP";
+    copyHttpBtn2.onclick=async()=>{ const d=proxyDataStore.get(apiKey); const lines=(d&&d.httpLines)||[]; if(!lines.length){alert("Chưa có proxy HTTP");return;} await navigator.clipboard.writeText(lines.join("\n")); copyHttpBtn2.innerHTML="✅"; setTimeout(()=>copyHttpBtn2.innerHTML="HTTP",800); };
+    const copySocksBtn2=document.createElement("button"); copySocksBtn2.className="btn-purple"; copySocksBtn2.innerHTML="SOCKS5";
+    copySocksBtn2.onclick=async()=>{ const d=proxyDataStore.get(apiKey); const lines=(d&&d.socksLines)||[]; if(!lines.length){alert("Chưa có proxy SOCKS5");return;} await navigator.clipboard.writeText(lines.join("\n")); copySocksBtn2.innerHTML="✅"; setTimeout(()=>copySocksBtn2.innerHTML="SOCKS5",800); };
+
+    const filterInput=document.createElement("input"); filterInput.type="text"; filterInput.placeholder="Lọc đầu IP (vd: 27)";
+    async function filterIp() {
+        const ipPrefix=filterInput.value.trim(); if(!ipPrefix){alert("Nhập đầu IP muốn lọc");return;}
+        const storeData=proxyDataStore.get(apiKey); const ids=(storeData&&storeData.proxyIds)||[];
+        if(!ids.length){status.innerText="⚠️ Chưa có proxy";return;}
+        filterBtn.disabled=true; status.innerText="⏳ Lọc IP...";
+        try {
+            let ok=0, fail=0;
+            for(const id of ids){
+                const url=`${UUID_API_BASE}${apiKey}/update?filter_ip=${encodeURIComponent(ipPrefix)}&minute_change_ip=0&id=${id}&change_ip=`;
+                const res=await fetch(url,{cache:"no-store"}); const data=await res.json();
+                let portMsg="", portError=false;
+                if(data.data&&typeof data.data==="object"){ const portObj=Object.values(data.data).find(v=>v&&typeof v==="object"&&v.status); if(portObj){portError=portObj.status==="error";portMsg=portObj.msg||"";} }
+                if(data.status==="success"&&!portError){ok++;} else{fail++;status.innerText="⏳ "+(portMsg||data.msg||data.message||"Lỗi lọc IP");}
+            }
+            if(ok>0){status.innerText="✅ Lọc IP xong";setTimeout(fetchAndRender,1500);}
+        } catch(err){status.innerText="❌ Lỗi lọc IP";}
+        filterBtn.disabled=false;
+    }
+    filterInput.addEventListener("keydown", e=>{ if(e.key==="Enter") filterIp(); });
+    const filterBtn=document.createElement("button"); filterBtn.className="btn-cyan"; filterBtn.innerHTML="🔍 Lọc IP"; filterBtn.onclick=filterIp;
+    changeIpBtn.onclick = changeAllIPs;
+
+    const filterRow=document.createElement("div"); filterRow.className="filter-row"; filterRow.append(filterInput, filterBtn);
+    const actionBtns=document.createElement("div"); actionBtns.className="action-btns"; actionBtns.append(copyHttpBtn2, copySocksBtn2, changeIpBtn, delBtn);
+    const actions=document.createElement("div"); actions.className="proxy-actions"; actions.append(filterRow, actionBtns);
+    const proxyBody=document.createElement("div"); proxyBody.className="proxy-body"; proxyBody.append(proxyArea);
+    const proxyFooter=document.createElement("div"); proxyFooter.className="proxy-footer"; proxyFooter.append(actions, status);
+    box.append(proxyBody, proxyFooter);
+    proxyList.appendChild(box);
+    await fetchAndRender();
 }
 
-async function createUuidProxyBox(apiKey){
-  const box=document.createElement("div");box.className="proxy-container uuid-type";box.dataset.uuid=apiKey;
-  proxyDataStore.set(apiKey,{httpLines:[],socksLines:[],proxyLines:[],proxyIds:[]});
-  const proxyArea=document.createElement("div");proxyArea.className="proxy-text uuid-proxies";proxyArea.innerHTML=`<span class="loading-text">⏳ Đang tải proxy...</span>`;
-  const status=document.createElement("span");status.className="status";
-  const changeIpBtn=document.createElement("button");changeIpBtn.className="btn-orange";changeIpBtn.innerHTML="🌐 ĐỔI IP";
-  const delBtn=document.createElement("button");delBtn.className="btn-red";delBtn.innerHTML="✕ XÓA";
-  delBtn.onclick=()=>{savedApis=savedApis.filter(k=>k!==apiKey);localStorage.setItem("proxy_api_keys",JSON.stringify(savedApis));proxyDataStore.delete(apiKey);box.style.opacity="0";box.style.transform="translateY(-6px)";box.style.transition="all .2s";setTimeout(()=>{if(box.parentNode)document.getElementById("proxyList").removeChild(box);},200);};
-  async function fetchAndRender(){
-    changeIpBtn.disabled=true;status.innerText="Đang tải...";proxyArea.innerHTML=`<span class="loading-text">⏳ Đang tải proxy...</span>`;
-    const url=UUID_API_BASE+apiKey;
-    try{
-      const res=await fetch(url,{cache:"no-store"});const data=await res.json();
-      if(data.status!=="success"||!data.proxies){proxyArea.innerText="⚠️ Không lấy được proxy";status.innerText="❌ Lỗi";changeIpBtn.disabled=false;return;}
-      const entries=Object.values(data.proxies);
-      if(!entries.length){proxyArea.innerText="⚠️ Không có proxy nào";status.innerText="";changeIpBtn.disabled=false;return;}
-      const store={httpLines:[],socksLines:[],proxyLines:[],proxyIds:entries.map(p=>p.id)};
-      proxyArea.innerHTML="";
-      entries.forEach((p,idx)=>{
-        const http=buildHttpProxy(p),socks5=buildSocks5Proxy(p);
-        store.proxyLines.push(http,socks5);store.httpLines.push(http);store.socksLines.push(socks5);
-        if(idx>0){const d=document.createElement("div");d.className="proxy-divider";proxyArea.appendChild(d);}
-        const rowH=document.createElement("div");rowH.className="proxy-line";
-        const lH=document.createElement("span");lH.className="proxy-label http";lH.innerText="HTTP";
-        const vH=document.createElement("span");vH.className="proxy-value";vH.innerText=http;
-        rowH.append(lH,vH);rowH.onclick=async()=>{await navigator.clipboard.writeText(http);rowH.classList.add("copied");setTimeout(()=>rowH.classList.remove("copied"),1200);};
-        const rowIP=document.createElement("div");rowIP.className="ip-info-row";
-        const realIpText=document.createElement("span");realIpText.className="real-ip-label";realIpText.innerText=p.real_ip||"";
-        const testKmBtn=document.createElement("button");testKmBtn.className="btn-test-km";testKmBtn.innerText="TEST KM";
-        testKmBtn.onclick=async()=>{const ip=p.real_ip;if(!ip)return;testKmBtn.disabled=true;testKmBtn.innerText="⏳...";try{const res=await fetch("https://testdodam.nguyenanlk2872.workers.dev/?ip="+ip,{cache:"no-store"});const text=await res.text();if(text.includes("Duplicate entry")){testKmBtn.innerText="📉 Tỉ Lệ KM Thấp";testKmBtn.style.cssText="background:rgba(220,38,38,.1);border-color:rgba(220,38,38,.4);color:#dc2626";}else{try{const json=JSON.parse(text);if(json.status==="success"){testKmBtn.innerText="📈 Tỉ Lệ KM Cao";testKmBtn.style.cssText="background:rgba(22,163,74,.1);border-color:rgba(22,163,74,.4);color:#16a34a";}else{testKmBtn.innerText="❓ "+(json.message||"?");testKmBtn.style.cssText="background:rgba(107,114,128,.1);color:#6b7280";}}catch{testKmBtn.innerText="❓ Unknown";testKmBtn.style.cssText="background:rgba(107,114,128,.1)";}}}catch{testKmBtn.innerText="❌ Lỗi";}testKmBtn.disabled=false;};
-        rowIP.append(realIpText,testKmBtn);
-        const rowS=document.createElement("div");rowS.className="proxy-line";
-        const lS=document.createElement("span");lS.className="proxy-label socks5";lS.innerText="SOCKS5";
-        const vS=document.createElement("span");vS.className="proxy-value";vS.innerText=socks5;
-        rowS.append(lS,vS);rowS.onclick=async()=>{await navigator.clipboard.writeText(socks5);rowS.classList.add("copied");setTimeout(()=>rowS.classList.remove("copied"),1200);};
-        proxyArea.append(rowH,rowIP,rowS);
-      });
-      proxyDataStore.set(apiKey,store);status.innerText=`✅ ${entries.length} proxy`;
-    }catch(err){proxyArea.innerText="❌ Lỗi kết nối";status.innerText="❌";}
-    changeIpBtn.disabled=false;
-  }
-  async function changeAllIPs(){
-    const storeData=proxyDataStore.get(apiKey);const ids=(storeData&&storeData.proxyIds)||[];
-    if(!ids.length){status.innerText="⚠️ Chưa có proxy";return;}
-    changeIpBtn.disabled=true;status.innerText="⏳ Đổi IP...";
-    try{let ok=0;for(const id of ids){const url=`${UUID_API_BASE}${apiKey}/update?filter_ip=&minute_change_ip=&id=${id}&change_ip=yes`;const res=await fetch(url,{cache:"no-store"});const data=await res.json();let portError=false,portMsg="";if(data.data&&typeof data.data==="object"){const portObj=Object.values(data.data).find(v=>v&&typeof v==="object"&&v.status);if(portObj){portError=portObj.status==="error";portMsg=portObj.msg||"";}}if(data.status==="success"&&!portError)ok++;else status.innerText="⏳ "+(portMsg||data.msg||data.message||"Lỗi đổi IP");}if(ok>0){status.innerText="✅ Xoay xong";setTimeout(fetchAndRender,1500);}else changeIpBtn.disabled=false;}catch(err){status.innerText="❌ Lỗi đổi IP";changeIpBtn.disabled=false;}
-  }
-  const copyHttpBtn2=document.createElement("button");copyHttpBtn2.className="btn-blue";copyHttpBtn2.innerHTML="HTTP";
-  copyHttpBtn2.onclick=async()=>{const d=proxyDataStore.get(apiKey);const lines=(d&&d.httpLines)||[];if(!lines.length){alert("Chưa có proxy HTTP");return;}await navigator.clipboard.writeText(lines.join("\n"));copyHttpBtn2.innerHTML="✅";setTimeout(()=>copyHttpBtn2.innerHTML="HTTP",800);};
-  const copySocksBtn2=document.createElement("button");copySocksBtn2.className="btn-purple";copySocksBtn2.innerHTML="SOCKS5";
-  copySocksBtn2.onclick=async()=>{const d=proxyDataStore.get(apiKey);const lines=(d&&d.socksLines)||[];if(!lines.length){alert("Chưa có proxy SOCKS5");return;}await navigator.clipboard.writeText(lines.join("\n"));copySocksBtn2.innerHTML="✅";setTimeout(()=>copySocksBtn2.innerHTML="SOCKS5",800);};
-  async function filterIp(){
-    const ipPrefix=filterInput.value.trim();if(!ipPrefix){alert("Nhập đầu IP muốn lọc");return;}
-    const storeData=proxyDataStore.get(apiKey);const ids=(storeData&&storeData.proxyIds)||[];
-    if(!ids.length){status.innerText="⚠️ Chưa có proxy";return;}
-    filterBtn.disabled=true;status.innerText="⏳ Lọc IP...";
-    try{let ok=0;for(const id of ids){const url=`${UUID_API_BASE}${apiKey}/update?filter_ip=${encodeURIComponent(ipPrefix)}&minute_change_ip=0&id=${id}&change_ip=`;const res=await fetch(url,{cache:"no-store"});const data=await res.json();let portError=false,portMsg="";if(data.data&&typeof data.data==="object"){const portObj=Object.values(data.data).find(v=>v&&typeof v==="object"&&v.status);if(portObj){portError=portObj.status==="error";portMsg=portObj.msg||"";}}if(data.status==="success"&&!portError)ok++;else status.innerText="⏳ "+(portMsg||data.msg||data.message||"Lỗi lọc IP");}if(ok>0){status.innerText="✅ Lọc IP xong";setTimeout(fetchAndRender,1500);}}catch(err){status.innerText="❌ Lỗi lọc IP";}
-    filterBtn.disabled=false;
-  }
-  changeIpBtn.onclick=changeAllIPs;
-  const filterInput=document.createElement("input");filterInput.type="text";filterInput.placeholder="Lọc đầu IP (vd: 27)";
-  filterInput.addEventListener("keydown",e=>{if(e.key==="Enter")filterIp();});
-  const filterBtn=document.createElement("button");filterBtn.className="btn-cyan";filterBtn.innerHTML="🔍 Lọc IP";filterBtn.onclick=filterIp;
-  const filterRow=document.createElement("div");filterRow.className="filter-row";filterRow.append(filterInput,filterBtn);
-  const actionBtns=document.createElement("div");actionBtns.className="action-btns";actionBtns.append(copyHttpBtn2,copySocksBtn2,changeIpBtn,delBtn);
-  const actions=document.createElement("div");actions.className="proxy-actions";actions.append(filterRow,actionBtns);
-  const proxyBody=document.createElement("div");proxyBody.className="proxy-body";proxyBody.append(proxyArea);
-  const proxyFooter=document.createElement("div");proxyFooter.className="proxy-footer";proxyFooter.append(actions,status);
-  box.append(proxyBody,proxyFooter);
-  document.getElementById("proxyList").appendChild(box);
-  await fetchAndRender();
+function createProxyBox(apiKey) {
+    const info = API_MAP[apiKey]; if (!info) return;
+    const box=document.createElement("div"); box.className="proxy-container";
+    const proxyText=document.createElement("div"); proxyText.className="proxy-text"; proxyText.innerText=info.proxy;
+    const copyBtn=document.createElement("button"); copyBtn.className="btn-copy"; copyBtn.innerHTML="⎘ COPY";
+    copyBtn.onclick=async()=>{ await navigator.clipboard.writeText(proxyText.innerText); copyBtn.innerHTML="✅ Copied"; setTimeout(()=>copyBtn.innerHTML="⎘ COPY",800); };
+    const rotateBtn=document.createElement("button"); rotateBtn.className="btn-primary"; rotateBtn.innerHTML="⟳ Xoay";
+    const status=document.createElement("span"); status.className="status";
+    rotateBtn.onclick=async()=>{
+        rotateBtn.disabled=true; status.innerText="⏳ Xoay...";
+        try {
+            let url=info.rotate;
+            if(url.includes("reset?proxy=")) url+=encodeURIComponent(info.proxy); else url+=apiKey;
+            const res=await fetch(url); const data=await res.json();
+            if(data.success===false){ status.innerText="⚠️ "+(data.message||"Không xoay được"); }
+            else { if(data.data?.proxy){info.proxy=data.data.proxy;proxyText.innerText=data.data.proxy;} status.innerText="✅ Xoay xong"; }
+        } catch(err){ status.innerText="❌ Bình tẽn xoay tutu"; }
+        rotateBtn.disabled=false;
+    };
+    const delBtn=document.createElement("button"); delBtn.className="btn-red"; delBtn.innerHTML="✕ XÓA";
+    delBtn.onclick=()=>{ savedApis=savedApis.filter(k=>k!==apiKey); localStorage.setItem("proxy_api_keys",JSON.stringify(savedApis)); box.style.opacity="0"; box.style.transform="translateY(-6px)"; box.style.transition="all .2s"; setTimeout(()=>{if(box.parentNode)proxyList.removeChild(box);},200); };
+    const actions=document.createElement("div"); actions.className="proxy-actions";
+    actions.append(copyBtn, rotateBtn, delBtn);
+    const proxyBody2=document.createElement("div"); proxyBody2.className="proxy-body"; proxyBody2.append(proxyText);
+    const proxyFooter2=document.createElement("div"); proxyFooter2.className="proxy-footer"; proxyFooter2.style.flexDirection="row"; proxyFooter2.style.flexWrap="wrap"; proxyFooter2.style.alignItems="center"; proxyFooter2.append(actions, status);
+    box.append(proxyBody2, proxyFooter2); proxyList.appendChild(box);
 }
 
-function createProxyBox(apiKey){
-  const info=API_MAP[apiKey];if(!info)return;
-  const box=document.createElement("div");box.className="proxy-container";
-  const proxyText=document.createElement("div");proxyText.className="proxy-text";proxyText.innerText=info.proxy;
-  const copyBtn=document.createElement("button");copyBtn.className="btn-copy";copyBtn.innerHTML="⎘ COPY";
-  copyBtn.onclick=async()=>{await navigator.clipboard.writeText(proxyText.innerText);copyBtn.innerHTML="✅ Copied";setTimeout(()=>copyBtn.innerHTML="⎘ COPY",800);};
-  const rotateBtn=document.createElement("button");rotateBtn.className="btn-primary";rotateBtn.innerHTML="⟳ Xoay";
-  const status=document.createElement("span");status.className="status";
-  rotateBtn.onclick=async()=>{rotateBtn.disabled=true;status.innerText="⏳ Xoay...";try{let url=info.rotate;if(url.includes("reset?proxy="))url+=encodeURIComponent(info.proxy);else url+=apiKey;const res=await fetch(url);const data=await res.json();if(data.success===false){status.innerText="⚠️ "+(data.message||"Không xoay được");}else{if(data.data?.proxy){info.proxy=data.data.proxy;proxyText.innerText=data.data.proxy;}status.innerText="✅ Xoay xong";}}catch(err){status.innerText="❌ Lỗi xoay";}rotateBtn.disabled=false;};
-  const delBtn=document.createElement("button");delBtn.className="btn-red";delBtn.innerHTML="✕ XÓA";
-  delBtn.onclick=()=>{savedApis=savedApis.filter(k=>k!==apiKey);localStorage.setItem("proxy_api_keys",JSON.stringify(savedApis));box.style.opacity="0";box.style.transform="translateY(-6px)";box.style.transition="all .2s";setTimeout(()=>{if(box.parentNode)document.getElementById("proxyList").removeChild(box);},200);};
-  const actions=document.createElement("div");actions.className="proxy-actions";
-  const actionBtns2=document.createElement("div");actionBtns2.className="action-btns";actionBtns2.append(copyBtn,rotateBtn,delBtn);
-  actions.style.cssText="flex-direction:row;flex-wrap:wrap;align-items:center;";
-  actions.append(actionBtns2,status);
-  box.append(proxyText,actions);
-  document.getElementById("proxyList").appendChild(box);
+// ══════════════════════════════════════════════
+//  EAGLE (fproxy.me) — Card trong proxyList, lưu localStorage
+// ══════════════════════════════════════════════
+const FPROXY_BASE = "https://fproxy.me/api/getnew";
+
+async function createFproxyBox(apiKey) {
+    // Tạo card skeleton trước
+    const box = document.createElement("div");
+    box.className = "proxy-container fproxy-type";
+    box.dataset.fpkey = apiKey;
+
+    const proxyArea = document.createElement("div");
+    proxyArea.className = "proxy-text uuid-proxies";
+    proxyArea.innerHTML = `<span class="loading-text">⏳ Đang lấy proxy Eagle...</span>`;
+
+    const status = document.createElement("span"); status.className = "status";
+
+    // Xoay IP button
+    const xoayBtn = document.createElement("button"); xoayBtn.className = "btn-orange"; xoayBtn.innerHTML = "🌐 XOAY IP";
+    // Xóa
+    const delBtn = document.createElement("button"); delBtn.className = "btn-red"; delBtn.innerHTML = "✕ XÓA";
+    delBtn.onclick = () => {
+        savedFpKeys = savedFpKeys.filter(k => k !== apiKey);
+        localStorage.setItem("fproxy_saved_keys", JSON.stringify(savedFpKeys));
+        proxyDataStore.delete(apiKey);
+        box.style.opacity = "0"; box.style.transform = "translateY(-6px)"; box.style.transition = "all .2s";
+        setTimeout(() => { if (box.parentNode) proxyList.removeChild(box); }, 200);
+    };
+
+    async function fetchAndRender() {
+        xoayBtn.disabled = true; status.innerText = "⏳ Đang lấy IP...";
+        proxyArea.innerHTML = `<span class="loading-text">⏳ Đang lấy proxy Eagle...</span>`;
+        proxyDataStore.set(apiKey, { httpLines: [], socksLines: [], proxyLines: [] });
+
+        try {
+            const res  = await fetch(`${FPROXY_BASE}?api_key=${encodeURIComponent(apiKey)}`, { cache: "no-store" });
+            const json = await res.json();
+
+            if (!json.success) {
+                // Waiting / error
+                if (json.data && json.data.waiting_time) {
+                    proxyArea.innerHTML = `<span style="font-family:'Space Mono',monospace;font-size:11px;color:#c2410c;">⏳ Đang xử lý — chờ <strong>${json.data.waiting_time}s</strong> rồi thử lại</span>`;
+                    status.innerText = `⏱ ${json.data.waiting_time}s`;
+                    // If there's an old proxy, still render it
+                    if (json.data.proxy) { renderFpData(json.data); }
+                } else {
+                    proxyArea.innerHTML = `<span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--red);">❌ ${json.message || json.msg || "Lỗi không xác định"}</span>`;
+                    status.innerText = "❌ Lỗi";
+                }
+                xoayBtn.disabled = false;
+                return;
+            }
+
+            renderFpData(json.data);
+            status.innerText = "✅ OK";
+        } catch(e) {
+            proxyArea.innerHTML = `<span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--red);">❌ Lỗi kết nối: ${e.message}</span>`;
+            status.innerText = "❌";
+        }
+        xoayBtn.disabled = false;
+    }
+
+    function renderFpData(d) {
+        proxyArea.innerHTML = "";
+        const store = { httpLines: [], socksLines: [], proxyLines: [] };
+
+        // Badge row: location, timing, IP, TEST KM — tất cả trên 1 hàng
+        {
+            const badgeRow = document.createElement("div"); badgeRow.className = "fproxy-badge-row";
+            if (d.location)    { const b=document.createElement("span"); b.className="fproxy-badge loc";  b.innerText="📍 "+d.location;        badgeRow.appendChild(b); }
+            if (d.waiting_time){ const b=document.createElement("span"); b.className="fproxy-badge wait"; b.innerText="⏱ "+d.waiting_time+"s"; badgeRow.appendChild(b); }
+            if (d.time_die)    { const b=document.createElement("span"); b.className="fproxy-badge die";  b.innerText="💀 "+d.time_die+"s";    badgeRow.appendChild(b); }
+
+            // Spacer đẩy IP + TEST KM sang phải
+            const spacer = document.createElement("span"); spacer.style.cssText = "flex:1;";
+            badgeRow.appendChild(spacer);
+
+            if (d.ip) {
+                const ipLabel = document.createElement("span"); ipLabel.className = "real-ip-label"; ipLabel.innerText = d.ip;
+                const testKmBtn = document.createElement("button"); testKmBtn.className = "btn-test-km"; testKmBtn.innerText = "TEST KM";
+                testKmBtn.onclick = async () => {
+                    const ip = d.ip; if (!ip) return;
+                    testKmBtn.disabled = true; testKmBtn.innerText = "⏳...";
+                    try {
+                        const r = await fetch("https://testdodam.nguyenanlk2872.workers.dev/?ip=" + ip, { cache: "no-store" });
+                        const text = await r.text();
+                        if (text.includes("Duplicate entry")) {
+                            testKmBtn.innerText = "📉 Tỉ Lệ KM Thấp"; testKmBtn.style.background = "rgba(220,38,38,.1)"; testKmBtn.style.borderColor = "rgba(220,38,38,.4)"; testKmBtn.style.color = "#dc2626";
+                        } else {
+                            try {
+                                const j = JSON.parse(text);
+                                if (j.status === "success") { testKmBtn.innerText = "📈 Tỉ Lệ KM Cao"; testKmBtn.style.background = "rgba(22,163,74,.1)"; testKmBtn.style.borderColor = "rgba(22,163,74,.4)"; testKmBtn.style.color = "#16a34a"; }
+                                else { testKmBtn.innerText = "❓ " + (j.message || "?"); testKmBtn.style.background = "rgba(107,114,128,.1)"; testKmBtn.style.color = "#6b7280"; }
+                            } catch { testKmBtn.innerText = "❓ Unknown"; testKmBtn.style.background = "rgba(107,114,128,.1)"; }
+                        }
+                    } catch { testKmBtn.innerText = "❌ Lỗi"; }
+                    testKmBtn.disabled = false;
+                };
+                badgeRow.append(ipLabel, testKmBtn);
+            }
+
+            proxyArea.appendChild(badgeRow);
+        }
+
+        // Helper: replace IP with domain
+        const DOMAIN = "proxyeagle.duckdns.org";
+        function toDomain(proxyStr) {
+            if (!proxyStr || !d.ip) return proxyStr;
+            return proxyStr.replace(d.ip, DOMAIN);
+        }
+
+        // Proxy lines: 4 rows, each has a DOMAIN button
+        const formats = [];
+        if (d.http)         formats.push({ label: "HTTP",   sub: "(ip:port)",   val: d.http,         cls: "http"   });
+        if (d.httpuserpass) formats.push({ label: "HTTP",   sub: "(user:pass)", val: d.httpuserpass, cls: "http"   });
+        if (d.sock)         formats.push({ label: "SOCKS5", sub: "(ip:port)",   val: d.sock,         cls: "socks5" });
+        if (d.sockuserpass) formats.push({ label: "SOCKS5", sub: "(user:pass)", val: d.sockuserpass, cls: "socks5" });
+
+        formats.forEach(({ label, sub, val, cls }) => {
+            const domainVal = toDomain(val);
+
+            const row = document.createElement("div");
+            row.className = "fproxy-proxy-line";
+            row.style.cssText = "cursor:default;";
+
+            // [HTTP] [HTTP DOMAIN]  value  ← layout
+            const lbl = document.createElement("span"); lbl.className = `proxy-label ${cls}`; lbl.innerText = label;
+
+            // DOMAIN button — right after the main badge
+            const domBtn = document.createElement("button");
+            domBtn.className = "btn-domain";
+            domBtn.innerText = cls === "http" ? "HTTP DOMAIN" : "SOCKS5 DOMAIN";
+            domBtn.title = domainVal;
+            domBtn.onclick = async (e) => {
+                e.stopPropagation();
+                await navigator.clipboard.writeText(domainVal);
+                const orig = domBtn.innerText;
+                domBtn.innerText = "✅"; domBtn.classList.add("copied-domain");
+                setTimeout(() => { domBtn.innerText = orig; domBtn.classList.remove("copied-domain"); }, 1200);
+            };
+
+            const sublbl = document.createElement("span"); sublbl.className = "proxy-sublabel"; sublbl.innerText = sub;
+            const v = document.createElement("span"); v.className = "proxy-value"; v.innerText = val;
+
+            // Click on value to copy IP version
+            const ipZone = document.createElement("span");
+            ipZone.style.cssText = "display:flex;align-items:center;flex:1;min-width:0;cursor:pointer;";
+            ipZone.title = "Click để copy";
+            ipZone.append(v);
+            ipZone.onclick = async (e) => {
+                e.stopPropagation();
+                await navigator.clipboard.writeText(val);
+                row.classList.add("copied"); setTimeout(() => row.classList.remove("copied"), 1200);
+            };
+
+            row.append(lbl, domBtn, sublbl, ipZone);
+            proxyArea.appendChild(row);
+
+            if (cls === "http") { store.httpLines.push(val); store.proxyLines.push(val); }
+            else { store.socksLines.push(val); store.proxyLines.push(val); }
+        });
+
+        proxyDataStore.set(apiKey, store);
+    }
+
+    xoayBtn.onclick = fetchAndRender;
+
+    const actionBtns = document.createElement("div"); actionBtns.className = "action-btns";
+    actionBtns.append(xoayBtn, delBtn);
+    const actions = document.createElement("div"); actions.className = "proxy-actions";
+    actions.append(actionBtns, status);
+
+    box.append(proxyArea, actions);
+    proxyList.appendChild(box);
+    await fetchAndRender();
 }
 
-document.getElementById("addApiBtn").onclick=async()=>{
-  const keys=document.getElementById("apiInput").value.trim().split(/\r?\n/).map(k=>k.trim()).filter(Boolean);
-  let a=0,s=0,i=0;
-  for(const k of keys){if(savedApis.includes(k)){s++;continue;}if(UUID_REGEX.test(k)){savedApis.push(k);await createUuidProxyBox(k);a++;}else{if(!API_MAP[k]){i++;continue;}savedApis.push(k);createProxyBox(k);a++;}}
-  localStorage.setItem("proxy_api_keys",JSON.stringify(savedApis));
-  const el=document.getElementById("apiStatus");
-  el.innerText=`+ Thêm ${a}  ·  ~ Trùng ${s}  ·  ✕ Sai ${i}`;
-  el.classList.add("visible");
-  document.getElementById("apiInput").value="";
+// ══════════════════════════════════════════════
+//  ADD API BUTTON
+// ══════════════════════════════════════════════
+addApiBtn.onclick = async () => {
+    const keys = apiInput.value.trim().split(/\r?\n/).map(k => k.trim()).filter(Boolean);
+    let addedEagle = 0, addedFp = 0;
+
+    for (const k of keys) {
+        if (savedApis.includes(k) || savedFpKeys.includes(k)) continue;
+
+        if (UUID_REGEX.test(k)) {
+            savedApis.push(k);
+            await createUuidProxyBox(k);
+            addedEagle++;
+        } else if (API_MAP[k]) {
+            savedApis.push(k);
+            createProxyBox(k);
+            addedEagle++;
+        } else {
+            // Treat as fproxy.me key
+            savedFpKeys.push(k);
+            localStorage.setItem("fproxy_saved_keys", JSON.stringify(savedFpKeys));
+            await createFproxyBox(k);
+            addedFp++;
+        }
+    }
+
+    localStorage.setItem("proxy_api_keys", JSON.stringify(savedApis));
+
+    let msg = "";
+    if (addedEagle) msg += `Eagle: +${addedEagle}`;
+    if (addedFp)    msg += `${msg ? "  ·  " : ""}Eagle API: +${addedFp}`;
+    if (!msg)       msg = "Không có key mới";
+    apiStatus.innerText = msg;
+    apiStatus.classList.add("visible");
+    apiInput.value = "";
 };
-document.getElementById("rotateAllBtn").onclick=async()=>{const buttons=document.querySelectorAll(".btn-orange,.btn-primary");for(const btn of buttons){if(!btn.disabled){btn.click();await new Promise(r=>setTimeout(r,800));}}};
 
-/* ═══ SIM OTP ═══ */
-async function callOkvip(path) { const res=await fetch(WORKER+path); return res.json(); }
-async function callSv2(params) { const url=SV2_BASE+"?"+new URLSearchParams({apik:SV2_KEY,...params}); const res=await fetch(url); return res.json(); }
-
-function copyText(btn,text,stripLeadingZero=false){
-  if(!text)return;let v=(stripLeadingZero&&text.startsWith("0"))?text.slice(1):text;
-  const finish=ok=>{const old=btn.textContent;btn.textContent=ok?"✅":"❌";setTimeout(()=>btn.textContent=old,1400);};
-  if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(v).then(()=>finish(true)).catch(()=>fallbackCopy(v,finish));
-  else fallbackCopy(v,finish);
-}
-function fallbackCopy(text,finish){try{const ta=document.createElement("textarea");ta.value=text;ta.style.cssText="position:fixed;top:-9999px;left:-9999px;opacity:0";document.body.appendChild(ta);ta.focus();ta.select();finish(document.execCommand("copy"));document.body.removeChild(ta);}catch(e){finish(false);}}
-
-function saveSims(){localStorage.setItem(SIM_STORE_KEY,JSON.stringify(sims));}
-function loadSims(){
-  const raw=localStorage.getItem(SIM_STORE_KEY);if(!raw)return;
-  sims=JSON.parse(raw);sims.forEach(s=>{if(s.pricePaid===undefined)s.pricePaid=0;});
-  if(sims.length){renderSims();startOtp();}
-}
-
-async function loadNetworksOkvip(){
-  const d=await callOkvip(`/networks?api_key=${OKVIP_KEY}`);
-  const n=document.getElementById("simNetwork");
-  n.innerHTML='<option value="">-- Tất cả nhà mạng --</option>';
-  d?.data?.forEach(x=>{n.innerHTML+=`<option value="${x.id}">${x.name}</option>`;});
-}
-function loadNetworksSv2(){
-  document.getElementById("simNetwork").innerHTML=`<option value="">-- Tất cả nhà mạng --</option><option value="Viettel">Viettel</option><option value="Mobi">Mobifone</option><option value="Vina">Vinaphone</option><option value="VNMB">Vietnamobile</option><option value="ITelecom">ITelecom</option>`;
-}
-
-function selectServer(server){
-  currentServer=server;
-  document.getElementById("tabOkvip").className="sim-server-tab okvip"+(server==="okvip"?" active":"");
-  document.getElementById("tabSv2").className  ="sim-server-tab sv2"  +(server==="sv2"  ?" active":"");
-  document.getElementById("priceVal").textContent=server==="okvip"?"OKVIP — 2,000 ₫":"Sv2 Admin — 3,000 ₫";
-  if(server==="okvip")loadNetworksOkvip();else loadNetworksSv2();
-}
-
-function renderSims(){
-  const box=document.getElementById("simList");
-  const cnt=document.getElementById("simCount");
-  box.innerHTML="";
-  if(cnt)cnt.textContent=sims.length;
-  sims.forEach((s,i)=>{
-    const badgeHtml=s.source==="okvip"?'<span class="badge badge-okvip">OKVIP</span>':'<span class="badge badge-sv2">Sv2 Admin</span>';
-    let otpContent="";
-    if(s.done&&s.code&&!s.code.startsWith("⏰")){otpContent=`<span class="otp-code">${s.code}</span><button class="copy-btn" data-copy="${s.code}">📋 Copy OTP</button>`;}
-    else if(s.done&&s.code){otpContent=`<span style="color:var(--red);font-size:13px;font-weight:700;">${s.code}</span>`;}
-    else{otpContent=`<span class="otp-waiting">Đang chờ OTP <span class="otp-dots"><span></span><span></span><span></span></span></span>`;}
-    const smsHtml=s.sms?`<div class="otp-sms">📩 ${s.sms}</div>`:"";
-    const audioHtml=s.audio?`<div style="margin-top:8px">🎧 OTP qua cuộc gọi:<audio controls preload="none"><source src="${s.audio}" type="audio/mpeg"></audio></div>`:"";
-    const div=document.createElement("div");div.className="sim-card";
-    div.innerHTML=`
-      <div class="sim-top"><div class="sim-phone">📞 ${s.phone} <button class="copy-btn" data-copy="${s.phone}" data-strip="1">📋</button></div><div class="sim-badges">${badgeHtml}</div></div>
-      <div class="sim-meta"><span>🆔 ${s.otpId}</span><span>💰 ${formatVND(s.pricePaid||0)}</span></div>
-      <div class="sim-otp-box"><span class="sim-otp-label">🔐 OTP</span>${otpContent}</div>
-      ${smsHtml}${audioHtml}
-      <div class="sim-actions"><button class="cancel-btn" data-cancel="${i}">❌ Hủy SIM</button></div>`;
-    box.appendChild(div);
-  });
-  box.onclick=e=>{
-    const btn=e.target.closest("button[data-copy],button[data-cancel]");if(!btn)return;
-    if(btn.dataset.cancel!==undefined)cancelSim(Number(btn.dataset.cancel));
-    else if(btn.dataset.copy!==undefined)copyText(btn,btn.dataset.copy,btn.dataset.strip==="1");
-  };
-}
-
-function startOtp(){if(otpTimer)return;otpTimer=setInterval(pollOtp,4000);}
-async function pollOtp(){
-  let changed=false;
-  for(const s of sims){
-    if(s.done)continue;
-    if(s.source==="okvip"){
-      const d=await callOkvip(`/get-otp?api_key=${OKVIP_KEY}&otp_id=${s.otpId}`);
-      if(!d?.data)continue;
-      const content=d.data.content||"",audio=d.data.audio||"";
-      if(d.status===408||d.data.status==="expired"||content.toLowerCase().includes("expired")){
-        s.done=true;s.code="⏰ Hết giờ";changed=true;
-        if(_uid&&s.pricePaid>0&&!s.refunded){s.refunded=true;await refundBalance(s.pricePaid,s.simId,s.phone);simLog("💰 SIM hết giờ — Đã tự hoàn "+formatVND(s.pricePaid));}
-      } else {
-        const match=content.match(/\b\d{4,8}\b/);
-        if(match){s.code=match[0];s.sms=content;s.done=true;changed=true;}
-        else if(audio){s.audio=audio;s.done=true;changed=true;}
-      }
-    }else{
-      const d=await callSv2({act:"code",id:s.otpId});if(!d)continue;
-      if(d.ResponseCode===0&&d.Result){s.sms=d.Result.SMS||"";s.code=d.Result.Code||"";if(d.Result.IsCall&&d.Result.CallFile)s.audio=d.Result.CallFile;s.done=true;changed=true;}
-      else if(d.ResponseCode===2){
-        s.done=true;s.code="⏰ Hết giờ";changed=true;
-        if(_uid&&s.pricePaid>0&&!s.refunded){s.refunded=true;await refundBalance(s.pricePaid,s.simId,s.phone);simLog("💰 SIM hết giờ — Đã tự hoàn "+formatVND(s.pricePaid));}
-      }
+// ══════════════════════════════════════════════
+//  ROTATE ALL
+// ══════════════════════════════════════════════
+rotateAllBtn.onclick = async () => {
+    const buttons = document.querySelectorAll(".btn-orange, .btn-primary");
+    for (const btn of buttons) {
+        if (!btn.disabled) { btn.click(); await new Promise(r => setTimeout(r, 800)); }
     }
-  }
-  if(changed){saveSims();renderSims();}
-}
+};
 
-async function cancelSim(index){
-  const s=sims[index];if(s._cancelling)return;s._cancelling=true;saveSims();
-  try{if(s.source==="okvip")await callOkvip(`/cancel?api_key=${OKVIP_KEY}&sim_id=${s.simId}`);else await callSv2({act:"expired",id:s.otpId});}catch{}
-  if(_uid&&s.pricePaid>0&&!s.refunded){s.refunded=true;await refundBalance(s.pricePaid,s.simId,s.phone);simLog("✅ Đã hủy SIM — Hoàn "+formatVND(s.pricePaid));}
-  else{simLog("✅ Đã hủy SIM"+(s.code==="⏰ Hết giờ"?" (đã hoàn tiền trước đó)":""));}
-  sims.splice(index,1);saveSims();renderSims();
-  if(!sims.length){clearInterval(otpTimer);otpTimer=null;localStorage.removeItem(SIM_STORE_KEY);}
-}
-
-async function getSim(){
-  const btn=document.querySelector(".btn-sim-primary");
-  if(btn.disabled)return;btn.disabled=true;btn.innerHTML='<span>⏳</span> Đang lấy số...';
-  const network=document.getElementById("simNetwork").value;
-  const prefix=document.getElementById("simPrefix").value.trim();
-  try{if(currentServer==="okvip")await getSimOkvip(network,prefix);else await getSimSv2(network,prefix);}
-  finally{btn.disabled=false;btn.innerHTML='<span>📞</span> Lấy số ngay';}
-}
-
-async function getSimOkvip(network,prefix){
-  if(_uid){try{await deductBalance(PRICE_OKVIP,"pending","","Thuê SIM OKVIP");}catch(e){return alert("❌ "+e.message);}}
-  let q=`/get-sim?api_key=${OKVIP_KEY}&service_id=${FIXED_SERVICE_ID}`;
-  if(network)q+=`&network_id=${network}`;if(prefix)q+=`&phone=${prefix}`;
-  const d=await callOkvip(q);
-  if(d?.status!==200){if(_uid)await refundBalance(PRICE_OKVIP,"failed","");return simLog("⚠️ LỖI Bảo Trì\nVui lòng Dùng Sv 2");}
-  sims.push({source:"okvip",otpId:d.data.otpId,simId:d.data.simId,phone:d.data.phone,code:null,audio:null,done:false,pricePaid:_uid?PRICE_OKVIP:0});
-  saveSims();renderSims();startOtp();simLog("✅ Lấy số thành công!"+(_uid?` Đã trừ ${formatVND(PRICE_OKVIP)}`:""));
-}
-
-async function getSimSv2(network,prefix){
-  if(_uid){try{await deductBalance(PRICE_SV2,"pending","","Thuê SIM Sv2");}catch(e){return alert("❌ "+e.message);}}
-  const params={act:"number",appId:1200};
-  if(network)params.carrier=network;if(prefix)params.prefix=prefix;
-  const d=await callSv2(params);
-  if(d?.ResponseCode!==0){if(_uid)await refundBalance(PRICE_SV2,"failed","");if(d?.ResponseCode===3)d.Msg="Kho số tạm hết, thử lại sau";return simLog("❌ Sv2: Không lấy được số\n"+JSON.stringify(d));}
-  sims.push({source:"sv2",otpId:d.Result.Id,simId:d.Result.Id,phone:"0"+d.Result.Number,code:null,audio:null,done:false,pricePaid:_uid?PRICE_SV2:0});
-  saveSims();renderSims();startOtp();simLog("✅ Lấy số thành công!"+(_uid?` Đã trừ ${formatVND(PRICE_SV2)}`:""));
-}
-
-/* ═══ PROMO ═══ */
-async function checkPromoStatus() {
-  const box=document.getElementById("promoStatusBox");
-  const icon=document.getElementById("promoStatusIcon");
-  const text=document.getElementById("promoStatusText");
-  const btn=document.getElementById("claimPromoBtn");
-  const setStatus=(cls,ico,msg,canClaim=false)=>{box.className="promo-status-box "+cls;icon.textContent=ico;text.textContent=msg;btn.disabled=!canClaim;};
-  const user=window._currentUser;
-  if(!user){setStatus("notlogged","🔐","Vui lòng đăng nhập để kiểm tra khuyến mãi");return;}
-  setStatus("","⏳","Đang kiểm tra trạng thái...");
-  try{
-    const snap=await _db.ref(`users/${user.uid}`).get();
-    const data=snap.val()||{};
-    if(data.firstDepositBonusClaimed){setStatus("claimed","✅","Bạn đã nhận khuyến mãi nạp đầu thành công!");return;}
-    const txSnap=await _db.ref(`transactions/${user.uid}`).get();
-    let hasDeposit=false;
-    if(txSnap.exists()){const txns=Object.values(txSnap.val());const deposits=txns.filter(t=>t.amount>0&&((t.type||"").includes("Nạp")||t.amount>=10000));if(deposits.length>0)hasDeposit=true;}
-    if(!hasDeposit&&(data.balance||0)<=0){setStatus("notlogged","💡","Hãy nạp tối thiểu 10,000 ₫ để nhận thưởng!");return;}
-    if((data.balance||0)>0||hasDeposit){setStatus("eligible","🎁","Đủ điều kiện! Nhấn nút bên dưới để nhận 10,000 ₫ thưởng",true);}
-  }catch(e){setStatus("","❌","Lỗi kiểm tra trạng thái: "+e.message);}
-}
-
-async function claimFirstDepositBonus(){
-  const btn=document.getElementById("claimPromoBtn");
-  const user=window._currentUser;
-  if(!user){alert("Vui lòng đăng nhập!");return;}
-  btn.disabled=true;btn.innerHTML='<span>⏳</span> Đang xử lý...';
-  try{
-    const snap=await _db.ref(`users/${user.uid}`).get();
-    const data=snap.val()||{};
-    if(data.firstDepositBonusClaimed){alert("❌ Bạn đã nhận khuyến mãi này rồi!");checkPromoStatus();return;}
-    const BONUS=10000;
-    await _db.ref(`users/${user.uid}/balance`).transaction(cur=>(cur||0)+BONUS);
-    await _db.ref(`users/${user.uid}/firstDepositBonusClaimed`).set(true);
-    await _db.ref(`transactions/${user.uid}/PROMO_${Date.now()}`).set({type:"🎁 KM Nạp đầu",amount:BONUS,createdAt:Date.now()});
-    document.getElementById("promoStatusBox").className="promo-status-box claimed";
-    document.getElementById("promoStatusIcon").textContent="🎉";
-    document.getElementById("promoStatusText").textContent=`Nhận thành công +${formatVND(BONUS)}! Số dư đã được cập nhật.`;
-    btn.innerHTML='<span>✅</span> Đã nhận thưởng';
-  }catch(e){alert("❌ Lỗi: "+e.message);btn.disabled=false;btn.innerHTML='<span>🎁</span> Nhận thưởng';}
-}
-
-/* ═══ GAME: SO BÀI ═══ */
-const SUITS_RED=['♥','♦'],SUITS_BLACK=['♠','♣'],RANKS=['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
-const RANK_VAL={2:2,3:3,4:4,5:5,6:6,7:7,8:8,9:9,10:10,J:11,Q:12,K:13,A:14};
-const GAME_REF='game/sobai',ROUND_SEC=10;
-let currentBet=0,myChoice=null,myBetPlaced=false,localRoundId=null,cdInterval=null;
-
-function renderCoins(){
-  const el=document.getElementById('gameCoins');if(!el)return;
-  if(!_uid){el.textContent='Đăng nhập để chơi';el.style.fontSize='14px';el.style.color='rgba(255,215,0,.5)';}
-  else{el.textContent=formatVND(_balance||0);el.style.fontSize='26px';el.style.color='#ffd700';}
-}
-function renderBet(){const el=document.getElementById('currentBetDisplay');if(el)el.textContent=currentBet.toLocaleString('vi-VN');}
-
-function selectChip(val){
-  if(myBetPlaced)return;
-  document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('selected',Number(c.dataset.val)===val));
-  const maxBal=window._balance||0;
-  if(val > maxBal){ alert('Không đủ số dư!'); return; }
-  currentBet=val;
-  renderBet();
-}
-function clearBet(){if(!myBetPlaced){currentBet=0;renderBet();}}
-function setGameBtns(disabled){['btnLeft','btnRight'].forEach(id=>{const b=document.getElementById(id);if(b)b.disabled=disabled;});}
-
-async function placeBet(choice){
-  if(!_uid){flashMsg('Vui lòng đăng nhập để chơi!','draw');return;}
-  if(myBetPlaced){flashMsg('Bạn đã đặt cược vòng này!','draw');return;}
-  if(currentBet<=0){flashMsg('Chọn mức cược trước!','draw');return;}
-  if(currentBet>(window._balance||0)){flashMsg('Không đủ số dư!','lose');return;}
-  const snap=await _db.ref(GAME_REF+'/current').get();const cur=snap.val();
-  if(!cur||cur.phase!=='betting'){flashMsg('Hết giờ đặt cược!','draw');return;}
-  try{await deductBalance(currentBet,'game_sobai','','Cược So Bài');}
-  catch(e){flashMsg('Lỗi trừ tiền: '+e.message,'lose');return;}
-  myChoice=choice;myBetPlaced=true;setGameBtns(true);
-  const name=window._currentUser?(window._currentUser.displayName||window._currentUser.email.split('@')[0]):'Khách';
-  await _db.ref(`${GAME_REF}/rounds/${cur.roundId}/bets/${_uid}`).set({choice,bet:currentBet,name,ts:Date.now()});
-  const info=document.getElementById('myBetInfo');
-  if(info){info.style.display='block';info.innerHTML=`✅ Đã cược <b>${currentBet.toLocaleString('vi-VN')} ₫</b> cho <b>${choice==='left'?'◀ TRÁI':'PHẢI ▶'}</b>`;}
-}
-
-function updateCountdown(sec){
-  const num=document.getElementById('countdownNum'),arc=document.getElementById('countdownArc');
-  if(!num||!arc)return;
-  num.textContent=Math.max(0,Math.ceil(sec));
-  arc.style.strokeDashoffset=163*(1-sec/ROUND_SEC);
-  arc.style.stroke=sec<=3?'#ef4444':sec<=5?'#f97316':'#ffd700';
-}
-function setPhaseLabel(phase){
-  const el=document.getElementById('roundPhaseLabel');if(!el)return;
-  el.textContent=phase==='betting'?'🟢 Đang nhận cược — Chọn TRÁI hay PHẢI?':'🔴 Lật bài...';
-  el.style.color=phase==='betting'?'rgba(74,222,128,.85)':'rgba(248,113,113,.85)';
-}
-function resetCards(){
-  ['cardLeft','cardRight'].forEach(id=>{const c=document.getElementById(id);if(c){c.className='playing-card back';c.innerHTML='';}});
-  ['cardLeftVal','cardRightVal'].forEach(id=>{const v=document.getElementById(id);if(v){v.textContent='';v.style.color='rgba(255,255,255,.4)';}});
-  const vs=document.getElementById('vsLabel');if(vs){vs.textContent='VS';vs.style.color='rgba(255,215,0,.7)';}
-}
-
-async function flipCards(cardL,cardR){
-  await sleep(300);
-  const elL=document.getElementById('cardLeft'),elR=document.getElementById('cardRight');if(!elL||!elR)return;
-  elL.className=`playing-card ${cardL.isRed?'red':'black'} flip-in`;elL.innerHTML=`<div class="card-rank">${cardL.rank}</div><div class="card-suit">${cardL.suit}</div>`;
-  await sleep(220);
-  elR.className=`playing-card ${cardR.isRed?'red':'black'} flip-in`;elR.innerHTML=`<div class="card-rank">${cardR.rank}</div><div class="card-suit">${cardR.suit}</div>`;
-  await sleep(400);
-  const vL=document.getElementById('cardLeftVal'),vR=document.getElementById('cardRightVal'),vs=document.getElementById('vsLabel');
-  const winner=cardL.val>cardR.val?'left':cardR.val>cardL.val?'right':'draw';
-  if(vL)vL.textContent=`Điểm: ${cardL.val}`;if(vR)vR.textContent=`Điểm: ${cardR.val}`;
-  if(winner==='left'){if(vL)vL.style.color='#4ade80';if(vs){vs.textContent='◀ WIN';vs.style.color='#4ade80';}elL.style.boxShadow='0 0 0 3px #4ade80, 0 8px 24px rgba(74,222,128,.5)';}
-  else if(winner==='right'){if(vR)vR.style.color='#4ade80';if(vs){vs.textContent='WIN ▶';vs.style.color='#4ade80';}elR.style.boxShadow='0 0 0 3px #4ade80, 0 8px 24px rgba(74,222,128,.5)';}
-  else{if(vs){vs.textContent='HÒA';vs.style.color='#ffd700';}}
-}
-
-async function resolveRound(roundData){
-  const{cardLeft:cL,cardRight:cR}=roundData;await flipCards(cL,cR);
-  const resEl=document.getElementById('gameResult'),info=document.getElementById('myBetInfo');if(!resEl)return;
-  const winner=cL.val>cR.val?'left':cR.val>cL.val?'right':'draw';
-  if(!myBetPlaced||!myChoice){resEl.className='game-result draw';resEl.innerHTML=`Bạn không đặt cược vòng này`;return;}
-  if(winner==='draw'){await refundBalance(currentBet,'game_sobai','');resEl.className='game-result draw';resEl.innerHTML=`🤝 HÒA! ${cL.rank}${cL.suit} vs ${cR.rank}${cR.suit} — Hoàn lại ${currentBet.toLocaleString('vi-VN')} ₫`;if(info)info.textContent='🤝 Hòa — đã hoàn cược';}
-  else if(myChoice===winner){await refundBalance(currentBet*2,'game_sobai','');resEl.className='game-result win';resEl.innerHTML=`🎉 THẮNG! ${cL.rank}${cL.suit}(${cL.val}) vs ${cR.rank}${cR.suit}(${cR.val}) → +${currentBet.toLocaleString('vi-VN')} ₫`;if(info)info.textContent=`🏆 Thắng! +${currentBet.toLocaleString('vi-VN')} ₫`;}
-  else{resEl.className='game-result lose';resEl.innerHTML=`😢 THUA! ${cL.rank}${cL.suit}(${cL.val}) vs ${cR.rank}${cR.suit}(${cR.val}) → -${currentBet.toLocaleString('vi-VN')} ₫`;if(info)info.textContent=`💔 Thua! -${currentBet.toLocaleString('vi-VN')} ₫`;}
-}
-
-function renderLiveBets(bets){
-  const el=document.getElementById('liveBetsList');if(!el)return;
-  if(!bets||!Object.keys(bets).length){el.innerHTML='<span style="font-family:Space Mono,monospace;font-size:10px;color:rgba(255,255,255,.25);">Chưa có ai cược</span>';return;}
-  el.innerHTML=Object.values(bets).map(b=>`<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:99px;background:${b.choice==='left'?'rgba(124,58,237,.25)':'rgba(220,38,38,.2)'};border:1px solid ${b.choice==='left'?'rgba(124,58,237,.4)':'rgba(220,38,38,.4)'};font-size:11px;font-weight:700;color:#fff;font-family:Barlow Condensed,sans-serif;">${b.choice==='left'?'◀':'▶'} ${b.name}<span style="font-family:JetBrains Mono,monospace;font-size:10px;color:#ffd700;">${b.bet.toLocaleString('vi-VN')}🪙</span></span>`).join('');
-}
-
-function listenLeaderboard(){
-  _db.ref(`${GAME_REF}/leaderboard`).orderByChild('balance').limitToLast(5).on('value',snap=>{
-    const el=document.getElementById('leaderboard');if(!el)return;
-    const raw=snap.val();if(!raw){el.innerHTML='<span style="font-family:Space Mono,monospace;font-size:10px;color:rgba(255,255,255,.25);">Chưa có dữ liệu</span>';return;}
-    const sorted=Object.values(raw).sort((a,b)=>b.balance-a.balance).slice(0,5);
-    const medals=['🥇','🥈','🥉','4️⃣','5️⃣'];
-    el.innerHTML=sorted.map((p,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);"><span style="font-size:16px;">${medals[i]}</span><span style="font-family:Barlow Condensed,sans-serif;font-size:13px;font-weight:700;color:#fff;flex:1;">${p.name}</span><span style="font-family:JetBrains Mono,monospace;font-size:13px;font-weight:700;color:#ffd700;">${(p.balance||0).toLocaleString('vi-VN')} ₫</span></div>`).join('');
-  });
-}
-
-function renderGameHistory(history){
-  const el=document.getElementById('gameHistory');if(!el)return;
-  if(!history||!history.length){el.innerHTML='<div style="text-align:center;padding:12px;font-family:Space Mono,monospace;font-size:10px;color:rgba(255,255,255,.3);">Chưa có ván nào</div>';return;}
-  el.innerHTML=history.slice(0,12).map(h=>{
-    let dot='';
-    if(h.desc&&h.desc.includes('TRÁI THẮNG'))dot='<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80;flex-shrink:0;"></span>';
-    else if(h.desc&&h.desc.includes('PHẢI THẮNG'))dot='<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f87171;box-shadow:0 0 6px #f87171;flex-shrink:0;"></span>';
-    else if(h.desc&&h.desc.includes('HÒA'))dot='<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ffd700;box-shadow:0 0 6px #ffd700;flex-shrink:0;"></span>';
-    return`<div class="game-history-item">${dot}<span class="gh-desc" style="flex:1;margin-left:8px;">${h.desc}</span></div>`;
-  }).join('');
-}
-
-function listenGame(){
-  _db.ref(GAME_REF+'/current').on('value',async snap=>{
-    const cur=snap.val();if(!cur){ensureRoundExists();return;}
-    const rn=document.getElementById('roundNumber');if(rn)rn.textContent='#'+cur.roundId;
-    setPhaseLabel(cur.phase);
-    if(cur.phase==='betting'){
-      if(localRoundId!==cur.roundId){
-        localRoundId=cur.roundId;myBetPlaced=false;myChoice=null;currentBet=0;
-        renderBet();setGameBtns(false);
-        document.querySelectorAll('.chip').forEach(c=>c.classList.remove('selected'));
-        const info=document.getElementById('myBetInfo');if(info){info.style.display='none';info.innerHTML='';}
-        const resEl=document.getElementById('gameResult');if(resEl)resEl.className='game-result';
-        resetCards();
-      }
-      const elapsed=(Date.now()-cur.startedAt)/1000,remain=Math.max(0,ROUND_SEC-elapsed);
-      updateCountdown(remain);
-      if(cdInterval)clearInterval(cdInterval);
-      cdInterval=setInterval(()=>{const r=Math.max(0,ROUND_SEC-(Date.now()-cur.startedAt)/1000);updateCountdown(r);if(r<=0){clearInterval(cdInterval);setGameBtns(true);}},500);
-      _db.ref(`${GAME_REF}/rounds/${cur.roundId}/bets`).on('value',bSnap=>{
-        const bets=bSnap.val()||{};renderLiveBets(bets);
-        const pc=document.getElementById('playerCount');if(pc)pc.textContent=Object.keys(bets).length;
-      });
-    }else if(cur.phase==='reveal'){
-      if(cdInterval)clearInterval(cdInterval);updateCountdown(0);setGameBtns(true);
-      await resolveRound(cur);
-      // Hiện kết quả 4 giây trước khi cho phép vòng mới
-      await sleep(4000);
-    }
-  });
-  _db.ref(GAME_REF+'/history').limitToLast(12).on('value',snap=>{
-    const raw=snap.val();if(!raw)return;renderGameHistory(Object.values(raw).reverse());
-  });
-}
-
-async function ensureRoundExists(){
-  const snap=await _db.ref(GAME_REF+'/current').get();const cur=snap.val();
-  if(!cur||cur.phase==='reveal'){
-    const nextId=cur?cur.roundId+1:1;
-    await _db.ref(GAME_REF+'/current').set({roundId:nextId,phase:'betting',startedAt:Date.now(),cardLeft:null,cardRight:null});
-  }
-  startMasterInterval();
-}
-
-function startMasterInterval(){
-  setInterval(async()=>{
-    try{
-      const snap=await _db.ref(GAME_REF+'/current').get();const cur=snap.val();if(!cur)return;
-      const elapsed=Date.now()-cur.startedAt;
-      if(cur.phase==='reveal'&&elapsed>10000){
-        const lockKey=`reset_${cur.roundId}`,lockRef=_db.ref(GAME_REF+'/roundLock');
-        const lSnap=await lockRef.get();if(lSnap.val()===lockKey)return;
-        await lockRef.set(lockKey);await sleep(150);const lCheck=await lockRef.get();if(lCheck.val()!==lockKey)return;
-        await _db.ref(GAME_REF+'/current').set({roundId:cur.roundId+1,phase:'betting',startedAt:Date.now(),cardLeft:null,cardRight:null});return;
-      }
-      if(cur.phase==='betting'&&elapsed>=ROUND_SEC*1000){
-        const lockKey=`flip_${cur.roundId}`,lockRef=_db.ref(GAME_REF+'/roundLock');
-        const lSnap=await lockRef.get();if(lSnap.val()===lockKey)return;
-        await lockRef.set(lockKey);await sleep(150);const lCheck=await lockRef.get();if(lCheck.val()!==lockKey)return;
-        const mkCard=()=>{const isRed=Math.random()<0.5;const suit=isRed?SUITS_RED[Math.floor(Math.random()*2)]:SUITS_BLACK[Math.floor(Math.random()*2)];const rank=RANKS[Math.floor(Math.random()*13)];return{isRed,suit,rank,val:RANK_VAL[rank]};};
-        const cL=mkCard(),cR=mkCard(),winner=cL.val>cR.val?'left':cR.val>cL.val?'right':'draw';
-        await _db.ref(GAME_REF+'/current').update({phase:'reveal',cardLeft:cL,cardRight:cR});
-        const bSnap=await _db.ref(`${GAME_REF}/rounds/${cur.roundId}/bets`).get();const bets=bSnap.val()||{};
-        const desc=`Vòng #${cur.roundId}: ${cL.rank}${cL.suit}(${cL.val}) vs ${cR.rank}${cR.suit}(${cR.val}) — ${winner==='draw'?'HÒA':winner==='left'?'◀ TRÁI THẮNG':'PHẢI THẮNG ▶'} · ${Object.keys(bets).length} người`;
-        await _db.ref(`${GAME_REF}/history/r${cur.roundId}`).set({desc,ts:Date.now()});
-      }
-    }catch(e){}
-  },800);
-}
-
-function flashMsg(msg,type){const el=document.getElementById('gameResult');if(!el)return;el.className='game-result '+type;el.textContent=msg;setTimeout(()=>{el.className='game-result';},1800);}
-function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
-function initGame(){renderCoins();renderBet();listenGame();ensureRoundExists();listenLeaderboard();}
-
-/* ── INIT ── */
-window.onload=()=>{loadApiMap();loadNetworksSv2();loadSims();initGame();};
+loadApiMap();
 </script>
 </body>
 </html>
