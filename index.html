@@ -457,7 +457,7 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 }
 .btn-test-km:hover:not(:disabled) { background: rgba(217,119,6,.15); border-color: #d97706; transform: none; filter: none; }
 
-/* Badge + IP row: badges trái, IP + TEST KM phải */
+/* Badge + IP row */
 .fproxy-badge-row {
     display: flex;
     align-items: center;
@@ -477,7 +477,7 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 
 .proxy-divider { height: 1px; background: var(--border); margin: 2px 0; }
 
-/* Domain copy button — inline on each proxy row */
+/* Domain copy button */
 .btn-domain {
     font-family: 'Barlow Condensed', sans-serif;
     font-size: 9px; font-weight: 700; letter-spacing: 0.8px;
@@ -488,6 +488,49 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 }
 .btn-domain:hover { background: rgba(8,145,178,.2); border-color: #0891b2; transform: none; filter: none; }
 .btn-domain.copied-domain { background: rgba(22,163,74,.1); border-color: rgba(22,163,74,.4); color: #16a34a; }
+
+/* ── Fproxy pending card (chưa xoay lần nào) ── */
+.fproxy-pending {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    background: rgba(13,148,136,.04);
+    border: 1px dashed rgba(13,148,136,.3);
+    border-radius: 8px;
+    margin-bottom: 4px;
+}
+.fproxy-pending-icon {
+    font-size: 22px;
+    flex-shrink: 0;
+}
+.fproxy-pending-info {
+    flex: 1;
+    min-width: 0;
+}
+.fproxy-pending-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #0f766e;
+    text-transform: uppercase;
+}
+.fproxy-pending-key {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 3px;
+    word-break: break-all;
+    overflow-wrap: anywhere;
+}
+.fproxy-pending-hint {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    color: #0891b2;
+    margin-top: 5px;
+    letter-spacing: 0.5px;
+}
 
 @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:.35; } }
 .loading-text { animation: blink 1.2s infinite; color: var(--muted); font-family: 'Space Mono', monospace; font-size: 12px; }
@@ -658,15 +701,14 @@ async function loadApiMap() {
         API_MAP = await res.json();
         proxyList.innerHTML = "";
         savedApis.forEach(k => UUID_REGEX.test(k) ? createUuidProxyBox(k) : createProxyBox(k));
-        // Restore fproxy keys
+        // Restore fproxy keys — chỉ hiện card, KHÔNG gọi API
         for (const k of savedFpKeys) {
-            await createFproxyBox(k);
+            createFproxyBox(k, false); // false = lazy, chưa fetch
         }
     } catch(err) {
         console.warn("Không tải được API MAP:", err);
-        // Still restore fproxy even if API_MAP fails
         for (const k of savedFpKeys) {
-            await createFproxyBox(k);
+            createFproxyBox(k, false);
         }
     }
 }
@@ -829,25 +871,36 @@ function createProxyBox(apiKey) {
 }
 
 // ══════════════════════════════════════════════
-//  EAGLE (fproxy.me) — Card trong proxyList, lưu localStorage
+//  EAGLE (fproxy.me) — Lazy: chỉ hiện card khi thêm,
+//  gọi API thật sự chỉ khi bấm XOAY IP
 // ══════════════════════════════════════════════
 const FPROXY_BASE = "https://fproxy.me/api/getnew";
 
-async function createFproxyBox(apiKey) {
-    // Tạo card skeleton trước
+/**
+ * createFproxyBox(apiKey, autoFetch)
+ *   autoFetch = true  → gọi API ngay (dùng khi user bấm THÊM API lần đầu — KHÔNG nữa)
+ *   autoFetch = false → chỉ hiện card pending, chờ user bấm XOAY IP (mặc định)
+ *
+ * Hiện tại: KHÔNG BAO GIỜ autoFetch khi thêm mới.
+ * API chỉ được gọi khi user bấm nút XOAY IP.
+ */
+function createFproxyBox(apiKey, autoFetch = false) {
     const box = document.createElement("div");
     box.className = "proxy-container fproxy-type";
     box.dataset.fpkey = apiKey;
 
+    proxyDataStore.set(apiKey, { httpLines: [], socksLines: [], proxyLines: [] });
+
+    // ── Vùng hiển thị proxy (bắt đầu bằng pending card) ──
     const proxyArea = document.createElement("div");
     proxyArea.className = "proxy-text uuid-proxies";
-    proxyArea.innerHTML = `<span class="loading-text">⏳ Đang lấy proxy Eagle...</span>`;
 
     const status = document.createElement("span"); status.className = "status";
 
-    // Xoay IP button
+    // ── Nút XOAY IP ──
     const xoayBtn = document.createElement("button"); xoayBtn.className = "btn-orange"; xoayBtn.innerHTML = "🌐 XOAY IP";
-    // Xóa
+
+    // ── Nút XÓA ──
     const delBtn = document.createElement("button"); delBtn.className = "btn-red"; delBtn.innerHTML = "✕ XÓA";
     delBtn.onclick = () => {
         savedFpKeys = savedFpKeys.filter(k => k !== apiKey);
@@ -857,8 +910,26 @@ async function createFproxyBox(apiKey) {
         setTimeout(() => { if (box.parentNode) proxyList.removeChild(box); }, 200);
     };
 
+    // ── Hiển thị pending (chưa xoay) ──
+    function showPending() {
+        const shortKey = apiKey.length > 24 ? apiKey.slice(0, 12) + "…" + apiKey.slice(-8) : apiKey;
+        proxyArea.innerHTML = `
+            <div class="fproxy-pending">
+                <div class="fproxy-pending-icon">🦅</div>
+                <div class="fproxy-pending-info">
+                    <div class="fproxy-pending-title">Eagle Proxy — Sẵn sàng</div>
+                    <div class="fproxy-pending-key">${shortKey}</div>
+                    <div class="fproxy-pending-hint">▶ Bấm <strong>XOAY IP</strong> để lấy proxy mới</div>
+                </div>
+            </div>
+        `;
+        status.innerText = "⏸ Chờ xoay";
+    }
+
+    // ── Fetch thật sự từ API ──
     async function fetchAndRender() {
-        xoayBtn.disabled = true; status.innerText = "⏳ Đang lấy IP...";
+        xoayBtn.disabled = true;
+        status.innerText = "⏳ Đang lấy IP...";
         proxyArea.innerHTML = `<span class="loading-text">⏳ Đang lấy proxy Eagle...</span>`;
         proxyDataStore.set(apiKey, { httpLines: [], socksLines: [], proxyLines: [] });
 
@@ -867,11 +938,9 @@ async function createFproxyBox(apiKey) {
             const json = await res.json();
 
             if (!json.success) {
-                // Waiting / error
                 if (json.data && json.data.waiting_time) {
                     proxyArea.innerHTML = `<span style="font-family:'Space Mono',monospace;font-size:11px;color:#c2410c;">⏳ Đang xử lý — chờ <strong>${json.data.waiting_time}s</strong> rồi thử lại</span>`;
                     status.innerText = `⏱ ${json.data.waiting_time}s`;
-                    // If there's an old proxy, still render it
                     if (json.data.proxy) { renderFpData(json.data); }
                 } else {
                     proxyArea.innerHTML = `<span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--red);">❌ ${json.message || json.msg || "Lỗi không xác định"}</span>`;
@@ -894,14 +963,13 @@ async function createFproxyBox(apiKey) {
         proxyArea.innerHTML = "";
         const store = { httpLines: [], socksLines: [], proxyLines: [] };
 
-        // Badge row: location, timing, IP, TEST KM — tất cả trên 1 hàng
+        // Badge row
         {
             const badgeRow = document.createElement("div"); badgeRow.className = "fproxy-badge-row";
             if (d.location)    { const b=document.createElement("span"); b.className="fproxy-badge loc";  b.innerText="📍 "+d.location;        badgeRow.appendChild(b); }
             if (d.waiting_time){ const b=document.createElement("span"); b.className="fproxy-badge wait"; b.innerText="⏱ "+d.waiting_time+"s"; badgeRow.appendChild(b); }
             if (d.time_die)    { const b=document.createElement("span"); b.className="fproxy-badge die";  b.innerText="💀 "+d.time_die+"s";    badgeRow.appendChild(b); }
 
-            // Spacer đẩy IP + TEST KM sang phải
             const spacer = document.createElement("span"); spacer.style.cssText = "flex:1;";
             badgeRow.appendChild(spacer);
 
@@ -932,14 +1000,12 @@ async function createFproxyBox(apiKey) {
             proxyArea.appendChild(badgeRow);
         }
 
-        // Helper: replace IP with domain
         const DOMAIN = "proxyeagle.duckdns.org";
         function toDomain(proxyStr) {
             if (!proxyStr || !d.ip) return proxyStr;
             return proxyStr.replace(d.ip, DOMAIN);
         }
 
-        // Proxy lines: 4 rows, each has a DOMAIN button
         const formats = [];
         if (d.http)         formats.push({ label: "HTTP",   sub: "(ip:port)",   val: d.http,         cls: "http"   });
         if (d.httpuserpass) formats.push({ label: "HTTP",   sub: "(user:pass)", val: d.httpuserpass, cls: "http"   });
@@ -948,15 +1014,12 @@ async function createFproxyBox(apiKey) {
 
         formats.forEach(({ label, sub, val, cls }) => {
             const domainVal = toDomain(val);
-
             const row = document.createElement("div");
             row.className = "fproxy-proxy-line";
             row.style.cssText = "cursor:default;";
 
-            // [HTTP] [HTTP DOMAIN]  value  ← layout
             const lbl = document.createElement("span"); lbl.className = `proxy-label ${cls}`; lbl.innerText = label;
 
-            // DOMAIN button — right after the main badge
             const domBtn = document.createElement("button");
             domBtn.className = "btn-domain";
             domBtn.innerText = cls === "http" ? "HTTP DOMAIN" : "SOCKS5 DOMAIN";
@@ -972,7 +1035,6 @@ async function createFproxyBox(apiKey) {
             const sublbl = document.createElement("span"); sublbl.className = "proxy-sublabel"; sublbl.innerText = sub;
             const v = document.createElement("span"); v.className = "proxy-value"; v.innerText = val;
 
-            // Click on value to copy IP version
             const ipZone = document.createElement("span");
             ipZone.style.cssText = "display:flex;align-items:center;flex:1;min-width:0;cursor:pointer;";
             ipZone.title = "Click để copy";
@@ -993,6 +1055,7 @@ async function createFproxyBox(apiKey) {
         proxyDataStore.set(apiKey, store);
     }
 
+    // Gán sự kiện XOAY IP = gọi API thật
     xoayBtn.onclick = fetchAndRender;
 
     const actionBtns = document.createElement("div"); actionBtns.className = "action-btns";
@@ -1002,7 +1065,9 @@ async function createFproxyBox(apiKey) {
 
     box.append(proxyArea, actions);
     proxyList.appendChild(box);
-    await fetchAndRender();
+
+    // Luôn hiện pending trước — KHÔNG tự động fetch
+    showPending();
 }
 
 // ══════════════════════════════════════════════
@@ -1024,10 +1089,10 @@ addApiBtn.onclick = async () => {
             createProxyBox(k);
             addedEagle++;
         } else {
-            // Treat as fproxy.me key
+            // Treat as fproxy.me key — chỉ hiện card, KHÔNG gọi API
             savedFpKeys.push(k);
             localStorage.setItem("fproxy_saved_keys", JSON.stringify(savedFpKeys));
-            await createFproxyBox(k);
+            createFproxyBox(k, false); // lazy
             addedFp++;
         }
     }
