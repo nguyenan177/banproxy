@@ -965,8 +965,22 @@ function createProxyBox(apiKey) {
 const FPROXY_BASE     = "https://fproxy.me/api/getnew";
 const FPROXY_SET_ISP  = "https://fproxy.me/api/set-isp";
 
-// ISP state per card — key → isp id (default 0 = random)
-const ispState = new Map();
+// ISP state per card — key → isp id, persisted in localStorage
+const ISP_STORAGE_KEY = "fproxy_isp_state";
+function loadIspState() {
+    try { return JSON.parse(localStorage.getItem(ISP_STORAGE_KEY) || "{}"); } catch { return {}; }
+}
+function saveIspState(obj) {
+    try { localStorage.setItem(ISP_STORAGE_KEY, JSON.stringify(obj)); } catch {}
+}
+// Wrap as Map-like helpers backed by a plain object
+const _ispObj = loadIspState();
+const ispState = {
+    get:    (k)    => (_ispObj[k] !== undefined ? _ispObj[k] : 0),
+    set:    (k, v) => { _ispObj[k] = v; saveIspState(_ispObj); },
+    has:    (k)    => k in _ispObj,
+    delete: (k)    => { delete _ispObj[k]; saveIspState(_ispObj); },
+};
 
 /**
  * createFproxyBox(apiKey, autoFetch)
@@ -978,9 +992,6 @@ function createFproxyBox(apiKey, autoFetch = false) {
     box.dataset.fpkey = apiKey;
 
     proxyDataStore.set(apiKey, { httpLines: [], socksLines: [], proxyLines: [] });
-
-    // Default ISP: Ngẫu nhiên (0)
-    if (!ispState.has(apiKey)) ispState.set(apiKey, 0);
 
     // ── Vùng hiển thị proxy ──
     const proxyArea = document.createElement("div");
