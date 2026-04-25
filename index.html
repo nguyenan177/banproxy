@@ -535,6 +535,88 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:.35; } }
 .loading-text { animation: blink 1.2s infinite; color: var(--muted); font-family: 'Space Mono', monospace; font-size: 12px; }
 
+/* ── ISP Selector ── */
+.isp-selector-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 8px 10px;
+    background: rgba(13,148,136,.04);
+    border: 1px solid rgba(13,148,136,.2);
+    border-radius: 7px;
+}
+.isp-selector-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #0f766e;
+    text-transform: uppercase;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.isp-btn-group {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    flex: 1;
+}
+.isp-btn {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    padding: 5px 11px;
+    border-radius: 5px;
+    border: 1.5px solid var(--border2);
+    background: #fff;
+    color: var(--muted2);
+    cursor: pointer;
+    transition: all .15s;
+    text-transform: uppercase;
+    white-space: nowrap;
+    transform: none !important;
+    filter: none !important;
+    box-shadow: none;
+}
+.isp-btn:hover:not(:disabled) {
+    transform: none !important;
+    filter: none !important;
+    border-color: #0d9488;
+    color: #0f766e;
+    background: rgba(13,148,136,.08);
+}
+.isp-btn.active {
+    background: linear-gradient(135deg, #0e7490, #0d9488);
+    border-color: #0d9488;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(13,148,136,.25);
+}
+.isp-btn.active:hover:not(:disabled) {
+    background: linear-gradient(135deg, #0e7490, #0d9488);
+    color: #fff;
+}
+.isp-status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 3px;
+    vertical-align: middle;
+}
+.isp-status-dot.random  { background: var(--muted2); }
+.isp-status-dot.vnpt    { background: #2563eb; }
+.isp-status-dot.viettel { background: #dc2626; }
+.isp-status-dot.fpt     { background: #d97706; }
+
+/* ISP set feedback */
+.isp-set-msg {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin-left: 4px;
+}
+
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: var(--surface); }
@@ -659,6 +741,14 @@ const copyAllBtn      = document.getElementById("copyAllBtn");
 const copyAllDropdown = document.getElementById("copyAllDropdown");
 const copyAllWrapper  = document.getElementById("copyAllWrapper");
 
+// ISP definitions
+const ISP_OPTIONS = [
+    { id: 0, label: "Ngẫu nhiên", dot: "random",  icon: "🔀" },
+    { id: 1, label: "VNPT",       dot: "vnpt",     icon: "🔵" },
+    { id: 2, label: "Viettel",    dot: "viettel",  icon: "🔴" },
+    { id: 3, label: "FPT",        dot: "fpt",      icon: "🟡" },
+];
+
 copyAllBtn.onclick = (e) => { e.stopPropagation(); copyAllDropdown.classList.toggle("open"); };
 document.addEventListener("click", (e) => { if (!copyAllWrapper.contains(e.target)) copyAllDropdown.classList.remove("open"); });
 
@@ -701,9 +791,8 @@ async function loadApiMap() {
         API_MAP = await res.json();
         proxyList.innerHTML = "";
         savedApis.forEach(k => UUID_REGEX.test(k) ? createUuidProxyBox(k) : createProxyBox(k));
-        // Restore fproxy keys — chỉ hiện card, KHÔNG gọi API
         for (const k of savedFpKeys) {
-            createFproxyBox(k, false); // false = lazy, chưa fetch
+            createFproxyBox(k, false);
         }
     } catch(err) {
         console.warn("Không tải được API MAP:", err);
@@ -871,18 +960,17 @@ function createProxyBox(apiKey) {
 }
 
 // ══════════════════════════════════════════════
-//  EAGLE (fproxy.me) — Lazy: chỉ hiện card khi thêm,
-//  gọi API thật sự chỉ khi bấm XOAY IP
+//  EAGLE (fproxy.me) — Lazy load + ISP selector
 // ══════════════════════════════════════════════
-const FPROXY_BASE = "https://fproxy.me/api/getnew";
+const FPROXY_BASE     = "https://fproxy.me/api/getnew";
+const FPROXY_SET_ISP  = "https://fproxy.me/api/set-isp";
+
+// ISP state per card — key → isp id (default 0 = random)
+const ispState = new Map();
 
 /**
  * createFproxyBox(apiKey, autoFetch)
- *   autoFetch = true  → gọi API ngay (dùng khi user bấm THÊM API lần đầu — KHÔNG nữa)
- *   autoFetch = false → chỉ hiện card pending, chờ user bấm XOAY IP (mặc định)
- *
- * Hiện tại: KHÔNG BAO GIỜ autoFetch khi thêm mới.
- * API chỉ được gọi khi user bấm nút XOAY IP.
+ *   autoFetch = false (default) → hiện pending card, chờ user bấm XOAY IP
  */
 function createFproxyBox(apiKey, autoFetch = false) {
     const box = document.createElement("div");
@@ -891,11 +979,75 @@ function createFproxyBox(apiKey, autoFetch = false) {
 
     proxyDataStore.set(apiKey, { httpLines: [], socksLines: [], proxyLines: [] });
 
-    // ── Vùng hiển thị proxy (bắt đầu bằng pending card) ──
+    // Default ISP: Ngẫu nhiên (0)
+    if (!ispState.has(apiKey)) ispState.set(apiKey, 0);
+
+    // ── Vùng hiển thị proxy ──
     const proxyArea = document.createElement("div");
     proxyArea.className = "proxy-text uuid-proxies";
 
     const status = document.createElement("span"); status.className = "status";
+
+    // ══════════════════════════════
+    //  ISP SELECTOR ROW
+    // ══════════════════════════════
+    const ispRow = document.createElement("div");
+    ispRow.className = "isp-selector-row";
+
+    const ispLabel = document.createElement("span");
+    ispLabel.className = "isp-selector-label";
+    ispLabel.innerText = "🌐 Nhà mạng:";
+
+    const ispBtnGroup = document.createElement("div");
+    ispBtnGroup.className = "isp-btn-group";
+
+    const ispMsg = document.createElement("span");
+    ispMsg.className = "isp-set-msg";
+
+    ISP_OPTIONS.forEach(opt => {
+        const btn = document.createElement("button");
+        btn.className = "isp-btn" + (ispState.get(apiKey) === opt.id ? " active" : "");
+        btn.innerHTML = `<span class="isp-status-dot ${opt.dot}"></span>${opt.label}`;
+        btn.dataset.ispId = opt.id;
+        btn.title = `Chọn nhà mạng: ${opt.label}`;
+
+        btn.onclick = async (e) => {
+            e.stopPropagation();
+            // Nếu đã active thì bỏ qua
+            if (ispState.get(apiKey) === opt.id) return;
+
+            // Update UI trước
+            ispBtnGroup.querySelectorAll(".isp-btn").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            ispState.set(apiKey, opt.id);
+            ispMsg.innerText = "⏳ Đang đặt...";
+
+            try {
+                const res = await fetch(FPROXY_SET_ISP, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ api_key: apiKey, isp: opt.id }),
+                    cache: "no-store"
+                });
+                const json = await res.json();
+
+                if (json.success || json.status === "success" || json.status === true) {
+                    ispMsg.innerText = `✅ ${opt.label}`;
+                } else {
+                    ispMsg.innerText = `⚠️ ${json.message || json.msg || "Lỗi"}`;
+                }
+            } catch (err) {
+                ispMsg.innerText = "❌ Lỗi kết nối";
+            }
+
+            // Tự xóa message sau 2.5s
+            setTimeout(() => { ispMsg.innerText = ""; }, 2500);
+        };
+
+        ispBtnGroup.appendChild(btn);
+    });
+
+    ispRow.append(ispLabel, ispBtnGroup, ispMsg);
 
     // ── Nút XOAY IP ──
     const xoayBtn = document.createElement("button"); xoayBtn.className = "btn-orange"; xoayBtn.innerHTML = "🌐 XOAY IP";
@@ -906,11 +1058,12 @@ function createFproxyBox(apiKey, autoFetch = false) {
         savedFpKeys = savedFpKeys.filter(k => k !== apiKey);
         localStorage.setItem("fproxy_saved_keys", JSON.stringify(savedFpKeys));
         proxyDataStore.delete(apiKey);
+        ispState.delete(apiKey);
         box.style.opacity = "0"; box.style.transform = "translateY(-6px)"; box.style.transition = "all .2s";
         setTimeout(() => { if (box.parentNode) proxyList.removeChild(box); }, 200);
     };
 
-    // ── Hiển thị pending (chưa xoay) ──
+    // ── Hiển thị pending ──
     function showPending() {
         const shortKey = apiKey.length > 24 ? apiKey.slice(0, 12) + "…" + apiKey.slice(-8) : apiKey;
         proxyArea.innerHTML = `
@@ -1063,10 +1216,10 @@ function createFproxyBox(apiKey, autoFetch = false) {
     const actions = document.createElement("div"); actions.className = "proxy-actions";
     actions.append(actionBtns, status);
 
-    box.append(proxyArea, actions);
+    // ISP row đứng trước proxy area
+    box.append(ispRow, proxyArea, actions);
     proxyList.appendChild(box);
 
-    // Luôn hiện pending trước — KHÔNG tự động fetch
     showPending();
 }
 
@@ -1089,10 +1242,9 @@ addApiBtn.onclick = async () => {
             createProxyBox(k);
             addedEagle++;
         } else {
-            // Treat as fproxy.me key — chỉ hiện card, KHÔNG gọi API
             savedFpKeys.push(k);
             localStorage.setItem("fproxy_saved_keys", JSON.stringify(savedFpKeys));
-            createFproxyBox(k, false); // lazy
+            createFproxyBox(k, false);
             addedFp++;
         }
     }
